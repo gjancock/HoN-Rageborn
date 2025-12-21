@@ -82,7 +82,7 @@ def signup_user(first_name, last_name, email, username, password):
     )
 
     if r.status_code == 200:
-        log_username(username)
+        log_username(username) # Save username to textfile
         return True, "Signup successful!"
     else:
         return False, r.text
@@ -154,6 +154,19 @@ def generate_email(prefix="", postfix="", domain="mail.com", length=6):
 # UI CALLBACKS
 # ============================================================
 
+def on_signup_success():
+    username = username_entry.get()
+    password = password_entry.get()
+
+    # Close UI first
+    root.destroy()
+
+    #
+    import rageborn
+
+    # Pass credentials to rageborn
+    rageborn.main(username, password)
+
 def log_username(username, filename="signup_users.txt"):
     with open(filename, "a", encoding="utf-8") as f:
         f.write(username + "\n")
@@ -191,7 +204,8 @@ def on_submit():
     success, msg = signup_user(first, last, email, user, pwd)
 
     if success:
-        messagebox.showinfo("Success", msg)
+        messagebox.showinfo("Success", msg)        
+        on_signup_success()
     else:
         messagebox.showerror("Failed", msg)
 
