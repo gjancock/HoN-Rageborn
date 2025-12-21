@@ -5,6 +5,8 @@ import re
 from urllib.parse import urlencode
 import random
 import string
+import subprocess
+import threading
 
 #
 BASE_URL = "https://app.juvio.com"
@@ -154,18 +156,29 @@ def generate_email(prefix="", postfix="", domain="mail.com", length=6):
 # UI CALLBACKS
 # ============================================================
 
+def run_rageborn_flow(username, password):
+    import rageborn
+    rageborn.main(username, password)
+
+    # after rageborn finishes
+    kill_jokevio()
+    show_root()
+
+def start_rageborn_async(username, password):
+    hide_root()
+    threading.Thread(
+        target=run_rageborn_flow,
+        args=(username, password),
+        daemon=True
+    ).start()
+
+# ----------------- UI callbacks -----------------
+
 def on_signup_success():
     username = username_entry.get()
     password = password_entry.get()
 
-    # Close UI first
-    root.destroy()
-
-    #
-    import rageborn
-
-    # Pass credentials to rageborn
-    rageborn.main(username, password)
+    start_rageborn_async(username, password)
 
 def log_username(username, filename="signup_users.txt"):
     with open(filename, "a", encoding="utf-8") as f:
@@ -185,6 +198,23 @@ def on_generate():
     email_entry.delete(0, tk.END)
     email_entry.insert(0, email)
 
+def hide_root():
+    root.withdraw()   # hide window
+
+def show_root():
+    root.deiconify()  # show window again
+
+def kill_jokevio():
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "juvio.exe"],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print("jokevio.exe killed")
+    except subprocess.CalledProcessError:
+        print("jokevio.exe not running")
 
 # ============================================================
 # TKINTER UI
@@ -204,14 +234,25 @@ def on_submit():
     success, msg = signup_user(first, last, email, user, pwd)
 
     if success:
-        messagebox.showinfo("Success", msg)        
+        #messagebox.showinfo("Success", msg)        
         on_signup_success()
     else:
         messagebox.showerror("Failed", msg)
 
 root = tk.Tk()
+root.update_idletasks()  # ensure geometry info is ready
 root.title("Random Username & Email Generator")
-root.geometry("400x420")
+
+WINDOW_WIDTH = 420
+WINDOW_HEIGHT = 480
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+x = screen_width - WINDOW_WIDTH
+y = screen_height - WINDOW_HEIGHT
+
+root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
 
 tk.Label(root, text="Password").pack()
 password_entry = tk.Entry(root)
@@ -255,4 +296,5 @@ first_name_entry.insert(0, DEFAULT_FIRST_NAME)
 last_name_entry.insert(0, DEFAULT_LAST_NAME)
 password_entry.insert(0, DEFAULT_PASSWORD)
 
-root.mainloop()
+if __name__ == "__main__":
+    root.mainloop()
