@@ -8,6 +8,11 @@ import string
 import subprocess
 import threading
 import time
+from datetime import datetime
+
+#
+auto_start_time = None
+iteration_count = 0
 
 #
 BASE_URL = "https://app.juvio.com"
@@ -253,15 +258,19 @@ def one_full_cycle():
 def auto_loop_worker():
     print("[AUTO] Auto mode started")
 
+    # Set start time ONCE
+    root.after(0, set_start_time)
+
+    global iteration_count
+    iteration_count = 0
+    root.after(0, lambda: iteration_var.set("Iterations completed: 0"))
+
     while auto_mode_var.get():
         ok = one_full_cycle()
 
-        if not ok:
-            print("[AUTO] Cycle failed, retrying...")
-            time.sleep(2)
-            continue
+        if ok:
+            root.after(0, increment_iteration)
 
-        print("[AUTO] Cycle complete, next iteration...")
         time.sleep(1)
 
     print("[AUTO] Auto mode stopped")
@@ -272,6 +281,19 @@ def on_auto_toggle():
             target=auto_loop_worker,
             daemon=True
         ).start()
+    else:
+        start_time_var.set("Started at: -")
+
+def set_start_time():
+    global auto_start_time
+    auto_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    start_time_var.set(f"Started at: {auto_start_time}")
+
+
+def increment_iteration():
+    global iteration_count
+    iteration_count += 1
+    iteration_var.set(f"Iterations completed: {iteration_count}")
 
 # ============================================================
 # TKINTER UI
@@ -301,7 +323,7 @@ root.update_idletasks()  # ensure geometry info is ready
 root.title("Random Username & Email Generator")
 
 WINDOW_WIDTH = 420
-WINDOW_HEIGHT = 480
+WINDOW_HEIGHT = 550
 
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
@@ -356,6 +378,15 @@ auto_mode_checkbox = tk.Checkbutton(
 auto_mode_checkbox.pack(pady=5)
 
 auto_mode_checkbox.config(command=on_auto_toggle)
+
+start_time_var = tk.StringVar(value="Started at: -")
+iteration_var = tk.StringVar(value="Iterations completed: 0")
+
+start_time_label = tk.Label(root, textvariable=start_time_var)
+start_time_label.pack(pady=2)
+
+iteration_label = tk.Label(root, textvariable=iteration_var)
+iteration_label.pack(pady=2)
 
 tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
 
