@@ -143,10 +143,7 @@ def account_Login():
     # Click password field (reuse if same)
     pyautogui.press("tab")
     type_text("@Abc12345", enter=True)
-    print("Waiting account to login...")
-
-    # Click submit/login button
-    #find_and_click("login-button.png")
+    print("Waiting account to login...")    
     wait(3)
 
 def prequeue():
