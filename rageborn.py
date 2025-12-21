@@ -1,5 +1,5 @@
 import pyautogui
-import cv2
+import sys
 import numpy as np
 import time
 import os
@@ -18,7 +18,7 @@ pyautogui.PAUSE = 0.3
 
 #
 def image_exists(image_name, region=None, confidence=None):
-    image_path = os.path.join(BASE_IMAGE_DIR, image_name)
+    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
     try:
         return pyautogui.locateOnScreen(
             image_path,
@@ -55,7 +55,7 @@ def find_and_click(image_name, timeout=10, click=True, doubleClick=False, rightC
     """
     Finds an image on screen and clicks it.
     """
-    image_path = os.path.join(BASE_IMAGE_DIR, image_name)
+    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -94,7 +94,9 @@ def click_until_image_appears(
     """
 
     #HEROES_PATH = Path(BASE_IMAGE_DIR) / "heroes" / TARGETING_HERO #TODO: Dynamic hero to be choosen
-    click_path = os.path.join(BASE_IMAGE_DIR, click_image)
+    click_path = resource_path(
+        os.path.join(BASE_IMAGE_DIR, click_image)
+    )
     start = time.time()
 
     while time.time() - start < timeout:
@@ -312,6 +314,15 @@ def ingame():
 
         if image_exists("kicked-message.png"):
             break
+
+#
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # PyInstaller temp folder
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 #
 def main(username, password):

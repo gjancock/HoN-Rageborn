@@ -9,6 +9,8 @@ import subprocess
 import threading
 import time
 from datetime import datetime
+import sys
+import os
 
 #
 auto_start_time = None
@@ -296,6 +298,17 @@ def increment_iteration():
     iteration_var.set(f"Iterations completed: {iteration_count}")
 
 # ============================================================
+# PYINSTALLER
+# ============================================================
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # PyInstaller temp folder
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+# ============================================================
 # TKINTER UI
 # ============================================================
 
@@ -320,7 +333,7 @@ def on_submit():
 
 root = tk.Tk()
 root.update_idletasks()  # ensure geometry info is ready
-root.title("Random Username & Email Generator")
+root.title("RageBorn V1.0")
 
 WINDOW_WIDTH = 420
 WINDOW_HEIGHT = 550
