@@ -7,6 +7,7 @@ import random
 import string
 import subprocess
 import threading
+import time
 
 #
 BASE_URL = "https://app.juvio.com"
@@ -217,6 +218,62 @@ def kill_jokevio():
         print("jokevio.exe not running")
 
 # ============================================================
+# AUTOMATION
+# ============================================================
+def one_full_cycle():
+    # 1️⃣ Generate username/email
+    on_generate()   # reuse your existing Generate button logic
+
+    # 2️⃣ Read generated credentials
+    username = username_entry.get()
+    password = password_entry.get()
+
+    print(f"[AUTO] Generated account: {username}")
+
+    # 3️⃣ Run signup
+    success, msg = signup_user(
+        first_name_entry.get(),
+        last_name_entry.get(),
+        email_entry.get(),
+        username,
+        password
+    )
+
+    if not success:
+        print("[AUTO] Signup failed:", msg)
+        return False
+
+    print("[AUTO] Signup success, starting rageborn")
+
+    # 4️⃣ Run rageborn (blocking inside worker thread)
+    run_rageborn_flow(username, password)
+
+    return True
+
+def auto_loop_worker():
+    print("[AUTO] Auto mode started")
+
+    while auto_mode_var.get():
+        ok = one_full_cycle()
+
+        if not ok:
+            print("[AUTO] Cycle failed, retrying...")
+            time.sleep(2)
+            continue
+
+        print("[AUTO] Cycle complete, next iteration...")
+        time.sleep(1)
+
+    print("[AUTO] Auto mode stopped")
+
+def on_auto_toggle():
+    if auto_mode_var.get():
+        threading.Thread(
+            target=auto_loop_worker,
+            daemon=True
+        ).start()
+
+# ============================================================
 # TKINTER UI
 # ============================================================
 
@@ -289,12 +346,24 @@ tk.Label(root, text="Email").pack()
 email_entry = tk.Entry(root)
 email_entry.pack()
 
+auto_mode_var = tk.BooleanVar(value=False)
+
+auto_mode_checkbox = tk.Checkbutton(
+    root,
+    text="Auto Generate & Run",
+    variable=auto_mode_var
+)
+auto_mode_checkbox.pack(pady=5)
+
+auto_mode_checkbox.config(command=on_auto_toggle)
+
 tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
 
 #
 first_name_entry.insert(0, DEFAULT_FIRST_NAME)
 last_name_entry.insert(0, DEFAULT_LAST_NAME)
 password_entry.insert(0, DEFAULT_PASSWORD)
+
 
 if __name__ == "__main__":
     root.mainloop()
