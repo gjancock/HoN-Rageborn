@@ -3,9 +3,21 @@ from tkinter import messagebox
 import requests
 import re
 from urllib.parse import urlencode
+import random
+import string
 
+#
 BASE_URL = "https://app.juvio.com"
 SIGNUP_URL = BASE_URL + "/signup"
+
+#
+MIN_USERNAME_LENGTH = 2
+MAX_USERNAME_LENGTH = 16
+
+#
+DEFAULT_FIRST_NAME = "Maliken"
+DEFAULT_LAST_NAME = "DeForest"
+DEFAULT_PASSWORD = "@Abc12345"
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -70,9 +82,95 @@ def signup_user(first_name, last_name, email, username, password):
     )
 
     if r.status_code == 200:
+        log_username(username)
         return True, "Signup successful!"
     else:
         return False, r.text
+
+
+# ============================================================
+# TKINTER UI
+# ============================================================
+
+def generate_random_string(length):
+    chars = string.ascii_lowercase + string.digits
+    return ''.join(random.choices(chars, k=length))
+
+
+def generate_username(prefix="", postfix=""):
+    """
+    Username rules:
+    - total length randomly chosen between 2 and 16
+    - supports prefix & postfix
+    - random part is alphanumeric
+    """
+
+    prefix = prefix.strip().lower()
+    postfix = postfix.strip().lower()
+
+    has_prefix = bool(prefix)
+    has_postfix = bool(postfix)
+
+    # underscores count
+    underscore_count = (1 if has_prefix else 0) + (1 if has_postfix else 0)
+    if has_prefix and has_postfix:
+        underscore_count = 2
+
+    fixed_length = len(prefix) + len(postfix) + underscore_count
+
+    # Pick a random TOTAL length
+    target_length = random.randint(
+        max(MIN_USERNAME_LENGTH, fixed_length + 1),
+        MAX_USERNAME_LENGTH
+    )
+
+    remaining = target_length - fixed_length
+
+    if remaining < 1:
+        # fallback if prefix/postfix too long
+        base = (prefix + postfix)[:MAX_USERNAME_LENGTH]
+        if len(base) < MIN_USERNAME_LENGTH:
+            base += generate_random_string(MIN_USERNAME_LENGTH - len(base))
+        return base
+
+    random_part = generate_random_string(remaining)
+
+    if has_prefix and has_postfix:
+        return f"{prefix}{random_part}{postfix}"
+    elif has_prefix:
+        return f"{prefix}{random_part}"
+    elif has_postfix:
+        return f"{random_part}{postfix}"
+    else:
+        return random_part
+
+def generate_email(prefix="", postfix="", domain="mail.com", length=6):
+    rand = generate_random_string(length)
+    local = "".join(p for p in [prefix, rand, postfix] if p)
+    return f"{local}@{domain}"
+
+
+# ============================================================
+# UI CALLBACKS
+# ============================================================
+
+def log_username(username, filename="signup_users.txt"):
+    with open(filename, "a", encoding="utf-8") as f:
+        f.write(username + "\n")
+
+def on_generate():
+    prefix = prefix_entry.get().strip()
+    postfix = postfix_entry.get().strip()
+    domain = domain_entry.get().strip() or "mail.com"
+
+    username = generate_username(prefix, postfix)
+    email = generate_email(prefix, postfix, domain)
+
+    username_entry.delete(0, tk.END)
+    username_entry.insert(0, username)
+
+    email_entry.delete(0, tk.END)
+    email_entry.insert(0, email)
 
 
 # ============================================================
@@ -97,10 +195,13 @@ def on_submit():
     else:
         messagebox.showerror("Failed", msg)
 
-
 root = tk.Tk()
-root.title("Signup Tool")
-root.geometry("350x300")
+root.title("Random Username & Email Generator")
+root.geometry("400x420")
+
+tk.Label(root, text="Password").pack()
+password_entry = tk.Entry(root)
+password_entry.pack()
 
 tk.Label(root, text="First Name").pack()
 first_name_entry = tk.Entry(root)
@@ -110,18 +211,34 @@ tk.Label(root, text="Last Name").pack()
 last_name_entry = tk.Entry(root)
 last_name_entry.pack()
 
-tk.Label(root, text="Email").pack()
-email_entry = tk.Entry(root)
-email_entry.pack()
+tk.Label(root, text="Prefix (optional)").pack()
+prefix_entry = tk.Entry(root)
+prefix_entry.pack()
+
+tk.Label(root, text="Postfix (optional)").pack()
+postfix_entry = tk.Entry(root)
+postfix_entry.pack()
+
+tk.Label(root, text="Email Domain").pack()
+domain_entry = tk.Entry(root)
+domain_entry.insert(0, "mail.com")
+domain_entry.pack()
+
+tk.Button(root, text="Generate Username & Email", command=on_generate).pack(pady=10)
 
 tk.Label(root, text="Username").pack()
 username_entry = tk.Entry(root)
 username_entry.pack()
 
-tk.Label(root, text="Password").pack()
-password_entry = tk.Entry(root, show="*")
-password_entry.pack()
+tk.Label(root, text="Email").pack()
+email_entry = tk.Entry(root)
+email_entry.pack()
 
 tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
+
+#
+first_name_entry.insert(0, DEFAULT_FIRST_NAME)
+last_name_entry.insert(0, DEFAULT_LAST_NAME)
+password_entry.insert(0, DEFAULT_PASSWORD)
 
 root.mainloop()
