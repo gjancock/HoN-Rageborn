@@ -1,5 +1,5 @@
 import pyautogui
-import cv2
+import sys
 import numpy as np
 import time
 import os
@@ -18,7 +18,7 @@ pyautogui.PAUSE = 0.3
 
 #
 def image_exists(image_name, region=None, confidence=None):
-    image_path = os.path.join(BASE_IMAGE_DIR, image_name)
+    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
     try:
         return pyautogui.locateOnScreen(
             image_path,
@@ -55,7 +55,7 @@ def find_and_click(image_name, timeout=10, click=True, doubleClick=False, rightC
     """
     Finds an image on screen and clicks it.
     """
-    image_path = os.path.join(BASE_IMAGE_DIR, image_name)
+    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
     start_time = time.time()
 
     while time.time() - start_time < timeout:
@@ -86,14 +86,17 @@ def click_until_image_appears(
     wait_image,
     timeout=60,
     click_interval=1.0,
-    region=None
+    region=None,
+    throwWhenTimedout=False
 ):
     """
     Clicks `click_image` repeatedly until `wait_image` appears.
     """
 
     #HEROES_PATH = Path(BASE_IMAGE_DIR) / "heroes" / TARGETING_HERO #TODO: Dynamic hero to be choosen
-    click_path = os.path.join(BASE_IMAGE_DIR, click_image)
+    click_path = resource_path(
+        os.path.join(BASE_IMAGE_DIR, click_image)
+    )
     start = time.time()
 
     while time.time() - start < timeout:
@@ -118,8 +121,10 @@ def click_until_image_appears(
             pass
 
         time.sleep(click_interval)
-
-    raise TimeoutError(f"{wait_image} did not appear in time")
+    if throwWhenTimedout == True:
+        raise TimeoutError(f"{wait_image} did not appear in time")
+    else:
+        return False
 
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
@@ -130,23 +135,22 @@ def wait(seconds):
     time.sleep(seconds)
 
 #
-def account_Login():
+def account_Login(username, password):
+    wait(3)
+
     while True:
         # do nothing until found username-field.png
         if image_exists("username-field.png"):
+            # Click username field
+            find_and_click("username-field.png")
             break
-
-    # Click username field
-    find_and_click("username-field.png")
-    type_text("stillborn33")
+        
+    type_text(username)
 
     # Click password field (reuse if same)
     pyautogui.press("tab")
-    type_text("@Abc12345", enter=True)
-    print("Waiting account to login...")
-
-    # Click submit/login button
-    #find_and_click("login-button.png")
+    type_text(password, enter=True)
+    print("Waiting account to login...")    
     wait(3)
 
 def prequeue():
@@ -187,19 +191,23 @@ def pickingPhase():
     print("Selecting hero")
     wait(3)
     
-    click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5)
-    print("waiting to get in game")
+    if click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
+        print("waiting to get in game")
+        return True
+    else:
+        print("Targetted hero banned! Exiting")
+        return False
 
 def ingame():
     # Configuration
     side="legion"
 
     #TODO: clean up until use case happened
-    #while True:
-    #    if not wait_until_appears("abandon-match-message.png", 3, None, 1):
-    #        break
-    #    else:
-    #        return # Quit this function
+    while True:
+        if not wait_until_appears("abandon-match-message.png", 3, None, 1):
+            break
+        else:
+            return # Quit this function
 
     if wait_until_appears("ingame-top-left-menu.png", 150):
         print("in game seeing fountain!")
@@ -295,6 +303,9 @@ def ingame():
             wait(1)
             find_and_click("vote-no-black.png")
 
+        if image_exists("not-a-host-message.png"):
+            break
+
         if image_exists("cancelled-match-message.png"):
             break
 
@@ -304,7 +315,17 @@ def ingame():
         if image_exists("kicked-message.png"):
             break
 
-def main():
+#
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # PyInstaller temp folder
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+#
+def main(username, password):
     print("Rageborn started...")
 
     # Example: Open program by clicking icon
@@ -313,7 +334,7 @@ def main():
     #wait(10)
 
     # Account Login manually
-    account_Login()
+    account_Login(username, password)
 
     #
     prequeue()
@@ -321,12 +342,12 @@ def main():
     #
     startQueue()    
     
-    #
-    pickingPhase()
-
-    #
-    ingame()
-
+    #    
+    if pickingPhase():       
+        ingame()
+    else:
+        return
+    
     #
     print("We are in the game lobby!")
     wait(0.5)
