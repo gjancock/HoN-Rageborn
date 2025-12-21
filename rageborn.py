@@ -201,11 +201,11 @@ def ingame():
     side="legion"
 
     #TODO: clean up until use case happened
-    #while True:
-    #    if not wait_until_appears("abandon-match-message.png", 3, None, 1):
-    #        break
-    #    else:
-    #        return # Quit this function
+    while True:
+        if not wait_until_appears("abandon-match-message.png", 3, None, 1):
+            break
+        else:
+            return # Quit this function
 
     if wait_until_appears("ingame-top-left-menu.png", 150):
         print("in game seeing fountain!")
