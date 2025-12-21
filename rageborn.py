@@ -86,7 +86,8 @@ def click_until_image_appears(
     wait_image,
     timeout=60,
     click_interval=1.0,
-    region=None
+    region=None,
+    throwWhenTimedout=False
 ):
     """
     Clicks `click_image` repeatedly until `wait_image` appears.
@@ -118,8 +119,10 @@ def click_until_image_appears(
             pass
 
         time.sleep(click_interval)
-
-    raise TimeoutError(f"{wait_image} did not appear in time")
+    if throwWhenTimedout == True:
+        raise TimeoutError(f"{wait_image} did not appear in time")
+    else:
+        return False
 
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
@@ -131,13 +134,15 @@ def wait(seconds):
 
 #
 def account_Login(username, password):
+    wait(3)
+
     while True:
         # do nothing until found username-field.png
         if image_exists("username-field.png"):
+            # Click username field
+            find_and_click("username-field.png")
             break
-
-    # Click username field
-    find_and_click("username-field.png")
+        
     type_text(username)
 
     # Click password field (reuse if same)
@@ -184,8 +189,12 @@ def pickingPhase():
     print("Selecting hero")
     wait(3)
     
-    click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5)
-    print("waiting to get in game")
+    if click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
+        print("waiting to get in game")
+        return True
+    else:
+        print("Targetted hero banned! Exiting")
+        return False
 
 def ingame():
     # Configuration
@@ -304,6 +313,7 @@ def ingame():
         if image_exists("kicked-message.png"):
             break
 
+#
 def main(username, password):
     print("Rageborn started...")
 
@@ -321,12 +331,12 @@ def main(username, password):
     #
     startQueue()    
     
-    #
-    pickingPhase()
-
-    #
-    ingame()
-
+    #    
+    if pickingPhase():       
+        ingame()
+    else:
+        return
+    
     #
     print("We are in the game lobby!")
     wait(0.5)
