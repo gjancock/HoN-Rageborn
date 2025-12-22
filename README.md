@@ -15,7 +15,7 @@ Windows Settings
 
 1. Set the Windows display resolution to 1920×1080.
 2. Make sure a “Heroes of Newerth Reborn” desktop shortcut exists and is visible when running the script.
-3. Minimize all other applications after starting the script to avoid interruptions (this will be improved in future updates).
+3. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
 4. Do not move the mouse cursor or click anywhere while the script is running.
 
 Notes
