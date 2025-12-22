@@ -89,50 +89,42 @@ def unpin_jokevio():
         set_window_topmost(hwnd, False)
 
 #
-def image_exists(image_name, region=None, confidence=None):
-    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
+def image_exists(image_rel_path, region=None, confidence=None):
+    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
     try:
         return pyautogui.locateOnScreen(
-            image_path,
+            full_path,
             confidence=confidence if confidence is not None else CONFIDENCE,
             region=region
         ) is not None
     except pyautogui.ImageNotFoundException:
         return False
     
-def any_image_exists(image_names, region=None, confidence=None):
-    for img in image_names:
+def any_image_exists(image_rel_paths, region=None, confidence=None):
+    for img in image_rel_paths:
         if image_exists(img, region, confidence):
             return True
     return False
     
-def wait_until_appears(image_name, timeout=30, region=None, confidence=None, throw=False):
+def wait_until_appears(image_rel_path, timeout=30, region=None, confidence=None, throw=False):
     start = time.time()
     while time.time() - start < timeout:
-        if image_exists(image_name, region, confidence):
+        if image_exists(image_rel_path, region, confidence):
             return True
         time.sleep(0.3)
     if throw:
-        raise TimeoutError(f"{image_name} did not appear")
+        raise TimeoutError(f"{image_rel_path} did not appear")
 
-def wait_until_disappears(image_name, timeout=30, region=None, confidence=None):
-    start = time.time()
-    while time.time() - start < timeout:
-        if not image_exists(image_name, region, confidence):
-            return True
-        time.sleep(0.3)
-    raise TimeoutError(f"{image_name} did not disappear")
-
-def find_and_click(image_name, timeout=10, click=True, doubleClick=False, rightClick=False):
+def find_and_click(image_rel_path, timeout=10, click=True, doubleClick=False, rightClick=False):
     """
     Finds an image on screen and clicks it.
     """
-    image_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_name))
+    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
     start_time = time.time()
 
     while time.time() - start_time < timeout:
         location = pyautogui.locateCenterOnScreen(
-            image_path,
+            full_path,
             confidence=CONFIDENCE
         )
 
@@ -150,53 +142,63 @@ def find_and_click(image_name, timeout=10, click=True, doubleClick=False, rightC
 
         time.sleep(0.5)
 
-    print(f"[ERROR] Could not find {image_name}")
+    print(f"[ERROR] Could not find {image_rel_path}")
     return False
 
 def click_until_image_appears(
-    click_image,
-    wait_image,
+    click_image_rel_path,
+    wait_image_rel_path,
     timeout=60,
     click_interval=1.0,
     region=None,
     throwWhenTimedout=False
 ):
     """
-    Clicks `click_image` repeatedly until `wait_image` appears.
+    Clicks `click_image_rel_path` repeatedly until ANY image in `wait_image_rel_path` appears.
     """
 
-    #HEROES_PATH = Path(BASE_IMAGE_DIR) / "heroes" / TARGETING_HERO #TODO: Dynamic hero to be choosen
-    click_path = resource_path(
-        os.path.join(BASE_IMAGE_DIR, click_image)
+    # Normalize wait images to list
+    if isinstance(wait_image_rel_path, str):
+        wait_image_rel_path = [wait_image_rel_path]
+
+    full_click_path = resource_path(
+        os.path.join(BASE_IMAGE_DIR, click_image_rel_path)
     )
+
+    full_wait_paths = [
+        resource_path(os.path.join(BASE_IMAGE_DIR, p))
+        for p in wait_image_rel_path
+    ]
+
     start = time.time()
 
     while time.time() - start < timeout:
 
-        # Stop condition
-        if any_image_exists(wait_image, region):
-            print(f"[OK] {wait_image} hero selected")
+        # Stop condition (OR logic)
+        if any_image_exists(full_wait_paths, region):
+            print(f"[OK] One of {wait_image_rel_path} appeared")
             return True
 
         try:
             location = pyautogui.locateCenterOnScreen(
-                click_path,
+                full_click_path,
                 confidence=CONFIDENCE,
                 region=region
             )
 
             if location:
                 pyautogui.doubleClick(location)
-                print(f"Clicked {click_image}")
+                print(f"Clicked {click_image_rel_path}")
 
         except pyautogui.ImageNotFoundException:
             pass
 
         time.sleep(click_interval)
-    if throwWhenTimedout == True:
-        raise TimeoutError(f"{wait_image} did not appear in time")
-    else:
-        return False
+
+    if throwWhenTimedout:
+        raise TimeoutError(f"{wait_image_rel_path} did not appear in time")
+
+    return False
 
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
@@ -264,7 +266,7 @@ def pickingPhase():
     print("Selecting hero")
     wait(3)
     
-    if click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
+    if click_until_image_appears("heroes/Bubbles/picking-phase-bubbles.png", ["heroes/Bubbles/picking-phase-bubbles-self-portrait-legion.png","heroes/Bubbles/picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
         wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         print("waiting to get in game")
