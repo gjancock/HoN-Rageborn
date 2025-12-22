@@ -19,6 +19,8 @@ Windows Settings
 2. Make sure a “Heroes of Newerth Reborn” desktop shortcut exists and is visible when running the script.
 3. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
 4. Do not move the mouse cursor or click anywhere while the script is running.
+5. Ensure keyboard CAPSLOCK is off.
+6. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
 
 Notes
 -------------------------------------
