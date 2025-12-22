@@ -1,0 +1,18 @@
+# =========================================================================== #
+# v1.1.0 - Feature Enhancement (12 December 2025)
+# =========================================================================== #
+- [x] Added resolution support for 1920x1080.
+- [x] Enhance on message print out in console mode.
+- [x] Added mouse move after hero pick to show team chat.
+
+# =========================================================================== #
+# v1.0.0 - Initial Release (11 December 2025)
+# =========================================================================== #
+- [x] Support for Juvio 0.0.0 version
+- [x] Account creation on the fly and run rageborn afterwards.
+- [x] Able to differentiate which team we are currently on and define which path to go.
+- [x] Able to purchase item Hatcher from in-game shop to spend all the possible gold.
+- [x] Added support on FOC mode.
+- [x] Able to select hero Bubbles after enter picking phase.
+- [x] Able to dismiss message if match taking too long to load and unable to enter game.
+- [x] Added support on automation scripting which allow user to repeating the program until manually stop.
