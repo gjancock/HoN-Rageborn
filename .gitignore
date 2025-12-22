@@ -19,3 +19,19 @@ ragebirth.spec
 dist/ragebirth.exe
 rageborn todo.txt
 rageborn info.txt
+build/Rageborn-console/Analysis-00.toc
+build/Rageborn-console/base_library.zip
+build/Rageborn-console/EXE-00.toc
+build/Rageborn-console/localpycs/pyimod01_archive.pyc
+build/Rageborn-console/localpycs/pyimod02_importers.pyc
+build/Rageborn-console/localpycs/pyimod03_ctypes.pyc
+build/Rageborn-console/localpycs/pyimod04_pywin32.pyc
+build/Rageborn-console/localpycs/struct.pyc
+build/Rageborn-console/PKG-00.toc
+build/Rageborn-console/PYZ-00.pyz
+build/Rageborn-console/PYZ-00.toc
+build/Rageborn-console/Rageborn-console.pkg
+build/Rageborn-console/warn-Rageborn-console.txt
+build/Rageborn-console/xref-Rageborn-console.html
+dist/Rageborn-console.exe
+Rageborn-console.spec
