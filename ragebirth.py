@@ -196,7 +196,7 @@ def run_rageborn_flow(username, password):
     show_root()
 
 def start_rageborn_async(username, password):
-    hide_root()
+    #hide_root() # dont need to hide
     threading.Thread(
         target=run_rageborn_flow,
         args=(username, password),
