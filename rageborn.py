@@ -188,7 +188,7 @@ def click_until_image_appears(
 
             if location:
                 pyautogui.doubleClick(location)
-                print(f"Clicked {TARGETING_HERO} {click_image_rel_path}")
+                print(f"Clicking {TARGETING_HERO} hero portraits from selection")
                 wait(0.5)
 
         except pyautogui.ImageNotFoundException:
@@ -232,7 +232,7 @@ def prequeue():
     # Queue options
     find_and_click("play-button.png")
     print("PLAY button clicked!")
-    wait(3)
+    wait(2.5)
 
 def startQueue():
     while True:
@@ -243,20 +243,40 @@ def startQueue():
             wait(1)
         wait(0.5)
 
-    find_and_click("enter-queue-button.png")
-    print("Start Queue!")
-    print("Waiting to get a match..")
+    # Tune matchmaking bar
+    pyautogui.moveTo(922, 614, duration=0.3)    
+    pyautogui.click()
+    wait(0.3)
 
+    # Click queue button
+    pyautogui.moveTo(937, 729, duration=0.3)
+    wait(0.3)
+    pyautogui.click()
+    print("Queue started. Waiting to get a match..")
+
+    last_click_time = time.time()
     while True:
+        now = time.time()
+        
+        if now - last_click_time > 30:
+            print("Still not getting a match, requeuing..")
+            pyautogui.moveTo(937, 729, duration=0.3)
+            wait(0.2)
+            pyautogui.click() # Unqueue
+            wait(0.5)
+            pyautogui.click() # Requeue
+            last_click_time = now
+        wait(0.1)
+
         if image_exists("message-taken-too-long.png", None):
             wait(2)
             print("'Waiting taken too long' message showed!")
             find_and_click("message-ok.png")
             print("Message dismissed!")
-
+        
         # successfully joined a match: FOC
         if image_exists("foc-role-info.png"):
-            print("Enter match! FOC role showing!")
+            print("Match found! Mode: Forest of Cunt!")
             wait(0.5)
             break
 
@@ -264,31 +284,34 @@ def startQueue():
 
 def pickingPhase():
     find_and_click("foc-role-info.png")
-    print("Selecting hero")
+    print("Picking phase begin..")
     wait(3)
     
     if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
+        print(f"{TARGETING_HERO} selected")
         wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
-        print("waiting to get in game")
+        print("Waiting to rageborn")
         return True
     else:
-        print("Targetted hero banned! Exiting")
+        # TODO: Random is just fine?
+        print(f"{TARGETING_HERO} banned! Exiting game..")
         return False
 
 def ingame():
     # Configuration
     side="legion"
 
-    #TODO: clean up until use case happened
+    # TODO: clean up until use case happened
     while True:
         if not wait_until_appears("abandon-match-message.png", 3, None, 1):
             break
         else:
             return # Quit this function
 
+    # TODO: should reset the timer while others picked their hero, so unnecessary wait is voided.
     if wait_until_appears("ingame-top-left-menu.png", 150):
-        print("in game seeing fountain!")
+        print("I see fountain, I see grief! Rageborn started!")
         wait(1.5)
     else:
         print("Couldn't see emotes button, perhaps we have returned to lobby?")
