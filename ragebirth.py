@@ -333,7 +333,7 @@ def on_submit():
 
 root = tk.Tk()
 root.update_idletasks()  # ensure geometry info is ready
-root.title("RageBorn V1.0")
+root.title("RageBorn v1.1.0")
 
 WINDOW_WIDTH = 420
 WINDOW_HEIGHT = 550
