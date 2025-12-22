@@ -1,2 +1,17 @@
 signup_users.txt
 __pycache__/rageborn.cpython-311.pyc
+build/ragebirth/Analysis-00.toc
+build/ragebirth/base_library.zip
+build/ragebirth/EXE-00.toc
+build/ragebirth/localpycs/pyimod01_archive.pyc
+build/ragebirth/localpycs/pyimod02_importers.pyc
+build/ragebirth/localpycs/pyimod03_ctypes.pyc
+build/ragebirth/localpycs/pyimod04_pywin32.pyc
+build/ragebirth/localpycs/struct.pyc
+build/ragebirth/PKG-00.toc
+build/ragebirth/PYZ-00.pyz
+build/ragebirth/PYZ-00.toc
+build/ragebirth/ragebirth.pkg
+build/ragebirth/warn-ragebirth.txt
+build/ragebirth/xref-ragebirth.html
+dist/Rageborn.exe
