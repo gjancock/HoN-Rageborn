@@ -1,4 +1,14 @@
 # =========================================================================== #
+# v1.1.2 - Bug fixes (12 December 2025) (Pending)
+# =========================================================================== #
+- [x] Fixed issue where program hide and couldn't close it appropriately due to interruption happening in the middle of scripting.
+- [x] Quality of life update.
+- [x] Added support on hero Maliken.
+- [x] Default hero selection will be set as Maliken.
+- [x] Improvement on matchmaking queue algorithm, managed to requeue if queuing time take too long.
+- [x] Added matchmaking tuning support.
+
+# =========================================================================== #
 # v1.1.1 - Feature Enhancement (12 December 2025)
 # =========================================================================== #
 - [x] Auto focus juvio.exe on startup.
