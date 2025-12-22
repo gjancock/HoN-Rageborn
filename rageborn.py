@@ -21,7 +21,7 @@ TARGETING_HERO = "Bubbles"
 pyautogui.PAUSE = 0.3
 
 #
-def find_juvio_hwnds():
+def find_jokevio_hwnds():
     pids = [
         p.pid for p in psutil.process_iter(["name"])
         if p.info["name"] and p.info["name"].lower() == "juvio.exe"
@@ -49,27 +49,26 @@ def set_window_topmost(hwnd, enable=True):
         win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
     )
 
-
-def wait_for_juvio_window(timeout=20):
+def wait_for_jokevio_window(timeout=20):
     start = time.time()
     while time.time() - start < timeout:
-        hwnds = find_juvio_hwnds()
+        hwnds = find_jokevio_hwnds()
         if hwnds:
             return hwnds
         time.sleep(0.3)
     return []
 
-def launch_focus_and_pin_juvio():
-    print("Launching juvio.exe...")
+def launch_focus_and_pin_jokevio():
+    print("Launching Jokevio...")
 
     # 1️⃣ Launch via desktop icon
     find_and_click("app-icon.png", doubleClick=True)
 
     # 2️⃣ Wait for window
-    print("Waiting for juvio window...")
-    hwnds = wait_for_juvio_window()
+    print("Waiting for Jokevio window...")
+    hwnds = wait_for_jokevio_window()
     if not hwnds:
-        raise RuntimeError("juvio.exe window not found")
+        raise RuntimeError("Jokevio window not found")
 
     # 3️⃣ Focus + Always-on-top
     for hwnd in hwnds:
@@ -84,13 +83,10 @@ def launch_focus_and_pin_juvio():
             break
         wait(0.5)
 
-    print("juvio.exe focused and pinned on top")
-
-def unpin_juvio():
-    hwnds = find_juvio_hwnds()
+def unpin_jokevio():
+    hwnds = find_jokevio_hwnds()
     for hwnd in hwnds:
         set_window_topmost(hwnd, False)
-    print("juvio.exe always-on-top removed")
 
 #
 def image_exists(image_name, region=None, confidence=None):
@@ -407,7 +403,7 @@ def main(username, password):
 
     try:
         #
-        launch_focus_and_pin_juvio()
+        launch_focus_and_pin_jokevio()
 
         # Account Login manually
         account_Login(username, password)
@@ -438,7 +434,7 @@ def main(username, password):
         print("Rageborn finished.")
     
     finally:
-        unpin_juvio()
+        unpin_jokevio()
 
 if __name__ == "__main__":
     main()
