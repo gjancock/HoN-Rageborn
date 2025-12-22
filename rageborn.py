@@ -15,7 +15,7 @@ pyautogui.FAILSAFE = True
 # Program Settings
 BASE_IMAGE_DIR = "images"
 CONFIDENCE = 0.75  # Adjust if detection fails
-TARGETING_HERO = "Bubbles"
+TARGETING_HERO = "Maliken"
 
 # Mouse/Keyboard Input Settings
 pyautogui.PAUSE = 0.3
@@ -176,7 +176,7 @@ def click_until_image_appears(
 
         # Stop condition (OR logic)
         if any_image_exists(full_wait_paths, region):
-            print(f"[OK] One of {wait_image_rel_path} appeared")
+            #print(f"[OK] One of {wait_image_rel_path} appeared") # DEBUG
             return True
 
         try:
@@ -188,7 +188,8 @@ def click_until_image_appears(
 
             if location:
                 pyautogui.doubleClick(location)
-                print(f"Clicked {click_image_rel_path}")
+                print(f"Clicked {TARGETING_HERO} {click_image_rel_path}")
+                wait(0.5)
 
         except pyautogui.ImageNotFoundException:
             pass
@@ -266,7 +267,7 @@ def pickingPhase():
     print("Selecting hero")
     wait(3)
     
-    if click_until_image_appears("heroes/Bubbles/picking-phase-bubbles.png", ["heroes/Bubbles/picking-phase-bubbles-self-portrait-legion.png","heroes/Bubbles/picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
+    if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
         wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         print("waiting to get in game")
