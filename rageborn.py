@@ -259,12 +259,12 @@ def startQueue():
     while True:
         now = time.time()
         
-        if now - last_click_time > 30:
+        if now - last_click_time > 60:
             print("Still not getting a match, requeuing..")
             pyautogui.moveTo(937, 729, duration=0.3)
-            wait(0.2)
-            pyautogui.click() # Unqueue
             wait(0.5)
+            pyautogui.click() # Unqueue
+            wait(0.7)
             pyautogui.click() # Requeue
             last_click_time = now
         wait(0.1)

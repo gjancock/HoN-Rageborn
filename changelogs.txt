@@ -1,4 +1,14 @@
 # =========================================================================== #
+# v1.1.3 - Bug fixes (12 December 2025) (Pending)
+# =========================================================================== #
+- [x] Changed requeue timeout from 30 seconds to 60 seconds.
+
+# =========================================================================== #
+# v1.1.2b-hotfix - Bug fixes (12 December 2025)
+# =========================================================================== #
+- [x] Fixed invalid message image not found issue.
+
+# =========================================================================== #
 # v1.1.2 - Bug fixes (12 December 2025)
 # =========================================================================== #
 - [x] Fixed issue where program hide and couldn't close it appropriately due to interruption happening in the middle of scripting.
