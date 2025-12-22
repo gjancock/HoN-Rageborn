@@ -14,6 +14,7 @@ pyautogui.FAILSAFE = True
 
 # Program Settings
 BASE_IMAGE_DIR = "images"
+DIALOG_MESSAGE_DIR = "dialog-message"
 CONFIDENCE = 0.75  # Adjust if detection fails
 TARGETING_HERO = "Maliken"
 
@@ -268,7 +269,7 @@ def startQueue():
             last_click_time = now
         wait(0.1)
 
-        if image_exists("message-taken-too-long.png", None):
+        if image_exists(f"{DIALOG_MESSAGE_DIR}/taken-too-long-message.png", None):
             wait(2)
             print("'Waiting taken too long' message showed!")
             find_and_click("message-ok.png")
@@ -408,12 +409,12 @@ def ingame():
             find_and_click("vote-no-black.png")        
 
         if any_image_exists([
-            "not-a-host-message.png",
-            "cancelled-match-message.png",
-            "game-has-ended-message.png",
-            "lobby-misc-message.png",
-            "kicked-message.png",
-            "no-response-from-server-message.png"
+            f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+            f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+            f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+            f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+            f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
+            f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
         ]):
             break
 
