@@ -170,15 +170,16 @@ def startQueue():
 
     find_and_click("enter-queue-button.png")
     print("Start Queue!")
-    print("Waiting to get match.. 300sec timeout")
+    print("Waiting to get a match..")
 
     while True:
         if image_exists("message-taken-too-long.png", None):
             wait(2)
-            print("waiting taken too long message showed!")
+            print("'Waiting taken too long' message showed!")
             find_and_click("message-ok.png")
-            print("dismiss message pop")
+            print("Message dismissed!")
 
+        # successfully joined a match: FOC
         if image_exists("foc-role-info.png"):
             print("Enter match! FOC role showing!")
             wait(0.5)
@@ -192,6 +193,8 @@ def pickingPhase():
     wait(3)
     
     if click_until_image_appears("picking-phase-bubbles.png", ["picking-phase-bubbles-self-portrait-legion.png","picking-phase-bubbles-self-portrait-hellbourne.png"], 60, 0.5) == True:
+        wait(0.5)
+        pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         print("waiting to get in game")
         return True
     else:
@@ -239,13 +242,13 @@ def ingame():
     # find hatcher
     # right click hatcher
     find_and_click("ingame-shop-hatcher-icon.png", 2, False, False, True)
-    print("Bought Hatcher!")
+    print("Bought a Hatcher cost 150!")
     wait(0.5)
     find_and_click("ingame-shop-hatcher-icon.png", 2, False, False, True)
-    print("Bought Hatcher!")
+    print("Bought a Hatcher cost 150!")
     wait(0.5)
     find_and_click("ingame-shop-hatcher-icon.png", 2, False, False, True)
-    print("Bought Hatcher!")
+    print("Bought a Hatcher cost 150!")
     wait(0.5)        
     # close ingame shop
     pyautogui.press("esc")
@@ -260,13 +263,13 @@ def ingame():
         match side:
             case "legion":
                 print("Applying Legion coordinate!")
-                pyautogui.moveTo(831, 790, duration=0.3)
+                pyautogui.moveTo(510, 787, duration=0.3)
                 wait(0.5)
                 pyautogui.hotkey("alt", "t")
                 wait(0.5)
                 pyautogui.click()
                 wait(3.5)            
-                pyautogui.moveTo(850, 771, duration=0.3)
+                pyautogui.moveTo(528, 768, duration=0.3)
                 wait(0.5)
                 pyautogui.rightClick()
                 wait(0.5)
@@ -274,14 +277,13 @@ def ingame():
 
             case "hellbourne":
                 print("Applying Hellbourne coordinate!")
-                pyautogui.moveTo(850, 771, duration=0.3)            
+                pyautogui.moveTo(528, 768, duration=0.3)            
                 wait(0.5)
                 pyautogui.hotkey("alt", "t")
                 wait(0.5)
                 pyautogui.click()
                 wait(3.5)
-                pyautogui.moveTo(831, 790, duration=0.3)
-                print("cursor moving to enemy tower")
+                pyautogui.moveTo(510, 787, duration=0.3)
                 wait(0.5)
                 pyautogui.rightClick()
                 wait(0.5)
@@ -293,6 +295,7 @@ def ingame():
         wait(3)
         print("Waiting to get kick by the team...")
         
+        # TODO: threading for this section; see vote press No
         if image_exists("vote-no.png"):
             print("See RED vote button! Decline whatever shit it is..")
             wait(1)
@@ -358,7 +361,6 @@ def main(username, password):
 
     # TODO: logout change account
     # TODO: login
-
 
     print("Rageborn finished.")
 
