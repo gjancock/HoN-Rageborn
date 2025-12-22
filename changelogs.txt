@@ -1,5 +1,5 @@
 # =========================================================================== #
-# v1.1.2 - Bug fixes (12 December 2025) (Pending)
+# v1.1.2 - Bug fixes (12 December 2025)
 # =========================================================================== #
 - [x] Fixed issue where program hide and couldn't close it appropriately due to interruption happening in the middle of scripting.
 - [x] Quality of life update.

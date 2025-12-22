@@ -275,7 +275,10 @@ def startQueue():
             print("Message dismissed!")
         
         # successfully joined a match: FOC
-        if image_exists("foc-role-info.png"):
+        if any_image_exists([
+            "foc-role-info.png",
+            "choose-a-hero-button.png"
+        ]):
             print("Match found! Mode: Forest of Cunt!")
             wait(0.5)
             break
@@ -410,7 +413,7 @@ def ingame():
             "game-has-ended-message.png",
             "lobby-misc-message.png",
             "kicked-message.png",
-            "no-response-from-server.png"
+            "no-response-from-server-message.png"
         ]):
             break
 
