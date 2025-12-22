@@ -30,6 +30,29 @@ DEFAULT_LAST_NAME = "DeForest"
 DEFAULT_PASSWORD = "@Abc12345"
 
 # ============================================================
+# APPLICATION SETTINGS
+# ============================================================
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
+
+def read_version():
+    try:
+        path = resource_path("VERSION")
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception:
+        return "unknown"
+    
+#
+APP_NAME = "Rageborn"
+VERSION = read_version()
+
+# ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
 # ============================================================
 
@@ -298,17 +321,6 @@ def increment_iteration():
     iteration_var.set(f"Iterations completed: {iteration_count}")
 
 # ============================================================
-# PYINSTALLER
-# ============================================================
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS  # PyInstaller temp folder
-    except AttributeError:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-# ============================================================
 # TKINTER UI
 # ============================================================
 
@@ -333,7 +345,7 @@ def on_submit():
 
 root = tk.Tk()
 root.update_idletasks()  # ensure geometry info is ready
-root.title("RageBorn v1.1.0")
+root.title(f"{APP_NAME} v{VERSION}")
 
 WINDOW_WIDTH = 420
 WINDOW_HEIGHT = 550
@@ -342,7 +354,7 @@ screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 
 x = screen_width - WINDOW_WIDTH
-y = screen_height - WINDOW_HEIGHT
+y = screen_height - 90 - WINDOW_HEIGHT
 
 root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
 
@@ -407,7 +419,6 @@ tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
 first_name_entry.insert(0, DEFAULT_FIRST_NAME)
 last_name_entry.insert(0, DEFAULT_LAST_NAME)
 password_entry.insert(0, DEFAULT_PASSWORD)
-
 
 if __name__ == "__main__":
     root.mainloop()

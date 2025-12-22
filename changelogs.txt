@@ -1,4 +1,11 @@
 # =========================================================================== #
+# v1.1.1 - Feature Enhancement (12 December 2025)
+# =========================================================================== #
+- [x] Auto focus juvio.exe on startup.
+- [x] Added support for several message box notified in-game.
+- [x] Fixed ui vertical offset.
+
+# =========================================================================== #
 # v1.1.0 - Feature Enhancement (12 December 2025)
 # =========================================================================== #
 - [x] Added resolution support for 1920x1080.
