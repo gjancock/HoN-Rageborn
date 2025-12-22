@@ -4,6 +4,10 @@ import numpy as np
 import time
 import os
 from pathlib import Path
+import win32gui
+import win32con
+import win32process
+import psutil
 
 # Safety: Move mouse to top-left to abort
 pyautogui.FAILSAFE = True
@@ -15,6 +19,78 @@ TARGETING_HERO = "Bubbles"
 
 # Mouse/Keyboard Input Settings
 pyautogui.PAUSE = 0.3
+
+#
+def find_juvio_hwnds():
+    pids = [
+        p.pid for p in psutil.process_iter(["name"])
+        if p.info["name"] and p.info["name"].lower() == "juvio.exe"
+    ]
+
+    hwnds = []
+
+    def enum_handler(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        if pid in pids:
+            hwnds.append(hwnd)
+
+    win32gui.EnumWindows(enum_handler, None)
+    return hwnds
+
+
+def set_window_topmost(hwnd, enable=True):
+    flag = win32con.HWND_TOPMOST if enable else win32con.HWND_NOTOPMOST
+    win32gui.SetWindowPos(
+        hwnd,
+        flag,
+        0, 0, 0, 0,
+        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+    )
+
+
+def wait_for_juvio_window(timeout=20):
+    start = time.time()
+    while time.time() - start < timeout:
+        hwnds = find_juvio_hwnds()
+        if hwnds:
+            return hwnds
+        time.sleep(0.3)
+    return []
+
+def launch_focus_and_pin_juvio():
+    print("Launching juvio.exe...")
+
+    # 1️⃣ Launch via desktop icon
+    find_and_click("app-icon.png", doubleClick=True)
+
+    # 2️⃣ Wait for window
+    print("Waiting for juvio window...")
+    hwnds = wait_for_juvio_window()
+    if not hwnds:
+        raise RuntimeError("juvio.exe window not found")
+
+    # 3️⃣ Focus + Always-on-top
+    for hwnd in hwnds:
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        win32gui.SetForegroundWindow(hwnd)
+        set_window_topmost(hwnd, True)
+
+    # Find the logo and click
+    while True:
+        if image_exists("startup-disclamer-logo.png"):
+            find_and_click("startup-disclamer-logo.png")
+            break
+        wait(0.5)
+
+    print("juvio.exe focused and pinned on top")
+
+def unpin_juvio():
+    hwnds = find_juvio_hwnds()
+    for hwnd in hwnds:
+        set_window_topmost(hwnd, False)
+    print("juvio.exe always-on-top removed")
 
 #
 def image_exists(image_name, region=None, confidence=None):
@@ -304,18 +380,16 @@ def ingame():
         if image_exists("vote-no-black.png"):
             print("See BLACK vote button! Decline whatever shit it is..")
             wait(1)
-            find_and_click("vote-no-black.png")
+            find_and_click("vote-no-black.png")        
 
-        if image_exists("not-a-host-message.png"):
-            break
-
-        if image_exists("cancelled-match-message.png"):
-            break
-
-        if image_exists("game-has-ended-message.png"):
-            break
-
-        if image_exists("kicked-message.png"):
+        if any_image_exists([
+            "not-a-host-message.png",
+            "cancelled-match-message.png",
+            "game-has-ended-message.png",
+            "lobby-misc-message.png",
+            "kicked-message.png",
+            "no-response-from-server.png"
+        ]):
             break
 
 #
@@ -331,39 +405,40 @@ def resource_path(relative_path):
 def main(username, password):
     print("Rageborn started...")
 
-    # Example: Open program by clicking icon
-    find_and_click("app-icon.png", 10, True, True)
-    print("Waiting Jokevio load up...")
-    #wait(10)
+    try:
+        #
+        launch_focus_and_pin_juvio()
 
-    # Account Login manually
-    account_Login(username, password)
+        # Account Login manually
+        account_Login(username, password)
 
-    #
-    prequeue()
+        #
+        prequeue()
 
-    #
-    startQueue()    
-    
-    #    
-    if pickingPhase():       
-        ingame()
-    else:
-        return
-    
-    #
-    print("We are in the game lobby!")
-    wait(0.5)
-    if image_exists("message-ok.png"):
-        find_and_click("message-ok.png")
-        print("close message")
+        #
+        startQueue()    
+        
+        #    
+        if pickingPhase():       
+            ingame()
+        else:
+            return
+        
+        #
+        print("We are in the game lobby!")
         wait(0.5)
+        if image_exists("message-ok.png"):
+            find_and_click("message-ok.png")
+            print("close message")
+            wait(0.5)
 
-    # TODO: logout change account
-    # TODO: login
+        # TODO: logout change account
+        # TODO: login
 
-    print("Rageborn finished.")
-
+        print("Rageborn finished.")
+    
+    finally:
+        unpin_juvio()
 
 if __name__ == "__main__":
     main()
