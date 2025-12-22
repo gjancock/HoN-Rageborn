@@ -5,11 +5,13 @@ How to Use
 -------------------------------------
 Game Settings
 
-1. Set the game resolution to 1024×768.
-2. Log out of any currently logged-in account, then uncheck “Remember Me”.
-3. Ensure the Teleport Stone hotkey is set to ALT + T.
-4. Make sure the minimap is in its default position (bottom-left corner of the screen).
-5. Ensure “Minimap Right Click” is enabled in the game settings.
+1. Set the game display mode to "Windowed".
+2. Set the game resolution to "1024×768".
+3. Log out of any currently logged-in account, then uncheck “Remember Me”.
+4. Ensure the Teleport Stone hotkey is set to ALT + T.
+5. Ensure the Open Shop hotkey is set to B.
+6. Make sure the minimap is in its default position (bottom-left corner of the screen).
+7. Ensure “Minimap Right Click” is enabled in the game settings.
 
 Windows Settings
 
