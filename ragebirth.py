@@ -13,6 +13,7 @@ import sys
 import os
 from queue import Queue
 from utilities.loggerSetup import setup_logger
+import core.state as state
 
 # Logger
 log_queue = Queue()
@@ -197,9 +198,14 @@ def generate_email(prefix="", postfix="", domain="mail.com", length=6):
 # UI CALLBACKS
 # ============================================================
 
+def resetState():
+    state.STOP_EVENT.clear()
+
 def run_rageborn_flow(username, password):
     import rageborn
-    rageborn.main(username, password)
+
+    resetState()
+    rageborn.start(username, password)
 
     # after rageborn finishes
     kill_jokevio()
