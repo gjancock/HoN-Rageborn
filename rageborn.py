@@ -103,8 +103,8 @@ def launch_focus_and_pin_jokevio():
 
     # Find the logo and click
     while True:
-        if image_exists("startup-disclamer-logo.png"):
-            find_and_click("startup-disclamer-logo.png")          
+        if image_exists("startup/startup-disclamer-logo.png"):
+            find_and_click("startup/startup-disclamer-logo.png")
             break
         wait(0.5)
 
@@ -246,7 +246,7 @@ def account_Login(username, password):
 
     while True:
         # do nothing until found username-field.png
-        if find_and_click("username-field.png"):
+        if find_and_click("startup/username-field.png"):
             # Click username field
             break
         
@@ -257,6 +257,18 @@ def account_Login(username, password):
     type_text(password, enter=True)
     logger.info("[INFO] Waiting account to login...")
     wait(3)
+
+    # 
+    if any_image_exists([
+        "startup/startup-account-not-found.png",
+        "startup/startup-invalid-password.png"
+    ]):
+        logger.info("[INFO] Invalid account / password detected.")
+        logger.info("[INFO] Aborting...")
+        return False
+    else:
+        logger.info(f"[INFO] Login as {username}")
+        return True
 
 def prequeue():
     # Queue options
@@ -325,6 +337,7 @@ def pickingPhase():
     logger.info("[INFO] Picking phase begin..")
     wait(3)
     
+    # TODO: Alternative hero selection
     if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
         logger.info(f"[INFO] {TARGETING_HERO} selected")
         wait(0.5)
@@ -333,19 +346,20 @@ def pickingPhase():
         return True
     else:
         # TODO: Random is just fine?
-        logger.info(f"[INFO] {TARGETING_HERO} banned! Exiting game..")
-        return False
+        logger.info(f"[INFO] {TARGETING_HERO} banned!")
+        logger.info("[INFO] Waiting to get random hero.")
+        return True
 
 def ingame():
     # Configuration
     side="legion"
 
     # TODO: confirmed not working, need to rework this portion maybe detected PLAY button
-    while True:
-        if not wait_until_appears("abandon-match-message.png", 3, region=LOBBY_CHAT_FOCUS_REGION):
-            break
-        else:
-            return # Quit this function
+    #while True:
+    #    if not wait_until_appears("play-button.png", 3, region=SCREEN_REGION):
+    #        break
+    #    else:
+    #        return # Quit this function
 
     # TODO: should reset the timer while others picked their hero, so unnecessary wait is voided.
     if wait_until_appears("ingame-top-left-menu.png", 150, region=SCREEN_REGION):
@@ -353,8 +367,7 @@ def ingame():
         wait(1.5)
     else:
         logger.info("[INFO] Couldn't see emotes button, perhaps we have returned to lobby?")
-        if image_exists("abandon-match-message.png", region=LOBBY_CHAT_FOCUS_REGION):            
-            return
+        return
 
     # check team side 
     pyautogui.keyDown("x")
@@ -472,31 +485,30 @@ def main(username, password):
         launch_focus_and_pin_jokevio()
 
         # Account Login manually
-        account_Login(username, password)
+        if account_Login(username, password):
+            #
+            prequeue()
 
-        #
-        prequeue()
-
-        #
-        startQueue()    
-        
-        #    
-        if pickingPhase():       
-            ingame()
-        else:
-            return
-        
-        #
-        logger.info("[INFO] We are in the game lobby!")
-        wait(0.5)
-        location = image_exists("message-ok.png", region=LOBBY_MESSAGE_REGION)
-        if location == True:
-            pyautogui.click(location)
-            logger.info("[INFO] Message box closed!")
+            #
+            startQueue()    
+            
+            #    
+            if pickingPhase():       
+                ingame()
+            else:
+                return
+            
+            #
+            logger.info("[INFO] We are in the game lobby!")
             wait(0.5)
+            location = image_exists("message-ok.png", region=LOBBY_MESSAGE_REGION)
+            if location == True:
+                pyautogui.click(location)
+                logger.info("[INFO] Message box closed!")
+                wait(0.5)
 
-        # TODO: logout change account
-        # TODO: login
+            # TODO: logout change account
+            # TODO: login
 
         logger.info("[INFO] Rageborn shutting down...")
     

@@ -253,28 +253,31 @@ def kill_jokevio():
 # AUTOMATION
 # ============================================================
 def one_full_cycle():
-    # 1️⃣ Generate username/email
-    on_generate()   # reuse your existing Generate button logic
+    while True:
+        # 1️⃣ Generate username/email
+        on_generate()   # reuse your existing Generate button logic
 
-    # 2️⃣ Read generated credentials
-    username = username_entry.get()
-    password = password_entry.get()
+        # 2️⃣ Read generated credentials
+        username = username_entry.get()
+        password = password_entry.get()
 
-    logger.info(f"[INFO] Auto random generating account: {username}")
+        logger.info(f"[INFO] Generated account: {username}")
 
-    # 3️⃣ Run signup
-    success, msg = signup_user(
-        first_name_entry.get(),
-        last_name_entry.get(),
-        email_entry.get(),
-        username,
-        password
-    )
-
-    if not success:
-        # TODO: regenerate and sign up
-        logger.info(f"[INFO] Failed to signup account {username}: {msg}")
-        return False
+        # 3️⃣ Run signup
+        success, msg = signup_user(
+            first_name_entry.get(),
+            last_name_entry.get(),
+            email_entry.get(),
+            username,
+            password
+        )
+        
+        if success:
+            break
+        else:
+            logger.info(f"[INFO] Failed to signup account {username}: {msg}")
+            logger.info("[INFO] Regenerating new account")
+        time.sleep(1)
 
     logger.info(f"[INFO] Signup success! Username {username} ..launching Rageborn.exe")
 
