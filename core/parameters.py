@@ -1,0 +1,2 @@
+#
+TARGETING_HERO = "Maliken"

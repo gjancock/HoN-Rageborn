@@ -1,14 +1,18 @@
 import pyautogui
-import sys
 import numpy as np
 import time
-import os
-from pathlib import Path
 import win32gui
 import win32con
 import win32process
 import psutil
-from utilities.logger_setup import setup_logger
+from utilities.loggerSetup import setup_logger
+import threading
+from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION
+from threads.ingame import vote_requester, lobby_message_check_requester
+from utilities.common import wait, interruptible_wait
+from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
+from core.parameters import TARGETING_HERO
+import core.state as state
 
 # Initialize Logger
 logger = setup_logger()
@@ -16,33 +20,28 @@ logger = setup_logger()
 # Safety: Move mouse to top-left to abort
 pyautogui.FAILSAFE = True
 
-# Program Settings
-BASE_IMAGE_DIR = "images"
-DIALOG_MESSAGE_DIR = "dialog-message"
-CONFIDENCE = 0.75  # Adjust if detection fails
-TARGETING_HERO = "Maliken"
-
 # Mouse/Keyboard Input Settings
 pyautogui.PAUSE = 0.3
 
-# Region
-SCREEN_REGION = (0, 0, 1919, 1079)
-VOTE_REGION = (1272, 212, 196, 188)
-GAME_REGION = (448, 214, 1021, 632) # Windows resolution 1920x1080; Game resolution 1024x768 without black border
-INGAME_SHOP_REGION = (451, 243, 313, 440)
-LEFT_MINI_MAP_REGION = (448, 697, 153, 148)
-COSMETIC_EMOTE_REGION = (448, 213, 220, 28) # unusable; too small
-LEGION_HEROES_TOP_PORTRAIT_REGION = (655, 209, 210, 33)
-HELLBOURNE_HEROES_TOP_PORTRAIT_REGION = (1057, 213, 193, 27) # unusable; too small
-SELF_HERO_CONTROL_PANEL_REGION = (711, 745, 521, 100)
-CENTER_HERO_REGION = (781, 386, 406, 273)
-DEATH_RECAP_REGION = (1172, 249, 292, 157)
-RESPAWN_TIMER_REGION = (906, 233, 109, 51) # unusable; too small
-CHAT_PANEL_REGION = (765, 562, 338, 150) # hold Z is required
-LOBBY_MESSAGE_REGION = (799, 448, 311, 166)
-LOBBY_CHAT_FOCUS_REGION = (1225, 671, 158, 148)
-LOBBY_CHAT_PANEL_REGION = (1226, 251, 152, 564)
-MATCHMAKING_PANEL_REGION = (659, 296, 560, 464)
+#
+def start(username, password):
+    threads = [
+        threading.Thread(name="VoteWatcher", target=vote_requester),
+        threading.Thread(name="LobbyMessageWatcher", target=lobby_message_check_requester)
+    ]
+
+    for t in threads:
+        t.start()
+
+    try:
+        main(username, password)
+    finally:
+        logger.info("[MAIN] shutting down")
+        state.STOP_EVENT.set()
+
+        # ⏳ wait for threads to exit cleanly
+        for t in threads:
+            t.join()
 
 #
 def find_jokevio_hwnds():
@@ -114,131 +113,11 @@ def unpin_jokevio():
         set_window_topmost(hwnd, False)
 
 #
-def image_exists(image_rel_path, region=None, confidence=None, throwException=False):
-    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
-    try:
-        return pyautogui.locateOnScreen(
-            full_path,
-            confidence=confidence if confidence is not None else CONFIDENCE,
-            region=region if region is not None else GAME_REGION
-        ) is not None
-    except pyautogui.ImageNotFoundException:
-        if throwException:
-            return False
-        else:
-            return None
-    
-def any_image_exists(image_rel_paths, region=None, confidence=None):
-    for img in image_rel_paths:
-        if image_exists(img, region, confidence):
-            return True
-    return False
-    
-def wait_until_appears(image_rel_path, timeout=30, region=None, confidence=None, throw=False):
-    start = time.time()
-    while time.time() - start < timeout:
-        if image_exists(image_rel_path, region, confidence):
-            return True
-        time.sleep(0.3)
-    if throw:
-        logger.info(f"[APP_ERROR] {image_rel_path} did not appear.")
-        raise TimeoutError(f"{image_rel_path} did not appear")
-
-def find_and_click(image_rel_path, timeout=10, click=True, doubleClick=False, rightClick=False, region=None):
-    """
-    Finds an image on screen and clicks it.
-    """
-    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
-    start_time = time.time()
-
-    while time.time() - start_time < timeout:
-        location = pyautogui.locateCenterOnScreen(
-            full_path,
-            confidence=CONFIDENCE,
-            region=region if region is not None else GAME_REGION
-        )
-
-        if location:
-            if doubleClick:
-                pyautogui.doubleClick(location)
-
-            if click:
-                pyautogui.click(location)
-
-            if rightClick:
-                pyautogui.rightClick(location)
-            
-            return True
-
-        time.sleep(0.5)
-
-    logger.info(f"[APP_ERROR] Could not find {image_rel_path}")
-    pass
-
-def click_until_image_appears(
-    click_image_rel_path,
-    wait_image_rel_path,
-    timeout=60,
-    click_interval=1.0,
-    region=None,
-    throwWhenTimedout=False
-):
-    """
-    Clicks `click_image_rel_path` repeatedly until ANY image in `wait_image_rel_path` appears.
-    """
-
-    # Normalize wait images to list
-    if isinstance(wait_image_rel_path, str):
-        wait_image_rel_path = [wait_image_rel_path]
-
-    full_click_path = resource_path(
-        os.path.join(BASE_IMAGE_DIR, click_image_rel_path)
-    )
-
-    full_wait_paths = [
-        resource_path(os.path.join(BASE_IMAGE_DIR, p))
-        for p in wait_image_rel_path
-    ]
-
-    start = time.time()
-
-    while time.time() - start < timeout:
-
-        # Stop condition (OR logic)
-        if any_image_exists(full_wait_paths, region):
-            #logger.info(f"[INFO] One of {wait_image_rel_path} appeared") # DEBUG
-            return True
-
-        try:
-            location = pyautogui.locateCenterOnScreen(
-                full_click_path,
-                confidence=CONFIDENCE,
-                region=region if region is not None else GAME_REGION
-            )
-
-            if location:
-                pyautogui.doubleClick(location)
-                logger.info(f"[INFO] Clicking {TARGETING_HERO} hero portraits from selection")
-                wait(0.5)
-
-        except pyautogui.ImageNotFoundException:
-            pass
-
-        time.sleep(click_interval)
-
-    if throwWhenTimedout:
-        logger.info(f"[APP_ERROR] {wait_image_rel_path} did not appear in time.")
-        raise TimeoutError(f"{wait_image_rel_path} did not appear in time")
-
-    return False
-
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
     if enter:
         pyautogui.press("enter")
 
-def wait(seconds):
-    time.sleep(seconds)
 
 #
 def account_Login(username, password):
@@ -306,12 +185,14 @@ def startQueue():
         now = time.time()
         
         if now - last_click_time > 60:
-            logger.info("[INFO] Still not getting a match, requeuing..")
+            logger.info("[INFO] Performing requeuing, due to timeout")
             pyautogui.moveTo(937, 729, duration=0.3)
             wait(0.5)
             pyautogui.click() # Unqueue
+            logger.info("[INFO] Stop queuing")
             wait(0.7)
             pyautogui.click() # Requeue
+            logger.info("[INFO] Start queuing")
             last_click_time = now
         wait(0.1)
 
@@ -343,31 +224,29 @@ def pickingPhase():
         wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         logger.info("[INFO] Waiting to rageborn")
-        return True
     else:
         # TODO: Random is just fine?
         logger.info(f"[INFO] {TARGETING_HERO} banned!")
         logger.info("[INFO] Waiting to get random hero.")
-        return True
+
+    while True:
+        if image_exists("ingame-top-left-menu.png", region=SCREEN_REGION):
+            logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
+            wait(1.5)
+            return True
+        
+        elif image_exists("play-button.png", region=SCREEN_REGION):
+            # Back to lobby
+            logger.info("[INFO] Match aborted!")
+            return False
+        
+        wait(2)
 
 def ingame():
     # Configuration
-    side="legion"
+    side="legion"    
 
-    # TODO: confirmed not working, need to rework this portion maybe detected PLAY button
-    #while True:
-    #    if not wait_until_appears("play-button.png", 3, region=SCREEN_REGION):
-    #        break
-    #    else:
-    #        return # Quit this function
-
-    # TODO: should reset the timer while others picked their hero, so unnecessary wait is voided.
-    if wait_until_appears("ingame-top-left-menu.png", 150, region=SCREEN_REGION):
-        logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
-        wait(1.5)
-    else:
-        logger.info("[INFO] Couldn't see emotes button, perhaps we have returned to lobby?")
-        return
+    logger.info("[INFO] HERE COMES THE TROLL")
 
     # check team side 
     pyautogui.keyDown("x")
@@ -381,100 +260,87 @@ def ingame():
     pyautogui.keyUp("x")
     wait(0.5)
 
-    # open ingame shop
-    pyautogui.press("b")
-    logger.info("[INFO] Opening ingame shop")
-    wait(0.5)
-    # locate to initiation icon
-    logger.info("[INFO] Finding Hatcher from initiation tab")
-    find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
-    wait(0.5)
-    # find hatcher
-    # right click hatcher
-    find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-    logger.info("[INFO] Bought a Hatcher cost 150g!")
-    wait(0.5)
-    find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-    logger.info("[INFO] Bought a Hatcher cost 150g!")
-    wait(0.5)
-    find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-    logger.info("[INFO] Bought a Hatcher cost 150g!")
-    wait(0.5)        
-    # close ingame shop
-    pyautogui.press("esc")
-    logger.info("[INFO] Ingame shop closed")
-    wait(1)
-    # mouse cursor to team mid tower
-    # alt+t and click to team mid tower
-    # mouse cursor to enemy mid tower
-    # right click to enemy mid tower
+    bought = False
+    pyautogui.keyDown("c") # center hero
+    while not state.STOP_EVENT.is_set():        
 
-    while True:
-        match side:
-            case "legion":
-                logger.info("[INFO] Applying Legion coordinate!")
-                pyautogui.moveTo(510, 787, duration=0.3)
-                wait(0.5)
-                pyautogui.hotkey("alt", "t")
-                wait(0.5)
-                pyautogui.click()
-                wait(3.5)            
-                pyautogui.moveTo(528, 768, duration=0.3)
-                wait(0.5)
-                pyautogui.rightClick()
-                wait(0.5)
-                pyautogui.click()
+        if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
+            state.SCAN_VOTE_EVENT.clear()
 
-            case "hellbourne":
-                logger.info("[INFO] Applying Hellbourne coordinate!")
-                pyautogui.moveTo(528, 768, duration=0.3)            
-                wait(0.5)
-                pyautogui.hotkey("alt", "t")
-                wait(0.5)
-                pyautogui.click()
-                wait(3.5)
-                pyautogui.moveTo(510, 787, duration=0.3)
-                wait(0.5)
-                pyautogui.rightClick()
-                wait(0.5)
-                pyautogui.click()
-    
-        # TODO: spam taunt (need to calculate or know already ready tower)    
-        # TODO: death recap or respawn time show then stop spam
+            if image_exists("vote-no.png", region=VOTE_REGION):
+                logger.info("[INFO] Kick Vote detected — declining")
+                find_and_click("vote-no.png", region=VOTE_REGION)
 
-        wait(1.2)
-        logger.info("[INFO] Waiting to get kick by the team...")
+            if image_exists("vote-no-black.png", region=VOTE_REGION):
+                logger.info("[INFO] Remake Vote detected — declining")
+                find_and_click("vote-no-black.png", region=VOTE_REGION)
         
-        # TODO: threading for this section; see vote press No        
-        if image_exists("vote-no.png", region=VOTE_REGION):
-            logger.info("[INFO] RED vote button spotted! Decline whatever shit it is..")
-            wait(1)
-            find_and_click("vote-no.png", region=VOTE_REGION)
-
+        if not state.STOP_EVENT.is_set() and not bought:
+            # open ingame shop
+            pyautogui.press("b")
+            logger.info("[INFO] Opening ingame shop")
+            wait(0.5)
+            # locate to initiation icon
+            logger.info("[INFO] Finding Hatcher from initiation tab")
+            find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
+            wait(0.3)
+            # find hatcher
+            # right click hatcher
+            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+            logger.info("[INFO] Bought a Hatcher cost 150g!")
+            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+            logger.info("[INFO] Bought a Hatcher cost 150g!")
+            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+            logger.info("[INFO] Bought a Hatcher cost 150g!")
+            wait(0.3)
+            # close ingame shop
+            pyautogui.press("esc")
+            logger.info("[INFO] Ingame shop closed")
+            bought = True
+            logger.info("[INFO] Waiting to get kick by the team...")
+            wait(0.5)
         
-        if image_exists("vote-no-black.png", region=VOTE_REGION):
-            logger.info("[INFO] BLACK vote button spotted! Decline whatever shit it is..")
-            wait(1)
-            find_and_click("vote-no-black.png", region=VOTE_REGION)
+        if not state.STOP_EVENT.is_set():
+            # mouse cursor to team mid tower
+            # alt+t and click to team mid tower
+            # mouse cursor to enemy mid tower
+            # right click to enemy mid tower
+            match side:
+                case "legion":                
+                    pyautogui.moveTo(510, 787, duration=0.3) # friendly tower
+                    pyautogui.hotkey("alt", "t")
+                    pyautogui.click()
+                    pyautogui.moveTo(574, 721, duration=0.3) # enemy base
+                    pyautogui.rightClick()
+                    pyautogui.click()
 
-        if any_image_exists([
-            f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-            f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-            f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-            f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-            f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
-            f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
-        ], region=LOBBY_MESSAGE_REGION):
-            break
+                case "hellbourne":                
+                    pyautogui.moveTo(528, 768, duration=0.3) # friendly tower
+                    pyautogui.hotkey("alt", "t")
+                    pyautogui.click()
+                    pyautogui.moveTo(465, 837, duration=0.3) # enemy base
+                    pyautogui.rightClick()
+                    pyautogui.click()
+            
+            # TODO: spam taunt (need to calculate or know already ready tower)    
+            # TODO: death recap or respawn time show then stop spam
 
-#
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS  # PyInstaller temp folder
-    except AttributeError:
-        base_path = os.path.abspath(".")
+        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
+            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
 
-    return os.path.join(base_path, relative_path)
+            if any_image_exists([
+                f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+                f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+                f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+                f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+                f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
+                f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+            ], region=LOBBY_MESSAGE_REGION):
+                pyautogui.keyUp("c") # stop spamming
+                state.STOP_EVENT.set()
+                break
+
+        wait(0.03)
 
 #
 def main(username, password):
@@ -493,9 +359,10 @@ def main(username, password):
             startQueue()    
             
             #    
-            if pickingPhase():       
+            if pickingPhase() == True:
                 ingame()
             else:
+                # if match aborted
                 return
             
             #
@@ -513,7 +380,4 @@ def main(username, password):
         logger.info("[INFO] Rageborn shutting down...")
     
     finally:
-        unpin_jokevio()
-
-if __name__ == "__main__":
-    main()
+        unpin_jokevio() 
