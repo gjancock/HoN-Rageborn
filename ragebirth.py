@@ -12,7 +12,7 @@ from datetime import datetime
 import sys
 import os
 from queue import Queue
-from utilities.logger_setup import setup_logger
+from utilities.loggerSetup import setup_logger
 
 # Logger
 log_queue = Queue()
@@ -354,7 +354,7 @@ def on_submit():
 
     success, msg = signup_user(first, last, email, user, pwd)
 
-    if success:        
+    if success:
         on_signup_success()
     else:
         messagebox.showerror("Failed", msg)
