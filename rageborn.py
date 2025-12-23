@@ -306,12 +306,14 @@ def startQueue():
         now = time.time()
         
         if now - last_click_time > 60:
-            logger.info("[INFO] Still not getting a match, requeuing..")
+            logger.info("[INFO] Performing requeuing, due to timeout")
             pyautogui.moveTo(937, 729, duration=0.3)
             wait(0.5)
             pyautogui.click() # Unqueue
+            logger.info("[INFO] Stop queuing")
             wait(0.7)
             pyautogui.click() # Requeue
+            logger.info("[INFO] Start queuing")
             last_click_time = now
         wait(0.1)
 
@@ -494,6 +496,7 @@ def main(username, password):
             if pickingPhase() == True:
                 ingame()
             else:
+                # if match aborted
                 return
             
             #
