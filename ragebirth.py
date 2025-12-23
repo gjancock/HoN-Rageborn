@@ -11,6 +11,12 @@ import time
 from datetime import datetime
 import sys
 import os
+from queue import Queue
+from utilities.logger_setup import setup_logger
+
+# Logger
+log_queue = Queue()
+logger = setup_logger(ui_queue=log_queue)
 
 #
 auto_start_time = None
@@ -46,10 +52,11 @@ def read_version():
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
+        logger.error("[INFO_ERROR] Unable to find VERSION")
         return "unknown"
     
 #
-APP_NAME = "Rageborn"
+INFO_NAME = "Rageborn"
 VERSION = read_version()
 
 # ============================================================
@@ -72,6 +79,7 @@ def signup_user(first_name, last_name, email, username, password):
     # 2️⃣ Extract CSRF
     match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
     if not match:
+        logger.error("[INFO_ERROR] Failed to get CSRF token.")
         return False, "Failed to get CSRF token"
 
     csrf = match.group(1)
@@ -115,9 +123,12 @@ def signup_user(first_name, last_name, email, username, password):
     )
 
     if r.status_code == 200:
+        logger.info(f"[INFO] Account {username} created, password: {password}")
         log_username(username) # Save username to textfile
         return True, "Signup successful!"
     else:
+        # TODO: regenerate account then sign up
+        logger.info(f"[INFO_ERROR] Failed to create account {username}")
         return False, r.text
 
 
@@ -128,7 +139,6 @@ def signup_user(first_name, last_name, email, username, password):
 def generate_random_string(length):
     chars = string.ascii_lowercase + string.digits
     return ''.join(random.choices(chars, k=length))
-
 
 def generate_username(prefix="", postfix=""):
     """
@@ -193,10 +203,8 @@ def run_rageborn_flow(username, password):
 
     # after rageborn finishes
     kill_jokevio()
-    show_root()
 
-def start_rageborn_async(username, password):
-    #hide_root() # dont need to hide
+def start_rageborn_async(username, password):    
     threading.Thread(
         target=run_rageborn_flow,
         args=(username, password),
@@ -229,12 +237,6 @@ def on_generate():
     email_entry.delete(0, tk.END)
     email_entry.insert(0, email)
 
-def hide_root():
-    root.withdraw()   # hide window
-
-def show_root():
-    root.deiconify()  # show window again
-
 def kill_jokevio():
     try:
         subprocess.run(
@@ -243,9 +245,9 @@ def kill_jokevio():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        print("jokevio.exe killed")
+        logger.info(f"[INFO] Jokevio.exe killed")
     except subprocess.CalledProcessError:
-        print("jokevio.exe not running")
+        logger.info(f"[INFO] Intend to kill Jokevio.exe, but its not running")
 
 # ============================================================
 # AUTOMATION
@@ -258,7 +260,7 @@ def one_full_cycle():
     username = username_entry.get()
     password = password_entry.get()
 
-    print(f"[AUTO] Generated account: {username}")
+    logger.info(f"[INFO] Auto random generating account: {username}")
 
     # 3️⃣ Run signup
     success, msg = signup_user(
@@ -270,10 +272,11 @@ def one_full_cycle():
     )
 
     if not success:
-        print("[AUTO] Signup failed:", msg)
+        # TODO: regenerate and sign up
+        logger.info(f"[INFO] Failed to signup account {username}: {msg}")
         return False
 
-    print("[AUTO] Signup success, starting rageborn")
+    logger.info(f"[INFO] Signup success! Username {username} ..launching Rageborn.exe")
 
     # 4️⃣ Run rageborn (blocking inside worker thread)
     run_rageborn_flow(username, password)
@@ -281,7 +284,7 @@ def one_full_cycle():
     return True
 
 def auto_loop_worker():
-    print("[AUTO] Auto mode started")
+    logger.info("[INFO] Endless mode started")
 
     # Set start time ONCE
     root.after(0, set_start_time)
@@ -298,7 +301,9 @@ def auto_loop_worker():
 
         time.sleep(1)
 
-    print("[AUTO] Auto mode stopped")
+    # TODO: stop button
+
+    logger.info("[INFO] Endless mode stopped")
 
 def on_auto_toggle():
     if auto_mode_var.get():
@@ -314,7 +319,6 @@ def set_start_time():
     auto_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     start_time_var.set(f"Started at: {auto_start_time}")
 
-
 def increment_iteration():
     global iteration_count
     iteration_count += 1
@@ -323,6 +327,16 @@ def increment_iteration():
 # ============================================================
 # TKINTER UI
 # ============================================================
+
+def poll_log_queue():
+    while not log_queue.empty():
+        msg = log_queue.get()
+        log_text.config(state="normal")
+        log_text.insert("end", msg + "\n")
+        log_text.see("end")
+        log_text.config(state="disabled")
+
+    root.after(100, poll_log_queue)
 
 def on_submit():
     first = first_name_entry.get()
@@ -337,23 +351,22 @@ def on_submit():
 
     success, msg = signup_user(first, last, email, user, pwd)
 
-    if success:
-        #messagebox.showinfo("Success", msg)        
+    if success:        
         on_signup_success()
     else:
         messagebox.showerror("Failed", msg)
 
 root = tk.Tk()
 root.update_idletasks()  # ensure geometry info is ready
-root.title(f"{APP_NAME} v{VERSION}")
+root.title(f"{INFO_NAME} v{VERSION}")
 
-WINDOW_WIDTH = 420
-WINDOW_HEIGHT = 550
+WINDOW_WIDTH = 425
+WINDOW_HEIGHT = 590
 
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
 
-x = screen_width - WINDOW_WIDTH
+x = screen_width - 10 - WINDOW_WIDTH
 y = screen_height - 90 - WINDOW_HEIGHT
 
 root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
@@ -415,10 +428,23 @@ iteration_label.pack(pady=2)
 
 tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
 
+log_text = tk.Text(
+    root,
+    height=20,
+    width=100,
+    state="disabled",
+    bg="black",
+    fg="lime",
+    font=("Consolas", 9)
+)
+log_text.pack(fill="both", expand=True, padx=5, pady=5)
+
 #
 first_name_entry.insert(0, DEFAULT_FIRST_NAME)
 last_name_entry.insert(0, DEFAULT_LAST_NAME)
 password_entry.insert(0, DEFAULT_PASSWORD)
+
+poll_log_queue()
 
 if __name__ == "__main__":
     root.mainloop()

@@ -2,18 +2,22 @@ import logging
 import os
 from datetime import date
 
-def rageborn_logger():
-    return setup_logger(log_dir="logs/rageborn")
+class TkLogHandler(logging.Handler):
+    def __init__(self, log_queue):
+        super().__init__()
+        self.log_queue = log_queue
 
-def ragebirth_logger():
-    return setup_logger(log_dir="logs/ragebirth")
+    def emit(self, record):
+        msg = self.format(record)
+        self.log_queue.put(msg)
 
 def setup_logger(    
     log_dir="logs",
-    level=logging.INFO
+    level=logging.INFO,
+    ui_queue=None
 ):
     os.makedirs(log_dir, exist_ok=True)
-    name = date.now().strftime('%Y-%m-%d')
+    name = date.today().strftime("%d-%m-%Y")
 
     log_file = os.path.join(
         log_dir,
@@ -28,19 +32,25 @@ def setup_logger(
         return logger
 
     formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(threadName)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="%(asctime)s | %(message)s",
+        #fmt="%(asctime)s | %(levelname)-8s | %(threadName)s | %(message)s", # default
+        datefmt="%H:%M:%S"
     )
 
     # File handler
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
-    file_handler.setFormatter(formatter)
+    fh = logging.FileHandler(log_file, encoding="utf-8")
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
-    # Console handler (optional, useful during dev)
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # Tkinter handler (optional)
+    if ui_queue:
+        th = TkLogHandler(ui_queue)
+        th.setFormatter(formatter)
+        logger.addHandler(th)
 
     return logger
