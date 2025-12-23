@@ -5,6 +5,10 @@
 - [x] Fixed issue where invalid password, program will be closed in manual or regenerate new id then relog in automatic mode.
 - [x] Fixed issue where signup failed, program will automatically regenerate a new credential and signup, until it success.
 - [x] Avoid unnecessary wait if match aborted.
+- [x] Added multi threading for performance improvement.
+- [x] Center hero will be automatically activate after purchase item from base at the very first time.
+- [x] Removed unnecessary sleep time while navigating hero path.
+- [x] Hero now will auto pathing to enemy base instead of first tower of the lane.
 
 # =========================================================================== #
 # v1.1.4 - Feature Enhancement (23 December 2025)
