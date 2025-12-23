@@ -36,3 +36,9 @@ build/Rageborn-console/xref-Rageborn-console.html
 dist/Rageborn-console.exe
 Rageborn-console.spec
 rageborn region info.txt
+logs/*.log
+*.pyc
+*.toc
+/build
+/dist
+*.spec
