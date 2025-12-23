@@ -325,6 +325,7 @@ def pickingPhase():
     logger.info("[INFO] Picking phase begin..")
     wait(3)
     
+    # TODO: Alternative hero selection
     if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
         logger.info(f"[INFO] {TARGETING_HERO} selected")
         wait(0.5)
@@ -333,8 +334,9 @@ def pickingPhase():
         return True
     else:
         # TODO: Random is just fine?
-        logger.info(f"[INFO] {TARGETING_HERO} banned! Exiting game..")
-        return False
+        logger.info(f"[INFO] {TARGETING_HERO} banned!")
+        logger.info("[INFO] Waiting to get random hero.")
+        return True
 
 def ingame():
     # Configuration
