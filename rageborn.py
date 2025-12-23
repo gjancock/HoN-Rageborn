@@ -261,20 +261,19 @@ def ingame():
     wait(0.5)
 
     bought = False
+    pyautogui.keyDown("c") # center hero
     while not state.STOP_EVENT.is_set():        
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
 
             if image_exists("vote-no.png", region=VOTE_REGION):
-                logger.info("[MAIN] Vote popup detected — declining")
+                logger.info("[INFO] Kick Vote detected — declining")
                 find_and_click("vote-no.png", region=VOTE_REGION)
-                interruptible_wait(0.8)
 
             if image_exists("vote-no-black.png", region=VOTE_REGION):
-                logger.info("[MAIN] Black Vote popup detected — declining")
+                logger.info("[INFO] Remake Vote detected — declining")
                 find_and_click("vote-no-black.png", region=VOTE_REGION)
-                interruptible_wait(0.8)
         
         if not state.STOP_EVENT.is_set() and not bought:
             # open ingame shop
@@ -284,23 +283,22 @@ def ingame():
             # locate to initiation icon
             logger.info("[INFO] Finding Hatcher from initiation tab")
             find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
-            wait(0.5)
+            wait(0.3)
             # find hatcher
             # right click hatcher
             find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
             logger.info("[INFO] Bought a Hatcher cost 150g!")
-            wait(0.5)
             find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
             logger.info("[INFO] Bought a Hatcher cost 150g!")
-            wait(0.5)
             find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
             logger.info("[INFO] Bought a Hatcher cost 150g!")
-            wait(0.5)        
+            wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
             logger.info("[INFO] Ingame shop closed")
             bought = True
-            wait(1)
+            logger.info("[INFO] Waiting to get kick by the team...")
+            wait(0.5)
         
         if not state.STOP_EVENT.is_set():
             # mouse cursor to team mid tower
@@ -309,32 +307,21 @@ def ingame():
             # right click to enemy mid tower
             match side:
                 case "legion":                
-                    pyautogui.moveTo(510, 787, duration=0.3)
-                    interruptible_wait(0.5)
+                    pyautogui.moveTo(510, 787, duration=0.3) # friendly tower
                     pyautogui.hotkey("alt", "t")
-                    interruptible_wait(0.5)
                     pyautogui.click()
-                    interruptible_wait(3.5)
-                    pyautogui.moveTo(528, 768, duration=0.3)
-                    interruptible_wait(0.5)
+                    pyautogui.moveTo(574, 721, duration=0.3) # enemy base
                     pyautogui.rightClick()
-                    interruptible_wait(0.5)
                     pyautogui.click()
 
                 case "hellbourne":                
-                    pyautogui.moveTo(528, 768, duration=0.3)            
-                    interruptible_wait(0.5)
+                    pyautogui.moveTo(528, 768, duration=0.3) # friendly tower
                     pyautogui.hotkey("alt", "t")
-                    interruptible_wait(0.5)
                     pyautogui.click()
-                    interruptible_wait(3.5)
-                    pyautogui.moveTo(510, 787, duration=0.3)
-                    interruptible_wait(0.5)
+                    pyautogui.moveTo(465, 837, duration=0.3) # enemy base
                     pyautogui.rightClick()
-                    interruptible_wait(0.5)
                     pyautogui.click()
-            interruptible_wait(1.2)
-            logger.info("[INFO] Waiting to get kick by the team...")
+            
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
 
@@ -349,28 +336,11 @@ def ingame():
                 f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
                 f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
             ], region=LOBBY_MESSAGE_REGION):
+                pyautogui.keyUp("c") # stop spamming
                 state.STOP_EVENT.set()
                 break
 
         wait(0.03)
-
-    #while True:
-        
-
-        
-        
-        # TODO: threading for this section; see vote press No          
-        #if image_exists("vote-no.png", region=VOTE_REGION):
-        #    logger.info("[INFO] RED vote button spotted! Decline whatever shit it is..")
-        #    wait(1)
-        #    find_and_click("vote-no.png", region=VOTE_REGION)
-        
-        #if image_exists("vote-no-black.png", region=VOTE_REGION):
-        #    logger.info("[INFO] BLACK vote button spotted! Decline whatever shit it is..")
-        #    wait(1)
-        #    find_and_click("vote-no-black.png", region=VOTE_REGION)
-
-        
 
 #
 def main(username, password):
