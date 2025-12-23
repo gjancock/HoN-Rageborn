@@ -343,31 +343,29 @@ def pickingPhase():
         wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         logger.info("[INFO] Waiting to rageborn")
-        return True
     else:
         # TODO: Random is just fine?
         logger.info(f"[INFO] {TARGETING_HERO} banned!")
         logger.info("[INFO] Waiting to get random hero.")
-        return True
+
+    while True:
+        if image_exists("ingame-top-left-menu.png", region=SCREEN_REGION):
+            logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
+            wait(1.5)
+            return True
+        
+        elif image_exists("play-button.png", region=SCREEN_REGION):
+            # Back to lobby
+            logger.info("[INFO] Match aborted!")
+            return False
+        
+        wait(2)
 
 def ingame():
     # Configuration
-    side="legion"
+    side="legion"    
 
-    # TODO: confirmed not working, need to rework this portion maybe detected PLAY button
-    #while True:
-    #    if not wait_until_appears("play-button.png", 3, region=SCREEN_REGION):
-    #        break
-    #    else:
-    #        return # Quit this function
-
-    # TODO: should reset the timer while others picked their hero, so unnecessary wait is voided.
-    if wait_until_appears("ingame-top-left-menu.png", 150, region=SCREEN_REGION):
-        logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
-        wait(1.5)
-    else:
-        logger.info("[INFO] Couldn't see emotes button, perhaps we have returned to lobby?")
-        return
+    logger.info("[INFO] HERE COMES THE TROLL")
 
     # check team side 
     pyautogui.keyDown("x")
@@ -493,7 +491,7 @@ def main(username, password):
             startQueue()    
             
             #    
-            if pickingPhase():       
+            if pickingPhase() == True:
                 ingame()
             else:
                 return
