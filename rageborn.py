@@ -355,11 +355,11 @@ def ingame():
     side="legion"
 
     # TODO: confirmed not working, need to rework this portion maybe detected PLAY button
-    while True:
-        if not wait_until_appears("play-button.png", 3, region=SCREEN_REGION):
-            break
-        else:
-            return # Quit this function
+    #while True:
+    #    if not wait_until_appears("play-button.png", 3, region=SCREEN_REGION):
+    #        break
+    #    else:
+    #        return # Quit this function
 
     # TODO: should reset the timer while others picked their hero, so unnecessary wait is voided.
     if wait_until_appears("ingame-top-left-menu.png", 150, region=SCREEN_REGION):
@@ -367,9 +367,7 @@ def ingame():
         wait(1.5)
     else:
         logger.info("[INFO] Couldn't see emotes button, perhaps we have returned to lobby?")
-        if image_exists("play-button.png", 3, region=SCREEN_REGION):
-            logger.info("[INFO] Match aborted?")
-            return
+        return
 
     # check team side 
     pyautogui.keyDown("x")
