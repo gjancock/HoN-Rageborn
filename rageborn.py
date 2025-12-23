@@ -8,7 +8,7 @@ import psutil
 from utilities.loggerSetup import setup_logger
 import threading
 from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION
-from threads.ingame import decline_vote_watcher, vote_requester, lobby_message_check_requester
+from threads.ingame import vote_requester, lobby_message_check_requester
 from utilities.common import wait, interruptible_wait
 from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
 from core.parameters import TARGETING_HERO
