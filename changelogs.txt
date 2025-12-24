@@ -1,7 +1,7 @@
 # =========================================================================== #
 # v1.1.5 - Feature Enhancement (23 December 2025)
 # =========================================================================== #
-- [x] If targetted hero got banned, it will wait for random and remain at match instead of quitting.
+- [x] If targeted hero got banned, it will wait for random and remain at match instead of quitting.
 - [x] Fixed issue where invalid password, program will be closed in manual or regenerate new id then relog in automatic mode.
 - [x] Fixed issue where signup failed, program will automatically regenerate a new credential and signup, until it success.
 - [x] Avoid unnecessary wait if match aborted.
