@@ -240,6 +240,7 @@ def pickingPhase():
         elif image_exists("play-button.png", region=SCREEN_REGION):
             # Back to lobby
             logger.info("[INFO] Match aborted!")
+            # state.STOP_EVENT.set()
             return False
         
         wait(2)
@@ -248,11 +249,11 @@ def ingame():
     # Configuration
     side="legion"    
 
-    logger.info("[INFO] HERE COMES THE TROLL")
+    logger.info("[INFO] HERE COMES THE TROLL BEGIN")
 
     # check team side 
     pyautogui.keyDown("x")
-    if image_exists("scoreboard-legion.png"):
+    if image_exists("fountain-legion.png", region=SCREEN_REGION):
         logger.info("[INFO] We are on Legion side!")
         side="legion"
     else:
@@ -336,7 +337,7 @@ def ingame():
                 f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
                 f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
             ], region=LOBBY_MESSAGE_REGION):
-                pyautogui.keyUp("c") # stop spamming
+                pyautogui.keyUp("c") # stop spamming                
                 state.STOP_EVENT.set()
                 break
 
@@ -352,30 +353,25 @@ def main(username, password):
 
         # Account Login manually
         if account_Login(username, password):
-            #
-            prequeue()
 
-            #
-            startQueue()    
-            
-            #    
-            if pickingPhase() == True:
+            while not state.STOP_EVENT.is_set():
+                #
+                prequeue()
+
+                #
+                startQueue()
+
+                logger.info("[DEBUG] startQueue finished, entering pickingPhase")
+                
+                #
+                result = pickingPhase()
+                logger.info(f"[DEBUG] pickingPhase returned: {result}")
+
+                if not result:    
+                    logger.warning("[QUEUE] Match aborted, restarting queue")
+                    continue
+
                 ingame()
-            else:
-                # if match aborted
-                return
-            
-            #
-            logger.info("[INFO] We are in the game lobby!")
-            wait(0.5)
-            location = image_exists("message-ok.png", region=LOBBY_MESSAGE_REGION)
-            if location == True:
-                pyautogui.click(location)
-                logger.info("[INFO] Message box closed!")
-                wait(0.5)
-
-            # TODO: logout change account
-            # TODO: login
 
         logger.info("[INFO] Rageborn shutting down...")
     
