@@ -14,6 +14,7 @@ import os
 from queue import Queue
 from utilities.loggerSetup import setup_logger
 import core.state as state
+from utilities.usernameGenerator import generate_word_username, generate_random_string
 
 # Logger
 log_queue = Queue()
@@ -137,54 +138,33 @@ def signup_user(first_name, last_name, email, username, password):
 # TKINTER UI
 # ============================================================
 
-def generate_random_string(length):
-    chars = string.ascii_lowercase + string.digits
-    return ''.join(random.choices(chars, k=length))
-
 def generate_username(prefix="", postfix=""):
-    """
-    Username rules:
-    - total length randomly chosen between 2 and 16
-    - supports prefix & postfix
-    - random part is alphanumeric
-    """
-
-    prefix = prefix.strip().lower()
-    postfix = postfix.strip().lower()
+    prefix = prefix.strip()
+    postfix = postfix.strip()
 
     has_prefix = bool(prefix)
     has_postfix = bool(postfix)
 
-    # underscores count
     underscore_count = (1 if has_prefix else 0) + (1 if has_postfix else 0)
-    if has_prefix and has_postfix:
-        underscore_count = 2
-
     fixed_length = len(prefix) + len(postfix) + underscore_count
 
-    # Pick a random TOTAL length
     target_length = random.randint(
         max(MIN_USERNAME_LENGTH, fixed_length + 1),
         MAX_USERNAME_LENGTH
     )
 
     remaining = target_length - fixed_length
-
     if remaining < 1:
-        # fallback if prefix/postfix too long
-        base = (prefix + postfix)[:MAX_USERNAME_LENGTH]
-        if len(base) < MIN_USERNAME_LENGTH:
-            base += generate_random_string(MIN_USERNAME_LENGTH - len(base))
-        return base
+        remaining = 1
 
     random_part = generate_random_string(remaining)
 
     if has_prefix and has_postfix:
-        return f"{prefix}{random_part}{postfix}"
+        return f"{prefix}_{random_part}_{postfix}"
     elif has_prefix:
-        return f"{prefix}{random_part}"
+        return f"{prefix}_{random_part}"
     elif has_postfix:
-        return f"{random_part}{postfix}"
+        return f"{random_part}_{postfix}"
     else:
         return random_part
 
@@ -234,7 +214,11 @@ def on_generate():
     postfix = postfix_entry.get().strip()
     domain = domain_entry.get().strip() or "mail.com"
 
-    username = generate_username(prefix, postfix)
+    username = generate_word_username(
+        prefix=prefix,
+        postfix=postfix
+    )
+
     email = generate_email(prefix, postfix, domain)
 
     username_entry.delete(0, tk.END)

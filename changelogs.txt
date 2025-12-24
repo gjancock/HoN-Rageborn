@@ -1,4 +1,12 @@
 # =========================================================================== #
+# v1.1.7 - Feature Enhancement (24 December 2025) (PENDING)
+# =========================================================================== #
+- [x] Added in-game match timeout to 500 seconds, game will auto reload if time passed.
+- [x] Changed queue timeout from 60 seconds to 95 seconds.
+- [x] Fixed issue where generated username doesn't include upper letter nor underscore.
+- [x] Generated username will be more make sense to human naming.
+
+# =========================================================================== #
 # v1.1.6 - Minor Bug Fixes (24 December 2025)
 # =========================================================================== #
 - [x] Fixed issue where FoC role information pops and click unintentionally causing crashed.
