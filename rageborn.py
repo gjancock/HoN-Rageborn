@@ -253,7 +253,7 @@ def ingame():
 
     # check team side 
     pyautogui.keyDown("x")
-    if image_exists("fountain-legion.png", region=SCREEN_REGION):
+    if image_exists("foc-fountain-legion.png", region=SCREEN_REGION):
         logger.info("[INFO] We are on Legion side!")
         side="legion"
     else:
