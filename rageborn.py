@@ -386,9 +386,24 @@ def main(username, password):
                 
                 #
                 result = pickingPhase()
-                logger.info(f"[DEBUG] pickingPhase returned: {result}")
+                logger.info(f"[DEBUG] pickingPhase returned: {result}")                
 
-                if not result:    
+                if not result:
+
+                    # Just in case message pops
+                    if any_image_exists([
+                        f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+                        f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+                        f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+                        f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+                        f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
+                        f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+                    ], region=LOBBY_MESSAGE_REGION):
+                        location = image_exists("message-ok.png", region=LOBBY_MESSAGE_REGION)
+                        if location == True:
+                            pyautogui.click(location)
+                            logger.info("[INFO] Message box closed!")
+
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue
 
