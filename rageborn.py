@@ -186,7 +186,7 @@ def startQueue():
 
         if not image_exists("waiting-for-players.png", region=MATCHMAKING_PANEL_REGION):
         
-            if now - last_click_time > 60:
+            if now - last_click_time > 95:
                 logger.info("[INFO] Performing requeuing, due to timeout")
                 pyautogui.moveTo(937, 729, duration=0.3)
                 interruptible_wait(0.5)
@@ -196,14 +196,9 @@ def startQueue():
                 pyautogui.click() # Requeue
                 logger.info("[INFO] Start queuing")
                 last_click_time = now
-
-            if image_exists("enter-queue-button.png", region=MATCHMAKING_PANEL_REGION):
-                logger.info("[DEBUG] Reclick missed queue button!")
-                pyautogui.moveTo(937, 729, duration=0.1)
-                pyautogui.click()
-                last_click_time = now
-        else:
+        else:            
             # Reset timer (Requeue)
+            logger.info("[INFO] Resetting queue timer: Match found!")
             last_click_time = time.time()
             now = time.time()
 
@@ -280,9 +275,19 @@ def ingame():
     pyautogui.keyUp("x")
     interruptible_wait(0.5)
 
+    #
     bought = False
     pyautogui.keyDown("c") # center hero
-    while not state.STOP_EVENT.is_set():        
+
+    #
+    matchTimedout = 500 # after 500 seconds from now will automatic leave the game    
+    start_time = time.monotonic()
+    while not state.STOP_EVENT.is_set():
+        elapsed = time.monotonic() - start_time
+        if elapsed >= matchTimedout:
+            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
+            state.STOP_EVENT.set()
+            break
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
