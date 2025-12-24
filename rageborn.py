@@ -199,6 +199,8 @@ def startQueue():
 
             if image_exists("enter-queue-button.png", region=MATCHMAKING_PANEL_REGION):
                 logger.info("[DEBUG] Reclick missed queue button!")
+                pyautogui.moveTo(937, 729, duration=0.1)
+                pyautogui.click()
                 last_click_time = now
         else:
             # Reset timer (Requeue)
@@ -225,8 +227,7 @@ def startQueue():
         interruptible_wait(2)
 
 def pickingPhase():
-    # TODO: Support others mode    
-    #find_and_click("foc-role-info.png")
+    # TODO: Support others mode
     pyautogui.moveTo(968, 336, duration=0.3)
     pyautogui.click() # dismiss foc role information
     logger.info("[INFO] FOC Role information dismissed..")
