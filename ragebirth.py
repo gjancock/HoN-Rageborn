@@ -267,6 +267,7 @@ def one_full_cycle():
         username = username_entry.get()
         password = password_entry.get()
 
+        logger.info("----------------------------------------------------")
         logger.info(f"[INFO] Generated account: {username}")
 
         # 3️⃣ Run signup

@@ -9,6 +9,7 @@
 - [x] Center hero will be automatically activate after purchase item from base at the very first time.
 - [x] Removed unnecessary sleep time while navigating hero path.
 - [x] Hero now will auto pathing to enemy base instead of first tower of the lane.
+- [x] Program will now requeue instead of rebooting whole program if match aborted.
 
 # =========================================================================== #
 # v1.1.4 - Feature Enhancement (23 December 2025)

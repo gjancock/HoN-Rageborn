@@ -9,7 +9,7 @@ from utilities.loggerSetup import setup_logger
 import threading
 from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION
 from threads.ingame import vote_requester, lobby_message_check_requester
-from utilities.common import wait, interruptible_wait
+from utilities.common import interruptible_wait, interruptible_wait
 from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
 from core.parameters import TARGETING_HERO
 import core.state as state
@@ -38,8 +38,7 @@ def start(username, password):
     finally:
         logger.info("[MAIN] shutting down")
         state.STOP_EVENT.set()
-
-        # ⏳ wait for threads to exit cleanly
+        
         for t in threads:
             t.join()
 
@@ -105,7 +104,7 @@ def launch_focus_and_pin_jokevio():
         if image_exists("startup/startup-disclamer-logo.png"):
             find_and_click("startup/startup-disclamer-logo.png")
             break
-        wait(0.5)
+        interruptible_wait(0.5)
 
 def unpin_jokevio():
     hwnds = find_jokevio_hwnds()
@@ -121,7 +120,7 @@ def type_text(text, enter=False):
 
 #
 def account_Login(username, password):
-    wait(3)
+    interruptible_wait(3)
 
     while True:
         # do nothing until found username-field.png
@@ -135,7 +134,7 @@ def account_Login(username, password):
     pyautogui.press("tab")
     type_text(password, enter=True)
     logger.info("[INFO] Waiting account to login...")
-    wait(3)
+    interruptible_wait(3)
 
     # 
     if any_image_exists([
@@ -157,27 +156,27 @@ def prequeue():
             find_and_click("play-button.png", region=SCREEN_REGION)
             logger.info("[INFO] PLAY button clicked!")            
             break
-        wait(0.7)    
+        interruptible_wait(0.7)    
 
 def startQueue():
-    wait(1.25)
+    interruptible_wait(1.25)
 
     # Tune matchmaking bar
     pyautogui.moveTo(922, 614, duration=0.3)    
     pyautogui.click()
-    wait(0.3)
+    interruptible_wait(0.3)
 
     while True:
         if not image_exists("matchmaking-disabled.png", region=MATCHMAKING_PANEL_REGION):
             break
         else:
             logger.info("[INFO] Matchmaking Disabled, waiting connection...")
-            wait(1)
-        wait(0.5)
+            interruptible_wait(1)
+        interruptible_wait(0.5)
 
     # Click queue button
     pyautogui.moveTo(937, 729, duration=0.3)
-    wait(0.3)
+    interruptible_wait(0.3)
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
@@ -188,17 +187,17 @@ def startQueue():
         if now - last_click_time > 60:
             logger.info("[INFO] Performing requeuing, due to timeout")
             pyautogui.moveTo(937, 729, duration=0.3)
-            wait(0.5)
+            interruptible_wait(0.5)
             pyautogui.click() # Unqueue
             logger.info("[INFO] Stop queuing")
-            wait(0.7)
+            interruptible_wait(0.7)
             pyautogui.click() # Requeue
             logger.info("[INFO] Start queuing")
             last_click_time = now
-        wait(0.1)
+        interruptible_wait(0.1)
 
         if image_exists(f"{DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=LOBBY_MESSAGE_REGION):
-            wait(2)
+            interruptible_wait(2)
             logger.info("[INFO] 'Waiting taken too long' message showed!")
             find_and_click("message-ok.png")
             logger.info("[INFO] Message dismissed!")
@@ -209,21 +208,24 @@ def startQueue():
             "choose-a-hero-button.png"
         ]):
             logger.info("[INFO] Match found! Mode: Forest of Cunt!")
-            wait(0.5)
+            interruptible_wait(0.5)
             break
 
-        wait(2)
+        interruptible_wait(2)
 
 def pickingPhase():
-    # TODO: Support others mode
-    find_and_click("foc-role-info.png")
+    # TODO: Support others mode    
+    #find_and_click("foc-role-info.png")
+    pyautogui.moveTo(968, 336, duration=0.3)
+    pyautogui.click() # dismiss foc role information
+    logger.info("[INFO] FOC Role information dismissed..")
     logger.info("[INFO] Picking phase begin..")
-    wait(3)
+    interruptible_wait(3)
     
     # TODO: Alternative hero selection
     if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
         logger.info(f"[INFO] {TARGETING_HERO} selected")
-        wait(0.5)
+        interruptible_wait(0.5)
         pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
         logger.info("[INFO] Waiting to rageborn")
     else:
@@ -234,7 +236,7 @@ def pickingPhase():
     while True:
         if image_exists("ingame-top-left-menu.png", region=SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
-            wait(1.5)
+            interruptible_wait(1.5)
             return True
         
         elif image_exists("play-button.png", region=SCREEN_REGION):
@@ -243,7 +245,7 @@ def pickingPhase():
             # state.STOP_EVENT.set()
             return False
         
-        wait(2)
+        interruptible_wait(2)
 
 def ingame():
     # Configuration
@@ -253,15 +255,18 @@ def ingame():
 
     # check team side 
     pyautogui.keyDown("x")
-    if image_exists("foc-fountain-legion.png", region=SCREEN_REGION):
+    if any_image_exists([
+        "foc-fountain-legion.png",
+        "scoreboard-legion.png"
+        ]):
         logger.info("[INFO] We are on Legion side!")
         side="legion"
     else:
         logger.info("[INFO] We are on Hellbourne side!")
         side="hellbourne"
-    wait(2)
+    interruptible_wait(2)
     pyautogui.keyUp("x")
-    wait(0.5)
+    interruptible_wait(0.5)
 
     bought = False
     pyautogui.keyDown("c") # center hero
@@ -282,11 +287,11 @@ def ingame():
             # open ingame shop
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
-            wait(0.5)
+            interruptible_wait(0.5)
             # locate to initiation icon
             logger.info("[INFO] Finding Hatcher from initiation tab")
             find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
-            wait(0.3)
+            interruptible_wait(0.3)
             # find hatcher
             # right click hatcher
             find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
@@ -295,13 +300,13 @@ def ingame():
             logger.info("[INFO] Bought a Hatcher cost 150g!")
             find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
             logger.info("[INFO] Bought a Hatcher cost 150g!")
-            wait(0.3)
+            interruptible_wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
             logger.info("[INFO] Ingame shop closed")
             bought = True
             logger.info("[INFO] Waiting to get kick by the team...")
-            wait(0.5)
+            interruptible_wait(0.5)
         
         if not state.STOP_EVENT.is_set():
             # mouse cursor to team mid tower
@@ -341,7 +346,7 @@ def ingame():
                 state.STOP_EVENT.set()
                 break
 
-        wait(0.03)
+        interruptible_wait(0.03)
 
 #
 def main(username, password):
