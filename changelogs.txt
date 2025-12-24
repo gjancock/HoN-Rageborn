@@ -1,4 +1,10 @@
 # =========================================================================== #
+# v1.1.6 - Minor Bug Fixes (24 December 2025)
+# =========================================================================== #
+- [x] Fixed issue where FoC role information pops and click unintentionally causing crashed.
+- [x] Fixed issue where program not able to recognize the correct side of the team.
+
+# =========================================================================== #
 # v1.1.5 - Feature Enhancement (23 December 2025)
 # =========================================================================== #
 - [x] If targeted hero got banned, it will wait for random and remain at match instead of quitting.
