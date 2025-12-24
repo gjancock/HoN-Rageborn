@@ -155,12 +155,18 @@ def prequeue():
         logger.info("[INFO] Looking for PLAY button...")
         if image_exists("play-button.png", region=SCREEN_REGION):
             find_and_click("play-button.png", region=SCREEN_REGION)
-            logger.info("[INFP] PLAY button clicked!")
-            wait(2.5)
+            logger.info("[INFO] PLAY button clicked!")            
             break
         wait(0.7)    
 
 def startQueue():
+    wait(1.25)
+
+    # Tune matchmaking bar
+    pyautogui.moveTo(922, 614, duration=0.3)    
+    pyautogui.click()
+    wait(0.3)
+
     while True:
         if not image_exists("matchmaking-disabled.png", region=MATCHMAKING_PANEL_REGION):
             break
@@ -168,11 +174,6 @@ def startQueue():
             logger.info("[INFO] Matchmaking Disabled, waiting connection...")
             wait(1)
         wait(0.5)
-
-    # Tune matchmaking bar
-    pyautogui.moveTo(922, 614, duration=0.3)    
-    pyautogui.click()
-    wait(0.3)
 
     # Click queue button
     pyautogui.moveTo(937, 729, duration=0.3)
@@ -214,6 +215,7 @@ def startQueue():
         wait(2)
 
 def pickingPhase():
+    # TODO: Support others mode
     find_and_click("foc-role-info.png")
     logger.info("[INFO] Picking phase begin..")
     wait(3)
@@ -312,7 +314,6 @@ def ingame():
                     pyautogui.click()
                     pyautogui.moveTo(574, 721, duration=0.3) # enemy base
                     pyautogui.rightClick()
-                    pyautogui.click()
 
                 case "hellbourne":                
                     pyautogui.moveTo(528, 768, duration=0.3) # friendly tower
@@ -320,7 +321,6 @@ def ingame():
                     pyautogui.click()
                     pyautogui.moveTo(465, 837, duration=0.3) # enemy base
                     pyautogui.rightClick()
-                    pyautogui.click()
             
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
