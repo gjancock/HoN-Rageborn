@@ -7,7 +7,7 @@ import win32process
 import psutil
 from utilities.loggerSetup import setup_logger
 import threading
-from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION
+from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION, GAME_REGION
 from threads.ingame import vote_requester, lobby_message_check_requester
 from utilities.common import interruptible_wait, interruptible_wait
 from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
@@ -183,17 +183,28 @@ def startQueue():
     last_click_time = time.time()
     while True:
         now = time.time()
+
+        if not image_exists("waiting-for-players.png", region=MATCHMAKING_PANEL_REGION):
         
-        if now - last_click_time > 60:
-            logger.info("[INFO] Performing requeuing, due to timeout")
-            pyautogui.moveTo(937, 729, duration=0.3)
-            interruptible_wait(0.5)
-            pyautogui.click() # Unqueue
-            logger.info("[INFO] Stop queuing")
-            interruptible_wait(0.7)
-            pyautogui.click() # Requeue
-            logger.info("[INFO] Start queuing")
-            last_click_time = now
+            if now - last_click_time > 60:
+                logger.info("[INFO] Performing requeuing, due to timeout")
+                pyautogui.moveTo(937, 729, duration=0.3)
+                interruptible_wait(0.5)
+                pyautogui.click() # Unqueue
+                logger.info("[INFO] Stop queuing")
+                interruptible_wait(0.7)
+                pyautogui.click() # Requeue
+                logger.info("[INFO] Start queuing")
+                last_click_time = now
+
+            if image_exists("enter-queue-button.png", region=MATCHMAKING_PANEL_REGION):
+                logger.info("[DEBUG] Reclick missed queue button!")
+                last_click_time = now
+        else:
+            # Reset timer (Requeue)
+            last_click_time = time.time()
+            now = time.time()
+
         interruptible_wait(0.1)
 
         if image_exists(f"{DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=LOBBY_MESSAGE_REGION):
