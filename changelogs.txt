@@ -1,5 +1,5 @@
 # =========================================================================== #
-# v1.1.7_beta - Feature Enhancement (24 December 2025)
+# v1.1.7b_beta - Feature Enhancement (24 December 2025)
 # =========================================================================== #
 - [x] Added in-game match timeout to 500 seconds, game will auto reload if time passed.
 - [x] Changed queue timeout from 60 seconds to 95 seconds.

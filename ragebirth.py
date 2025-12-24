@@ -15,6 +15,8 @@ from queue import Queue
 from utilities.loggerSetup import setup_logger
 import core.state as state
 from utilities.usernameGenerator import generate_word_username, generate_random_string
+from requests.exceptions import ConnectionError, Timeout
+from http.client import RemoteDisconnected
 
 # Logger
 log_queue = Queue()
@@ -74,65 +76,69 @@ def signup_user(first_name, last_name, email, username, password):
         )
     })
 
-    # 1️⃣ GET signup page
-    resp = session.get(SIGNUP_URL, timeout=15)
-    resp.raise_for_status()
+    try:
+        # 1️⃣ GET signup page
+        resp = session.get(SIGNUP_URL, timeout=15)
+        resp.raise_for_status()
 
-    # 2️⃣ Extract CSRF
-    match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
-    if not match:
-        logger.error("[INFO_ERROR] Failed to get CSRF token.")
-        return False, "Failed to get CSRF token"
+        match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
+        if not match:
+            logger.error("[INFO_ERROR] Failed to get CSRF token.")
+            return False, "CSRF not found"
 
-    csrf = match.group(1)
+        csrf = match.group(1)
 
-    # 3️⃣ Build payload
-    payload = {
-        "_csrf": csrf,
-        "User[first_name]": first_name,
-        "User[last_name]": last_name,
-        "User[email]": email,
-        "User[display_name]": first_name,
-        "User[username]": username,
-        "User[password]": password,
-        "User[repeat_password]": password,
-        "User[role_id]": "player",
-        "User[timezone_id]": 1,
-        "User[ip_address]": "127.0.0.1",
-        "User[status_id]": 1,
-        "User[user_referral_code]": "",
-        "User[send_sms]": 1,
-        "User[reCaptcha]": "",
-        "g-recaptcha-response": "",
-    }
+        payload = {
+            "_csrf": csrf,
+            "User[first_name]": first_name,
+            "User[last_name]": last_name,
+            "User[email]": email,
+            "User[display_name]": first_name,
+            "User[username]": username,
+            "User[password]": password,
+            "User[repeat_password]": password,
+            "User[role_id]": "player",
+            "User[timezone_id]": 1,
+            "User[ip_address]": "127.0.0.1",
+            "User[status_id]": 1,
+            "User[user_referral_code]": "",
+            "User[send_sms]": 1,
+            "User[reCaptcha]": "",
+            "g-recaptcha-response": "",
+        }
 
-    raw_body = urlencode(payload)
+        raw_body = urlencode(payload)
 
-    headers = {
-        "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "origin": BASE_URL,
-        "referer": SIGNUP_URL,
-        "x-csrf-token": csrf,
-        "x-requested-with": "XMLHttpRequest",
-    }
+        headers = {
+            "content-type": "application/x-www-form-urlencoded",
+            "origin": BASE_URL,
+            "referer": SIGNUP_URL,
+            "x-csrf-token": csrf,
+            "x-requested-with": "XMLHttpRequest",
+        }
 
-    # 4️⃣ POST signup
-    r = session.post(
-        SIGNUP_URL,
-        headers=headers,
-        data=raw_body,
-        timeout=15,
-    )
+        # 4️⃣ POST signup
+        r = session.post(
+            SIGNUP_URL,
+            headers=headers,
+            data=raw_body,
+            timeout=15,
+        )
 
-    if r.status_code == 200:
-        logger.info(f"[INFO] Account {username} created, password: {password}")
-        log_username(username) # Save username to textfile
-        return True, "Signup successful!"
-    else:
-        # TODO: regenerate account then sign up
-        logger.info(f"[INFO_ERROR] Failed to create account {username}")
-        return False, r.text
+        if r.status_code == 200:
+            logger.info(f"[INFO] Account {username} created, password: {password}")
+            log_username(username)
+            return True, "Signup Successfully"
 
+        return False, f"HTTP {r.status_code}"
+
+    except (ConnectionError, Timeout, RemoteDisconnected) as e:
+        logger.warning(f"[NET] Signup dropped by server: {e}")
+        return False, "connection_dropped"
+
+    except Exception as e:
+        logger.exception("[FATAL] Unexpected signup error")
+        return False, str(e)
 
 # ============================================================
 # TKINTER UI
@@ -243,44 +249,52 @@ def kill_jokevio():
 # AUTOMATION
 # ============================================================
 def one_full_cycle():
-    while True:
-        # 1️⃣ Generate username/email
-        on_generate()   # reuse your existing Generate button logic
+    try:
+        while True:
+            # 1️⃣ Generate username/email
+            on_generate()
 
-        # 2️⃣ Read generated credentials
-        username = username_entry.get()
-        password = password_entry.get()
+            # 2️⃣ Read generated credentials
+            username = username_entry.get()
+            password = password_entry.get()
 
-        logger.info("----------------------------------------------------")
-        logger.info(f"[INFO] Generated account: {username}")
+            logger.info("-------------------------------------------")
+            logger.info(f"[INFO] Generated account: {username}")
 
-        # 3️⃣ Run signup
-        success, msg = signup_user(
-            first_name_entry.get(),
-            last_name_entry.get(),
-            email_entry.get(),
-            username,
-            password
-        )
-        
-        if success:
-            break
-        else:
+            # 3️⃣ Run signup
+            try:
+                success, msg = signup_user(
+                    first_name_entry.get(),
+                    last_name_entry.get(),
+                    email_entry.get(),
+                    username,
+                    password
+                )
+            except Exception as e:
+                logger.warning(f"[WARN] Signup exception, regenerating: {e}")
+                success = False
+                msg = "exception"
+            
+            if success:
+                break
+            
             logger.info(f"[INFO] Failed to signup account {username}: {msg}")
             logger.info("[INFO] Regenerating new account")
-        time.sleep(1)
+            time.sleep(random.uniform(8, 15))
 
-    logger.info(f"[INFO] Signup success! Username {username} ..launching Rageborn.exe")
+        logger.info(f"[INFO] Signup success! Username {username} ..launching Rageborn.exe")
 
-    # 4️⃣ Run rageborn (blocking inside worker thread)
-    run_rageborn_flow(username, password)
+        # 4️⃣ Run rageborn (blocking inside worker thread)
+        run_rageborn_flow(username, password)
 
-    return True
+        return True
+    except Exception:
+        logger.exception("[WARN] Cycle error, recovering")
+        time.sleep(10)
 
 def auto_loop_worker():
     logger.info("[INFO] Endless mode started")
 
-    # Set start time ONCE
     root.after(0, set_start_time)
 
     global iteration_count
@@ -288,14 +302,20 @@ def auto_loop_worker():
     root.after(0, lambda: iteration_var.set("Iterations completed: 0"))
 
     while auto_mode_var.get():
-        ok = one_full_cycle()
+        try:
+            one_full_cycle()
 
-        if ok:
             root.after(0, increment_iteration)
 
-        time.sleep(1)
+        except Exception as e:
+            # ABSOLUTE LAST LINE OF DEFENSE
+            logger.exception("[FATAL] Cycle crashed, recovering")
 
-    # TODO: stop button
+            # Cooldown to avoid rapid crash loops
+            time.sleep(10)
+
+            # Continue forever
+            continue
 
     logger.info("[INFO] Endless mode stopped")
 

@@ -198,7 +198,6 @@ def startQueue():
                 last_click_time = now
         else:            
             # Reset timer (Requeue)
-            logger.info("[INFO] Resetting queue timer: Match found!")
             last_click_time = time.time()
             now = time.time()
 
