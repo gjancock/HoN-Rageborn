@@ -8,17 +8,12 @@
     "matchmaking_tuner": {
         "fastest": { "x": 922, "y": 614 },
         "balanced": { "x": 1055, "y": 614 },
-        "faireness": { "x": 1191, "y": 614 }
+        "fairness": { "x": 1191, "y": 614 }
     },
-    "enter-queue-button": { "x": 937, "y": 729 }
+    "enter_queue_button": { "x": 937, "y": 729 }
   },
   "picking_phase": {
-    "foc": {
-        "dismiss-safezone": { "x": 968, "y": 336 }
-    },
-    "midwar": {
-        "dismiss-safezone": { "x": 968, "y": 336 }
-    }
+    "dismiss_safezone": { "x": 968, "y": 336 }    
   },
   "in_game": {
     "foc": {

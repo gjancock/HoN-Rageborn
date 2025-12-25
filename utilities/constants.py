@@ -21,3 +21,16 @@ MATCHMAKING_PANEL_REGION = (659, 296, 560, 464)
 BASE_IMAGE_DIR = "images"
 DIALOG_MESSAGE_DIR = "dialog-message"
 CONFIDENCE = 0.75  # Adjust if detection fails
+
+# Map
+MAP_FOC = "foc"
+MAP_MIDWAR = "midwar"
+
+# Team
+TEAM_LEGION = "legion"
+TEAM_HELLBOURNE = "hellbourne"
+
+# Lane
+LANE_TOP = "top"
+LANE_MID = "mid"
+LANE_BOT = "bot"

@@ -7,12 +7,14 @@ import win32process
 import psutil
 from utilities.loggerSetup import setup_logger
 import threading
-from utilities.constants import SCREEN_REGION, MATCHMAKING_PANEL_REGION, LOBBY_MESSAGE_REGION, INGAME_SHOP_REGION, DIALOG_MESSAGE_DIR, VOTE_REGION, GAME_REGION
+import utilities.constants as constant
 from threads.ingame import vote_requester, lobby_message_check_requester
 from utilities.common import interruptible_wait, interruptible_wait
 from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
 from core.parameters import TARGETING_HERO
 import core.state as state
+from utilities.datasetLoader import load_dataset
+import utilities.coordinateAccess as coordLibrary
 
 # Initialize Logger
 logger = setup_logger()
@@ -22,6 +24,17 @@ pyautogui.FAILSAFE = True
 
 # Mouse/Keyboard Input Settings
 pyautogui.PAUSE = 0.3
+
+# Load Dataset
+COORDS = load_dataset("coordinates_1920x1080")
+coordLibrary.init(COORDS)
+
+#
+def validate_coords(coords):
+    required = ["in_game", "matchmaking_panel", "picking_phase"]
+    for key in required:
+        if key not in coords:
+            raise RuntimeError(f"Invalid dataset: missing {key}")
 
 #
 def start(username, password):
@@ -34,6 +47,10 @@ def start(username, password):
         t.start()
 
     try:
+        # Validate Coordinate
+        validate_coords(COORDS)
+
+        #
         main(username, password)
     finally:
         logger.info("[MAIN] shutting down")
@@ -125,10 +142,10 @@ def launch_focus_and_pin_jokevio():
     logger.info("[INFO] Launching game...")
 
     # 1️⃣ Launch via desktop icon
-    if image_exists("app-icon.png", region=SCREEN_REGION):
-        find_and_click("app-icon.png", doubleClick=True, region=SCREEN_REGION)
-    elif image_exists("app-icon-default.png", region=SCREEN_REGION):
-        find_and_click("app-icon-default.png", doubleClick=True, region=SCREEN_REGION)
+    if image_exists("app-icon.png", region=constant.SCREEN_REGION):
+        find_and_click("app-icon.png", doubleClick=True, region=constant.SCREEN_REGION)
+    elif image_exists("app-icon-default.png", region=constant.SCREEN_REGION):
+        find_and_click("app-icon-default.png", doubleClick=True, region=constant.SCREEN_REGION)
     else:
         raise RuntimeError("Failed to click Juvio desktop icon")
 
@@ -167,7 +184,7 @@ def launch_focus_and_pin_jokevio():
         if any_image_exists([
             "startup/startup-disclamer-logo.png",
             "startup/username-field.png"
-        ], region=SCREEN_REGION):
+        ], region=constant.SCREEN_REGION):
             logger.info("[INFO] Startup UI detected")
             break
 
@@ -177,9 +194,9 @@ def launch_focus_and_pin_jokevio():
         interruptible_wait(0.5)
 
     # 5️⃣ Dismiss disclaimer if present
-    if image_exists("startup/startup-disclamer-logo.png", region=SCREEN_REGION):
+    if image_exists("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION):
         logger.info("[INFO] Dismissing startup disclaimer")
-        find_and_click("startup/startup-disclamer-logo.png", region=SCREEN_REGION)
+        find_and_click("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION)
         interruptible_wait(0.5)
 
     logger.info("[INFO] Juvio Platform ready for login")
@@ -230,8 +247,8 @@ def prequeue():
     # Queue options
     while True:
         logger.info("[INFO] Looking for PLAY button...")
-        if image_exists("play-button.png", region=SCREEN_REGION):
-            find_and_click("play-button.png", region=SCREEN_REGION)
+        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+            find_and_click("play-button.png", region=constant.SCREEN_REGION)
             logger.info("[INFO] PLAY button clicked!")            
             break
         interruptible_wait(0.7)    
@@ -240,12 +257,13 @@ def startQueue():
     interruptible_wait(1.25)
 
     # Tune matchmaking bar
-    pyautogui.moveTo(922, 614, duration=0.3)    
+    x, y = coordLibrary.get_matchmaking_tuner_coord()
+    pyautogui.moveTo(x, y, duration=0.3)    
     pyautogui.click()
     interruptible_wait(0.3)
 
     while True:
-        if not image_exists("matchmaking-disabled.png", region=MATCHMAKING_PANEL_REGION):
+        if not image_exists("matchmaking-disabled.png", region=constant.MATCHMAKING_PANEL_REGION):
             break
         else:
             logger.info("[INFO] Matchmaking Disabled, waiting connection...")
@@ -253,7 +271,8 @@ def startQueue():
         interruptible_wait(0.5)
 
     # Click queue button
-    pyautogui.moveTo(937, 729, duration=0.3)
+    x, y = coordLibrary.get_queue_button_coord()
+    pyautogui.moveTo(x, y, duration=0.3)
     interruptible_wait(0.3)
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
@@ -262,11 +281,11 @@ def startQueue():
     while True:
         now = time.time()
 
-        if not image_exists("waiting-for-players.png", region=MATCHMAKING_PANEL_REGION):
+        if not image_exists("waiting-for-players.png", region=constant.MATCHMAKING_PANEL_REGION):
         
             if now - last_click_time > 95:
                 logger.info("[INFO] Performing requeuing, due to timeout")
-                pyautogui.moveTo(937, 729, duration=0.3)
+                pyautogui.moveTo(x, y, duration=0.3)
                 interruptible_wait(0.5)
                 pyautogui.click() # Unqueue
                 logger.info("[INFO] Stop queuing")
@@ -281,7 +300,7 @@ def startQueue():
 
         interruptible_wait(0.1)
 
-        if image_exists(f"{DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=LOBBY_MESSAGE_REGION):
+        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
             interruptible_wait(2)
             logger.info("[INFO] 'Waiting taken too long' message showed!")
             find_and_click("message-ok.png")
@@ -293,61 +312,65 @@ def startQueue():
             "choose-a-hero-button.png"
         ]):
             logger.info("[INFO] Match found! Mode: Forest of Cunt!")
+            state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)
             interruptible_wait(0.5)
             break
 
         interruptible_wait(2)
 
 def pickingPhase():
-    # TODO: Support others mode
-    pyautogui.moveTo(968, 336, duration=0.3)
-    pyautogui.click() # dismiss foc role information
-    logger.info("[INFO] FOC Role information dismissed..")
-    logger.info("[INFO] Picking phase begin..")
-    interruptible_wait(3)
-    
-    # TODO: Alternative hero selection
-    if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
-        logger.info(f"[INFO] {TARGETING_HERO} selected")
-        interruptible_wait(0.5)
-        pyautogui.moveTo(968, 336, duration=0.3) # move off hover hero selection
-        logger.info("[INFO] Waiting to rageborn")
-    else:
-        # TODO: Random is just fine?
-        logger.info(f"[INFO] {TARGETING_HERO} banned!")
-        logger.info("[INFO] Waiting to get random hero.")
+    match state.INGAME_STATE.getCurrentMap():
+        case constant.MAP_FOC:        
+
+            # TODO: Support others mode
+            x,y = coordLibrary.get_picking_dismiss_safezone_coord()
+            pyautogui.moveTo(x, y, duration=0.3)
+            pyautogui.click() # dismiss foc role information
+            logger.info("[INFO] FOC Role information dismissed..")
+            logger.info("[INFO] Picking phase begin..")
+            interruptible_wait(3)
+            
+            # TODO: Alternative hero selection
+            if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
+                logger.info(f"[INFO] {TARGETING_HERO} selected")
+                interruptible_wait(0.5)        
+                pyautogui.moveTo(x, y, duration=0.3) # move off hover hero selection
+                logger.info("[INFO] Waiting to rageborn")
+            else:
+                # TODO: Random is just fine?
+                logger.info(f"[INFO] {TARGETING_HERO} banned!")
+                logger.info("[INFO] Waiting to get random hero.")
 
     while True:
-        if image_exists("ingame-top-left-menu.png", region=SCREEN_REGION):
-            logger.info("[INFO] I see fountain, I see grief! Rageborn started!")
+        if image_exists("ingame-top-left-menu.png", region=constant.SCREEN_REGION):
+            logger.info("[INFO] I see fountain, I see grief!")
+            logger.info("[INFO] Rageborn begin!")
             interruptible_wait(1.5)
             return True
         
-        elif image_exists("play-button.png", region=SCREEN_REGION):
+        elif image_exists("play-button.png", region=constant.SCREEN_REGION):
             # Back to lobby
             logger.info("[INFO] Match aborted!")
-            # state.STOP_EVENT.set()
             return False
         
         interruptible_wait(2)
 
-def ingame():
-    # Configuration
-    side="legion"    
-
+def ingame(): 
+    #
     logger.info("[INFO] HERE COMES THE TROLL BEGIN")
 
-    # check team side 
+    # check team team 
     pyautogui.keyDown("x")
     if any_image_exists([
         "foc-fountain-legion.png",
         "scoreboard-legion.png"
         ]):
-        logger.info("[INFO] We are on Legion side!")
-        side="legion"
+        team = constant.TEAM_LEGION
     else:
-        logger.info("[INFO] We are on Hellbourne side!")
-        side="hellbourne"
+        team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(F"[INFO] We are on {team} team!")
     interruptible_wait(2)
     pyautogui.keyUp("x")
     interruptible_wait(0.5)
@@ -365,44 +388,31 @@ def ingame():
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
 
-            if image_exists("vote-no.png", region=VOTE_REGION):
+            if image_exists("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
-                find_and_click("vote-no.png", region=VOTE_REGION)
+                find_and_click("vote-no.png", region=constant.VOTE_REGION)
 
-            if image_exists("vote-no-black.png", region=VOTE_REGION):
+            if image_exists("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
-                find_and_click("vote-no-black.png", region=VOTE_REGION)
+                find_and_click("vote-no-black.png", region=constant.VOTE_REGION)
         
         if not state.STOP_EVENT.is_set() and not bought:
             # open ingame shop
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
             interruptible_wait(0.5)
+            # find boots
+            if image_exists("ingame-shop-boots-icon.png", region=constant.INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-boots-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
-            if image_exists("ingame-shop-enchantment-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-enchantment-icon.png", region=INGAME_SHOP_REGION)
+            if image_exists("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION)
             interruptible_wait(0.3)
             # find Jade Spire
-            if image_exists("ingame-shop-jade-spire-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-icon.png", click=True, region=INGAME_SHOP_REGION)
-            # find Jade Spire recipe and buy
-            if image_exists("ingame-shop-jade-spire-recipe-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                interruptible_wait(0.5)
-            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+            if image_exists("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")            
             interruptible_wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
@@ -416,20 +426,18 @@ def ingame():
             # alt+t and click to team mid tower
             # mouse cursor to enemy mid tower
             # right click to enemy mid tower
-            match side:
-                case "legion":                
-                    pyautogui.moveTo(510, 787, duration=0.3) # friendly tower
-                    pyautogui.hotkey("alt", "t")
-                    pyautogui.click()
-                    pyautogui.moveTo(574, 721, duration=0.3) # enemy base
-                    pyautogui.rightClick()
 
-                case "hellbourne":                
-                    pyautogui.moveTo(528, 768, duration=0.3) # friendly tower
-                    pyautogui.hotkey("alt", "t")
-                    pyautogui.click()
-                    pyautogui.moveTo(465, 837, duration=0.3) # enemy base
-                    pyautogui.rightClick()
+            map = state.INGAME_STATE.getCurrentMap()
+            x1, y1 = coordLibrary.get_friendly_tower_coord(map, team, constant.LANE_MID, 3)
+            x2, y2 = coordLibrary.get_enemy_tower_coord(map, team, constant.LANE_MID, 3)
+
+            pyautogui.moveTo(x1, y1, duration=0.3) # friendly tower
+            pyautogui.hotkey("alt", "t")
+            pyautogui.keyDown("shift")
+            pyautogui.click()
+            pyautogui.moveTo(x2, y2, duration=0.3) # enemy base
+            pyautogui.rightClick()
+            pyautogui.keyUp("shift")
             
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
@@ -438,13 +446,13 @@ def ingame():
             state.SCAN_LOBBY_MESSAGE_EVENT.clear()
 
             if any_image_exists([
-                f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-                f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-                f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-                f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-                f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
-                f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
-            ], region=LOBBY_MESSAGE_REGION):
+                f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+                f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+                f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+                f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+                f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
+                f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+            ], region=constant.LOBBY_MESSAGE_REGION):
                 pyautogui.keyUp("c") # stop spamming                
                 state.STOP_EVENT.set()
                 break
@@ -459,6 +467,7 @@ def ingame():
 #
 def main(username, password):
     logger.info("[INFO] Rageborn boot up...")
+    # ingame() # debug only
 
     try:
         #
@@ -484,14 +493,14 @@ def main(username, password):
 
                     # Just in case message pops
                     if any_image_exists([
-                        f"{DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-                        f"{DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-                        f"{DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-                        f"{DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-                        f"{DIALOG_MESSAGE_DIR}/kicked-message.png",
-                        f"{DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
-                    ], region=LOBBY_MESSAGE_REGION):
-                        location = image_exists("message-ok.png", region=LOBBY_MESSAGE_REGION)
+                        f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+                    ], region=constant.LOBBY_MESSAGE_REGION):
+                        location = image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
                         if location == True:
                             pyautogui.click(location)
                             logger.info("[INFO] Message box closed!")

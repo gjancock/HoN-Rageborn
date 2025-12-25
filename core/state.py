@@ -4,14 +4,23 @@ class InGameState:
     def __init__(self):
         self._lock = threading.Lock()
         self._current_map = ""
+        self._current_team = ""
 
     def setCurrentMap(self, map):
         with self._lock:
             self._current_map = map
 
+    def setCurrentTeam(self, team):
+        with self._lock:
+            self._current_team = team
+
     def getCurrentMap(self):
         with self._lock:
             return self._current_map
+        
+    def getCurrentTeam(self):
+        with self._lock:
+            return self._current_team
 
 #
 STOP_EVENT = threading.Event()
