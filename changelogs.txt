@@ -3,6 +3,7 @@
 # =========================================================================== #
 - [x] Fixed username generator error issue where prefix/postfix containing 14 or more characters.
 - [x] Added failsafe handler for ingame phase function.
+- [x] Fixed issue where app-icon doesn't found due to windows background color different.
 
 # =========================================================================== #
 # v1.1.7b_beta - Feature Enhancement (24 December 2025)

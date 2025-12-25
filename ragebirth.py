@@ -326,17 +326,28 @@ def on_auto_toggle():
             daemon=True
         ).start()
     else:
-        start_time_var.set("Started at: -")
+        duration_var.set("Duration: 00:00:00")
 
 def set_start_time():
     global auto_start_time
-    auto_start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    start_time_var.set(f"Started at: {auto_start_time}")
+    auto_start_time = datetime.now()
+    duration_var.set("Duration: 00:00:00")
+    
+def format_duration(seconds: int) -> str:
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+    return f"{h:02}:{m:02}:{s:02}"
 
 def increment_iteration():
-    global iteration_count
+    global iteration_count, auto_start_time
+
     iteration_count += 1
     iteration_var.set(f"Iterations completed: {iteration_count}")
+
+    if auto_start_time:
+        elapsed = int((datetime.now() - auto_start_time).total_seconds())
+        duration_var.set(f"Duration: {format_duration(elapsed)}")
 
 # ============================================================
 # TKINTER UI
@@ -431,11 +442,11 @@ auto_mode_checkbox.pack(pady=5)
 
 auto_mode_checkbox.config(command=on_auto_toggle)
 
-start_time_var = tk.StringVar(value="Started at: -")
-iteration_var = tk.StringVar(value="Iterations completed: 0")
+duration_var = tk.StringVar(value="Duration: 00:00:00")
+duration_label = tk.Label(root, textvariable=duration_var)
+duration_label.pack(pady=2)
 
-start_time_label = tk.Label(root, textvariable=start_time_var)
-start_time_label.pack(pady=2)
+iteration_var = tk.StringVar(value="Iterations completed: 0")
 
 iteration_label = tk.Label(root, textvariable=iteration_var)
 iteration_label.pack(pady=2)

@@ -43,6 +43,34 @@ def start(username, password):
             t.join()
 
 #
+def find_juvio_platform_hwnd():
+    hwnds = []
+
+    def enum_handler(hwnd, _):
+        if not win32gui.IsWindowVisible(hwnd):
+            return
+
+        title = win32gui.GetWindowText(hwnd)
+        if title and "juvio platform" in title.lower():
+            hwnds.append(hwnd)
+
+    win32gui.EnumWindows(enum_handler, None)
+    return hwnds
+
+
+def wait_for_juvio_platform(timeout=60):
+    logger.info("[INFO] Waiting for Juvio Platform window...")
+
+    start = time.time()
+    while time.time() - start < timeout:
+        hwnds = find_juvio_platform_hwnd()
+        if hwnds:
+            return hwnds[0]
+        time.sleep(0.3)
+
+    raise RuntimeError("Juvio Platform window not found")
+
+
 def find_jokevio_hwnds():
     pids = [
         p.pid for p in psutil.process_iter(["name"])
@@ -81,30 +109,62 @@ def wait_for_jokevio_window(timeout=20):
     return []
 
 def launch_focus_and_pin_jokevio():
-    logger.info(f"[INFO] Launching game...")
+    logger.info("[INFO] Launching game...")
 
     # 1️⃣ Launch via desktop icon
-    find_and_click("app-icon.png", doubleClick=True, region=SCREEN_REGION)
+    if image_exists("app-icon.png", region=SCREEN_REGION):
+        find_and_click("app-icon.png", doubleClick=True, region=SCREEN_REGION)
+    elif image_exists("app-icon-default.png", region=SCREEN_REGION):
+        find_and_click("app-icon-default.png", doubleClick=True, region=SCREEN_REGION)
+    else:
+        raise RuntimeError("Failed to click Juvio desktop icon")
 
-    # 2️⃣ Wait for window
-    logger.info("[INFO] Waiting for Jokevio window to be detected...")
-    hwnds = wait_for_jokevio_window()
-    if not hwnds:
-        logger.info("[APP_ERROR] Jokevio window couldn't be found!")
-        raise RuntimeError("Jokevio window not found")
+    # Give launcher a moment to bootstrap
+    interruptible_wait(2.0)
 
-    # 3️⃣ Focus + Always-on-top
-    for hwnd in hwnds:
+    # 2️⃣ Wait for REAL UI window (Juvio Platform)
+    hwnd = wait_for_juvio_platform()
+    logger.info(f"[INFO] Juvio Platform hwnd={hwnd}")
+
+    # 3️⃣ Bring window to front & pin topmost
+    try:
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-        win32gui.SetForegroundWindow(hwnd)
-        set_window_topmost(hwnd, True)
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOPMOST,
+            0, 0, 0, 0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+        )
+        logger.info("[INFO] Juvio Platform pinned topmost")
+    except Exception as e:
+        logger.warning(f"[WARN] Failed to pin Juvio Platform: {e}")
 
-    # Find the logo and click
+    # 4️⃣ Wait for login / disclaimer UI to be visible
+    logger.info("[INFO] Waiting for startup/login UI...")
+
+    start = time.time()
     while True:
-        if image_exists("startup/startup-disclamer-logo.png"):
-            find_and_click("startup/startup-disclamer-logo.png")
+        # Login screen OR disclaimer screen
+        if any_image_exists([
+            "startup/startup-disclamer-logo.png",
+            "startup/username-field.png"
+        ], region=SCREEN_REGION):
+            logger.info("[INFO] Startup UI detected")
             break
+
+        if time.time() - start > 60:
+            raise RuntimeError("Startup UI not detected within timeout")
+
         interruptible_wait(0.5)
+
+    # 5️⃣ Dismiss disclaimer if present
+    if image_exists("startup/startup-disclamer-logo.png", region=SCREEN_REGION):
+        logger.info("[INFO] Dismissing startup disclaimer")
+        find_and_click("startup/startup-disclamer-logo.png", region=SCREEN_REGION)
+        interruptible_wait(0.5)
+
+    logger.info("[INFO] Juvio Platform ready for login")
+
 
 def unpin_jokevio():
     hwnds = find_jokevio_hwnds()
@@ -116,7 +176,6 @@ def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
     if enter:
         pyautogui.press("enter")
-
 
 #
 def account_Login(username, password):
