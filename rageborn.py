@@ -283,10 +283,6 @@ def ingame():
     start_time = time.monotonic()
     while not state.STOP_EVENT.is_set():
         elapsed = time.monotonic() - start_time
-        if elapsed >= matchTimedout:
-            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
-            state.STOP_EVENT.set()
-            break
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
@@ -306,16 +302,20 @@ def ingame():
             interruptible_wait(0.5)
             # locate to initiation icon
             logger.info("[INFO] Finding Hatcher from initiation tab")
-            find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
+            if image_exists("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
             interruptible_wait(0.3)
             # find hatcher
             # right click hatcher
-            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-            logger.info("[INFO] Bought a Hatcher cost 150g!")
-            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-            logger.info("[INFO] Bought a Hatcher cost 150g!")
-            find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-            logger.info("[INFO] Bought a Hatcher cost 150g!")
+            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Hatcher cost 150g!")
+            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Hatcher cost 150g!")
+            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Hatcher cost 150g!")
             interruptible_wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
@@ -361,6 +361,11 @@ def ingame():
                 pyautogui.keyUp("c") # stop spamming                
                 state.STOP_EVENT.set()
                 break
+        
+        if elapsed >= matchTimedout:
+            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
+            state.STOP_EVENT.set()
+            break
 
         interruptible_wait(0.03)
 
