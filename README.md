@@ -1,5 +1,4 @@
-# Rageborn
-Any thoughts on Rageborn?
+Gjanko: Any thoughts on Rageborn?
 
 How to Use
 -------------------------------------
