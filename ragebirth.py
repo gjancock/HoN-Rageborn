@@ -204,10 +204,13 @@ def start_rageborn_async(username, password):
     ).start()
 
 # ----------------- UI callbacks -----------------
+def get_effective_password():
+    pwd = password_entry.get().strip()
+    return pwd if pwd else DEFAULT_PASSWORD
 
 def on_signup_success():
     username = username_entry.get()
-    password = password_entry.get()
+    password = get_effective_password()
 
     start_rageborn_async(username, password)
 
@@ -256,7 +259,7 @@ def one_full_cycle():
 
             # 2️⃣ Read generated credentials
             username = username_entry.get()
-            password = password_entry.get()
+            password = get_effective_password()
 
             logger.info("-------------------------------------------")
             logger.info(f"[INFO] Generated account: {username}")
@@ -368,7 +371,7 @@ def on_submit():
     last = last_name_entry.get()
     email = email_entry.get()
     user = username_entry.get()
-    pwd = password_entry.get()
+    pwd = get_effective_password()
 
     if not all([first, last, email, user, pwd]):
         messagebox.showerror("Error", "All fields are required")
