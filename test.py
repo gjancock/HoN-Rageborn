@@ -14,6 +14,7 @@ def test_ingame():
     reset_state()
 
     try:
+        state.init_cycle_number()
         rageborn.ingame()
     except KeyboardInterrupt:
         print("[TEST] Interrupted by user")

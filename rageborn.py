@@ -38,6 +38,9 @@ def validate_coords(coords):
 
 #
 def start(username, password):
+    #
+    state.init_cycle_number()
+
     threads = [
         threading.Thread(name="VoteWatcher", target=vote_requester),
         threading.Thread(name="LobbyMessageWatcher", target=lobby_message_check_requester)
@@ -320,7 +323,7 @@ def startQueue():
 
 def pickingPhase():
     match state.INGAME_STATE.getCurrentMap():
-        case constant.MAP_FOC:        
+        case constant.MAP_FOC:
 
             # TODO: Support others mode
             x,y = coordLibrary.get_picking_dismiss_safezone_coord()
@@ -355,11 +358,32 @@ def pickingPhase():
         
         interruptible_wait(2)
 
-def ingame(): 
-    #
-    logger.info("[INFO] HERE COMES THE TROLL BEGIN")
+# FOC
+def do_lane_push_step(team):
+    # Will go random lane
+    map = state.INGAME_STATE.getCurrentMap()
+    lane_number = state.get_cycle_number()
 
-    # check team team 
+    LANE_BY_NUMBER = {
+        1: constant.LANE_TOP,
+        2: constant.LANE_MID,
+        3: constant.LANE_BOT,
+    }
+
+    lane = LANE_BY_NUMBER[lane_number]
+
+    x1, y1 = coordLibrary.get_friendly_tower_coord(map, team, lane, 3)
+    x2, y2 = coordLibrary.get_enemy_base_coord(map, team)
+
+    pyautogui.moveTo(x1, y1, duration=0.3)
+    pyautogui.hotkey("alt", "t")
+    pyautogui.click()
+    pyautogui.moveTo(x2, y2, duration=0.3)
+    pyautogui.rightClick()
+
+# FOC
+def do_foc_stuff():
+     # check team team 
     pyautogui.keyDown("x")
     if any_image_exists([
         "foc-fountain-legion.png",
@@ -370,7 +394,7 @@ def ingame():
         team = constant.TEAM_HELLBOURNE
     
     state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(F"[INFO] We are on {team} team!")
+    logger.info(f"[INFO] We are on {team} team!")
     interruptible_wait(2)
     pyautogui.keyUp("x")
     interruptible_wait(0.5)
@@ -427,35 +451,15 @@ def ingame():
             # mouse cursor to enemy mid tower
             # right click to enemy mid tower
 
-            map = state.INGAME_STATE.getCurrentMap()
-            x1, y1 = coordLibrary.get_friendly_tower_coord(map, team, constant.LANE_MID, 3)
-            x2, y2 = coordLibrary.get_enemy_tower_coord(map, team, constant.LANE_MID, 3)
-
-            pyautogui.moveTo(x1, y1, duration=0.3) # friendly tower
-            pyautogui.hotkey("alt", "t")
-            pyautogui.keyDown("shift")
-            pyautogui.click()
-            pyautogui.moveTo(x2, y2, duration=0.3) # enemy base
-            pyautogui.rightClick()
-            pyautogui.keyUp("shift")
+            do_lane_push_step(team)
             
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
 
         if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
             state.SCAN_LOBBY_MESSAGE_EVENT.clear()
-
-            if any_image_exists([
-                f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-                f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-                f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-                f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-                f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
-                f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
-            ], region=constant.LOBBY_MESSAGE_REGION):
-                pyautogui.keyUp("c") # stop spamming                
-                state.STOP_EVENT.set()
-                break
+            check_lobby_message()
+            break
         
         if elapsed >= matchTimedout:
             logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
@@ -464,10 +468,29 @@ def ingame():
 
         interruptible_wait(0.03)
 
+def check_lobby_message():
+    if any_image_exists([
+        f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+    ], region=constant.LOBBY_MESSAGE_REGION):
+        pyautogui.keyUp("c") # stop spamming                
+        state.STOP_EVENT.set()
+
+def ingame(): 
+    #
+    logger.info("[INFO] HERE COMES THE TROLL BEGIN")
+
+    match state.INGAME_STATE.getCurrentMap():
+        case constant.MAP_FOC:
+           do_foc_stuff()
+
 #
 def main(username, password):
     logger.info("[INFO] Rageborn boot up...")
-    # ingame() # debug only
 
     try:
         #

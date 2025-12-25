@@ -1,4 +1,11 @@
 # =========================================================================== #
+# v1.1.9 - Feature Enhancement (25 December 2025)
+# =========================================================================== #
+- [x] Enhancement on QoL stuff.
+- [x] Now heroes will purchase 1x "Boots" and 1x "Jade Spire recipe" instead to speed up the purchasing progress.
+- [x] Now bot will portal to random lane on each iteration.
+
+# =========================================================================== #
 # v1.1.8b - Feature Enhancement (25 December 2025)
 # =========================================================================== #
 - [x] Fixed username generator error issue where prefix/postfix containing 14 or more characters.
