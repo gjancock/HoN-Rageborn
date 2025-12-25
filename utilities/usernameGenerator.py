@@ -108,46 +108,47 @@ def generate_word_username(prefix="", postfix=""):
     prefix = prefix.strip()
     postfix = postfix.strip()
 
-    base = random.choice(WORD_POOL)
-
     sep_prefix = "_" if prefix else ""
     sep_postfix = "_" if postfix else ""
 
-    # minimum: prefix + (generated 2 chars) + postfix
-    min_required_length = (
+    fixed_length = (
         len(prefix) +
         len(sep_prefix) +
-        2 +                     # at least 2 chars generated
         len(sep_postfix) +
         len(postfix)
     )
 
+    # 🔒 HARD SAFETY: prefix/postfix too long
+    if fixed_length >= MAX_USERNAME_LENGTH:
+        # preserve prefix/postfix, trim safely if needed
+        result = f"{prefix}{sep_prefix}{sep_postfix}{postfix}"
+        return result[:MAX_USERNAME_LENGTH]
+
+    # space available for generated content
+    available = MAX_USERNAME_LENGTH - fixed_length
+
+    # ensure at least 1 char generated
+    available = max(1, available)
+
+    # choose random total length safely
     target_length = random.randint(
-        max(MIN_USERNAME_LENGTH, min_required_length),
-        MAX_USERNAME_LENGTH
+        MIN_USERNAME_LENGTH,
+        fixed_length + available
     )
 
-    available = (
-        target_length -
-        len(prefix) -
-        len(sep_prefix) -
-        len(sep_postfix) -
-        len(postfix)
-    )
+    generated_space = target_length - fixed_length
 
-    # Always reserve at least 1 char for base and 1 for suffix
-    base_len = min(len(base), max(1, available - 1))
-    suffix_len = available - base_len
+    # choose base + suffix split
+    base = random.choice(WORD_POOL)
 
-    # Randomize order: base+suffix OR suffix+base
+    base_len = min(len(base), max(1, generated_space - 1))
+    suffix_len = generated_space - base_len
+
+    # allow generated part to start with number or underscore
     if random.choice([True, False]):
-        part1 = base[:base_len]
-        part2 = generate_random_string(suffix_len)
+        generated = base[:base_len] + generate_random_string(suffix_len)
     else:
-        part1 = generate_random_string(suffix_len)
-        part2 = base[:base_len]
-
-    generated = part1 + part2
+        generated = generate_random_string(suffix_len) + base[:base_len]
 
     username = f"{prefix}{sep_prefix}{generated}{sep_postfix}{postfix}"
     return username
