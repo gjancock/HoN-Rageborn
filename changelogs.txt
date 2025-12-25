@@ -6,6 +6,7 @@
 - [x] Fixed issue where app-icon doesn't found due to windows background color different.
 - [x] Changed "started time" to "duration" on UI.
 - [x] Fixed issue where default password value getting reset whenever click on "Generate Username & Email" password.
+- [x] Now heroes will purchase 5x "Jade Spire recipe" instead of 3x "Hatcher".
 
 # =========================================================================== #
 # v1.1.7b_beta - Feature Enhancement (24 December 2025)

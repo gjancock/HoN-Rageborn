@@ -108,6 +108,19 @@ def wait_for_jokevio_window(timeout=20):
         time.sleep(0.3)
     return []
 
+def force_foreground_and_topmost(hwnd):
+    try:
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        win32gui.SetForegroundWindow(hwnd)
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOPMOST,
+            0, 0, 0, 0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+        )
+    except Exception as e:
+        logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
+
 def launch_focus_and_pin_jokevio():
     logger.info("[INFO] Launching game...")
 
@@ -140,11 +153,17 @@ def launch_focus_and_pin_jokevio():
         logger.warning(f"[WARN] Failed to pin Juvio Platform: {e}")
 
     # 4️⃣ Wait for login / disclaimer UI to be visible
-    logger.info("[INFO] Waiting for startup/login UI...")
+    logger.info("[INFO] Waiting for game client to surface...")
 
     start = time.time()
     while True:
-        # Login screen OR disclaimer screen
+        # 🔁 Re-detect platform/game window (launcher may have exited)
+        hwnds = find_juvio_platform_hwnd()
+        if hwnds:
+            hwnd = hwnds[0]
+            force_foreground_and_topmost(hwnd)
+
+        # 🔍 Now check UI
         if any_image_exists([
             "startup/startup-disclamer-logo.png",
             "startup/username-field.png"
@@ -152,7 +171,7 @@ def launch_focus_and_pin_jokevio():
             logger.info("[INFO] Startup UI detected")
             break
 
-        if time.time() - start > 60:
+        if time.time() - start > 90:
             raise RuntimeError("Startup UI not detected within timeout")
 
         interruptible_wait(0.5)
@@ -359,22 +378,31 @@ def ingame():
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
             interruptible_wait(0.5)
-            # locate to initiation icon
-            logger.info("[INFO] Finding Hatcher from initiation tab")
-            if image_exists("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-initiation-icon.png", region=INGAME_SHOP_REGION)
+            # locate to enchantment icon
+            logger.info("[INFO] Finding Jade Spire from enchantment tab")
+            if image_exists("ingame-shop-enchantment-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-enchantment-icon.png", region=INGAME_SHOP_REGION)
             interruptible_wait(0.3)
-            # find hatcher
-            # right click hatcher
-            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Hatcher cost 150g!")
-            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Hatcher cost 150g!")
-            if image_exists("ingame-shop-hatcher-icon.png", region=INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-hatcher-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Hatcher cost 150g!")
+            # find Jade Spire
+            if image_exists("ingame-shop-jade-spire-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-icon.png", click=True, region=INGAME_SHOP_REGION)
+            # find Jade Spire recipe and buy
+            if image_exists("ingame-shop-jade-spire-recipe-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                interruptible_wait(0.5)
+            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+            if image_exists("ingame-shop-jade-spire-recipe-owned-icon.png", region=INGAME_SHOP_REGION):
+                find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=INGAME_SHOP_REGION)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
             interruptible_wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
