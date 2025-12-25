@@ -3,6 +3,13 @@ Any thoughts on Rageborn?
 
 How to Use
 -------------------------------------
+1. Download latest release from https://github.com/gjancock/HoN-Rageborn.
+2. Execute the .exe files you just downloaded.
+3. Enjoy.
+
+Do take note on settings below:
+-------------------------------------
+
 Game Settings
 
 1. Set the game display mode to "Windowed".
@@ -21,6 +28,11 @@ Windows Settings
 4. Do not move the mouse cursor or click anywhere while the script is running.
 5. Ensure keyboard CAPSLOCK is off.
 6. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
+
+Hardware Settings
+
+1. If you experiencing program stucked or failed unintentionally, try keep the screen opened while the script is running.
+2. Use a "Dummy Adapter" if you don't have a physical monitor to run this bot.
 
 Notes
 -------------------------------------
