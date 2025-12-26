@@ -366,6 +366,24 @@ def pickingPhase():
         
         interruptible_wait(2)
 
+# TODO: Incomplete code
+def define_team():
+    # check team team 
+    pyautogui.keyDown("x")
+    if any_image_exists([
+        "foc-fountain-legion.png",
+        "scoreboard-legion.png"
+        ]):
+        team = constant.TEAM_LEGION
+    else:
+        team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[INFO] We are on {team} team!")
+    interruptible_wait(2)
+    pyautogui.keyUp("x")
+    interruptible_wait(0.5)
+
 # FOC
 def do_lane_push_step(team):
     # Will go random lane
@@ -391,7 +409,7 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
-     # check team team 
+    # check team team 
     pyautogui.keyDown("x")
     if any_image_exists([
         "foc-fountain-legion.png",
@@ -487,6 +505,25 @@ def do_foc_stuff():
 
         interruptible_wait(0.03)
 
+# TODO: Incomplete code
+# Midwar
+def do_midwar_stuff():
+    # check team team 
+    pyautogui.keyDown("x")
+    if any_image_exists([
+        "foc-fountain-legion.png",
+        "scoreboard-legion.png"
+        ]):
+        team = constant.TEAM_LEGION
+    else:
+        team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[INFO] We are on {team} team!")
+    interruptible_wait(2)
+    pyautogui.keyUp("x")
+    interruptible_wait(0.5)
+
 def check_lobby_message():
     return any_image_exists([
         f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
@@ -503,7 +540,10 @@ def ingame():
 
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
-           do_foc_stuff()
+            do_foc_stuff()
+
+        case constant.MAP_MIDWAR:
+            do_midwar_stuff()
 
 #
 def main(username, password):
