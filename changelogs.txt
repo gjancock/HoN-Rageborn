@@ -1,4 +1,27 @@
 # =========================================================================== #
+# v1.2.1 - Various Bug Fixes (27 December 2025)
+# =========================================================================== #
+- [x] Added 0.7 seconds as interval after password entered.
+- [x] Fixed issue where after message box "Failed to fetch mmr" pops and queue wasn't start.
+
+# =========================================================================== #
+# v1.2.0 - Feature Enhancement (26 December 2025)
+# =========================================================================== #
+- [x] Overall UI/UX overhaul.
+- [x] Added new feature which allow user to use the bot by login their own account.
+- [x] Added new feature which allow user to generate and sign up account without running the bot.
+- [x] Fixed issue where item trying to be purchase not found and crashing the program.
+- [x] Change requeue button click interval from 0.5 seconds to 1 seconds.
+- [x] Added new feature which allow user to set "Auto run program on next startup".
+
+# =========================================================================== #
+# v1.1.10 - Various Bug Fixes (26 December 2025)
+# =========================================================================== #
+- [x] Fixed issue where invalid password occurring during login screen with slow connection.
+- [x] Fixed issue where bot doesn't buy item from in-game shop.
+- [x] Added heroes picking phase coordinate in dataset.
+
+# =========================================================================== #
 # v1.1.9 - Feature Enhancement (26 December 2025)
 # =========================================================================== #
 - [x] Enhancement dataset for QoL stuff.

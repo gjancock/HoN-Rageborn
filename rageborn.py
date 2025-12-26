@@ -146,11 +146,9 @@ def launch_focus_and_pin_jokevio():
     # 1️⃣ Launch via desktop icon
     icon1 = assetsLibrary.get_app_icon()
     icon2 = assetsLibrary.get_app_icon_default()
-    if image_exists(icon1, region=constant.SCREEN_REGION):
-        find_and_click(icon1, doubleClick=True, region=constant.SCREEN_REGION)
+    if find_and_click(icon1, doubleClick=True, region=constant.SCREEN_REGION):
         logger.info("[INFO] Launching game...")
-    elif image_exists(icon2, region=constant.SCREEN_REGION):
-        find_and_click(icon2, doubleClick=True, region=constant.SCREEN_REGION)
+    elif find_and_click(icon2, doubleClick=True, region=constant.SCREEN_REGION):        
         logger.info("[INFO] Launching game...")
     else:
         raise RuntimeError("Failed to click Juvio desktop icon")
@@ -200,9 +198,8 @@ def launch_focus_and_pin_jokevio():
         interruptible_wait(0.5)
 
     # 5️⃣ Dismiss disclaimer if present
-    if image_exists("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION):
-        logger.info("[INFO] Dismissing startup disclaimer")
-        find_and_click("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION)
+    if find_and_click("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION):
+        logger.info("[INFO] Dismissing startup disclaimer")        
         interruptible_wait(0.5)
 
     logger.info("[INFO] Juvio Platform ready for login")
@@ -216,6 +213,7 @@ def unpin_jokevio():
 #
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
+    time.sleep(0.7)
     if enter:
         pyautogui.press("enter")
 
@@ -234,27 +232,38 @@ def account_Login(username, password):
     # Click password field (reuse if same)
     pyautogui.press("tab")
     type_text(password, enter=True)
-    logger.info("[INFO] Waiting account to login...")
-    interruptible_wait(3)
+    start_time = time.time()
+    timeout = 10
 
-    # 
-    if any_image_exists([
-        "startup/startup-account-not-found.png",
-        "startup/startup-invalid-password.png"
-    ]):
-        logger.info("[INFO] Invalid account / password detected.")
-        logger.info("[INFO] Aborting...")
-        return False
-    else:
-        logger.info(f"[INFO] Login as {username}")
-        return True
+    while not state.STOP_EVENT.is_set():
+        # ⛔ Timeout protection
+        if time.time() - start_time > timeout:
+            logger.warning("[LOGIN] Timeout waiting for login result")
+            return False
+
+        # ❌ Login failed
+        if any_image_exists([
+            "startup/startup-account-not-found.png",
+            "startup/startup-invalid-password.png"
+        ]):
+            logger.warning("[LOGIN] Invalid account or password detected")
+            return False
+
+        # ✅ Login success (pick a reliable UI signal)
+        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+            logger.info(f"[LOGIN] Successfully logged in as {username}")
+            return True
+
+        time.sleep(0.3)
+
+    logger.warning("[LOGIN] Login aborted due to STOP_EVENT")
+    return False
 
 def prequeue():
     # Queue options
     while True:
         logger.info("[INFO] Looking for PLAY button...")
-        if image_exists("play-button.png", region=constant.SCREEN_REGION):
-            find_and_click("play-button.png", region=constant.SCREEN_REGION)
+        if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
             logger.info("[INFO] PLAY button clicked!")            
             break
         interruptible_wait(0.7)    
@@ -289,18 +298,24 @@ def startQueue():
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
-            find_and_click("message-ok.png")
-            logger.info("[INFO] Message dismissed!")
+            if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+                logger.info("[INFO] Message dismissed!")
+                pyautogui.moveTo(x, y, duration=0.3)
+                interruptible_wait(0.3)
+                pyautogui.click()
+                last_click_time = now
+            else:
+                logger.info("[ERROR] Unable to locate OK button.")
 
         if not image_exists("waiting-for-players.png", region=constant.MATCHMAKING_PANEL_REGION):
         
             if now - last_click_time > 95:
                 logger.info("[INFO] Performing requeuing, due to timeout")
                 pyautogui.moveTo(x, y, duration=0.3)
-                interruptible_wait(0.5)
+                interruptible_wait(1)
                 pyautogui.click() # Unqueue
                 logger.info("[INFO] Stop queuing")
-                interruptible_wait(0.7)
+                interruptible_wait(1)
                 pyautogui.click() # Requeue
                 logger.info("[INFO] Start queuing")
                 last_click_time = now
@@ -314,8 +329,10 @@ def startQueue():
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
             interruptible_wait(2)
             logger.info("[INFO] 'Waiting taken too long' message showed!")
-            find_and_click("message-ok.png")
-            logger.info("[INFO] Message dismissed!")
+            if find_and_click("message-ok.png"):
+                logger.info("[INFO] Message dismissed!")
+            else:
+                logger.info("[ERROR] Unable to locate OK button.")
         
         # successfully joined a match: FOC
         if any_image_exists([
@@ -366,6 +383,24 @@ def pickingPhase():
         
         interruptible_wait(2)
 
+# TODO: Incomplete code
+def define_team():
+    # check team team 
+    pyautogui.keyDown("x")
+    if any_image_exists([
+        "foc-fountain-legion.png",
+        "scoreboard-legion.png"
+        ]):
+        team = constant.TEAM_LEGION
+    else:
+        team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[INFO] We are on {team} team!")
+    interruptible_wait(2)
+    pyautogui.keyUp("x")
+    interruptible_wait(0.5)
+
 # FOC
 def do_lane_push_step(team):
     # Will go random lane
@@ -391,7 +426,7 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
-     # check team team 
+    # check team team 
     pyautogui.keyDown("x")
     if any_image_exists([
         "foc-fountain-legion.png",
@@ -420,13 +455,11 @@ def do_foc_stuff():
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
 
-            if image_exists("vote-no.png", region=constant.VOTE_REGION):
+            if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
-                find_and_click("vote-no.png", region=constant.VOTE_REGION)
 
-            if image_exists("vote-no-black.png", region=constant.VOTE_REGION):
+            if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
-                find_and_click("vote-no-black.png", region=constant.VOTE_REGION)
         
         if not state.STOP_EVENT.is_set() and not bought:
             # open ingame shop
@@ -436,22 +469,22 @@ def do_foc_stuff():
             
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
-            if image_exists("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION)
-            time.sleep(0.5)
-            # find Jade Spire recipe
-            if image_exists("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION) 
-                time.sleep(0.3)
-                if image_exists("ingame-shop-jade-spire-recipe-icon.png", region=constant.INGAME_SHOP_REGION):
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
-                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
-                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
-                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
-                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+            if find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
+                time.sleep(0.5)
+                # find Jade Spire recipe
+                if find_and_click("ingame-shop-jade-spire-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION):                    
+                    time.sleep(0.5)
+                    if find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
+                        for _ in range(4):
+                            if find_and_click(
+                                "ingame-shop-jade-spire-recipe-owned-icon.png",
+                                rightClick=True,
+                                region=constant.INGAME_SHOP_REGION
+                            ):
+                                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                            else:
+                                logger.info("[INFO] Jade Spire already missing / no gold / UI changed")
+                            time.sleep(0.3)
 
             interruptible_wait(0.3)
             # close ingame shop
@@ -487,6 +520,25 @@ def do_foc_stuff():
 
         interruptible_wait(0.03)
 
+# TODO: Incomplete code
+# Midwar
+def do_midwar_stuff():
+    # check team team 
+    pyautogui.keyDown("x")
+    if any_image_exists([
+        "foc-fountain-legion.png",
+        "scoreboard-legion.png"
+        ]):
+        team = constant.TEAM_LEGION
+    else:
+        team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[INFO] We are on {team} team!")
+    interruptible_wait(2)
+    pyautogui.keyUp("x")
+    interruptible_wait(0.5)
+
 def check_lobby_message():
     return any_image_exists([
         f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
@@ -503,7 +555,10 @@ def ingame():
 
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
-           do_foc_stuff()
+            do_foc_stuff()
+
+        case constant.MAP_MIDWAR:
+            do_midwar_stuff()
 
 #
 def main(username, password):
