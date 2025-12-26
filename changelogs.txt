@@ -3,7 +3,7 @@
 # =========================================================================== #
 - [x] Enhancement dataset for QoL stuff.
 - [x] Now bot will portal to random lane on each iteration.
-- [x] Added support on handling "fetch to fetch mmr" case.
+- [x] Added support on handling "Failed to fetch MMR" case.
 
 # =========================================================================== #
 # v1.1.8b - Feature Enhancement (25 December 2025)
