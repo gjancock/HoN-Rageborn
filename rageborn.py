@@ -14,7 +14,7 @@ from utilities.imagesUtilities import find_and_click, image_exists, any_image_ex
 from core.parameters import TARGETING_HERO
 import core.state as state
 from utilities.datasetLoader import load_dataset
-import utilities.coordinateAccess as coordLibrary
+import utilities.coordinateAccess as assetsLibrary
 
 # Initialize Logger
 logger = setup_logger()
@@ -27,7 +27,7 @@ pyautogui.PAUSE = 0.3
 
 # Load Dataset
 COORDS = load_dataset("coordinates_1920x1080")
-coordLibrary.init(COORDS)
+assetsLibrary.init(COORDS)
 
 #
 def validate_coords(coords):
@@ -142,13 +142,16 @@ def force_foreground_and_topmost(hwnd):
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
 
 def launch_focus_and_pin_jokevio():
-    logger.info("[INFO] Launching game...")
 
     # 1️⃣ Launch via desktop icon
-    if image_exists("app-icon.png", region=constant.SCREEN_REGION):
-        find_and_click("app-icon.png", doubleClick=True, region=constant.SCREEN_REGION)
-    elif image_exists("app-icon-default.png", region=constant.SCREEN_REGION):
-        find_and_click("app-icon-default.png", doubleClick=True, region=constant.SCREEN_REGION)
+    icon1 = assetsLibrary.get_app_icon()
+    icon2 = assetsLibrary.get_app_icon_default()
+    if image_exists(icon1, region=constant.SCREEN_REGION):
+        find_and_click(icon1, doubleClick=True, region=constant.SCREEN_REGION)
+        logger.info("[INFO] Launching game...")
+    elif image_exists(icon2, region=constant.SCREEN_REGION):
+        find_and_click(icon2, doubleClick=True, region=constant.SCREEN_REGION)
+        logger.info("[INFO] Launching game...")
     else:
         raise RuntimeError("Failed to click Juvio desktop icon")
 
@@ -260,7 +263,7 @@ def startQueue():
     interruptible_wait(1.25)
 
     # Tune matchmaking bar
-    x, y = coordLibrary.get_matchmaking_tuner_coord()
+    x, y = assetsLibrary.get_matchmaking_tuner_coord()
     pyautogui.moveTo(x, y, duration=0.3)    
     pyautogui.click()
     interruptible_wait(0.3)
@@ -274,7 +277,7 @@ def startQueue():
         interruptible_wait(0.5)
 
     # Click queue button
-    x, y = coordLibrary.get_queue_button_coord()
+    x, y = assetsLibrary.get_queue_button_coord()
     pyautogui.moveTo(x, y, duration=0.3)
     interruptible_wait(0.3)
     pyautogui.click()
@@ -283,6 +286,11 @@ def startQueue():
     last_click_time = time.time()
     while True:
         now = time.time()
+
+        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
+            logger.info("[INFO] 'Failed to fetch mmr' message showed!")
+            find_and_click("message-ok.png")
+            logger.info("[INFO] Message dismissed!")
 
         if not image_exists("waiting-for-players.png", region=constant.MATCHMAKING_PANEL_REGION):
         
@@ -326,12 +334,12 @@ def pickingPhase():
         case constant.MAP_FOC:
 
             # TODO: Support others mode
-            x,y = coordLibrary.get_picking_dismiss_safezone_coord()
+            x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
             pyautogui.moveTo(x, y, duration=0.3)
             pyautogui.click() # dismiss foc role information
             logger.info("[INFO] FOC Role information dismissed..")
             logger.info("[INFO] Picking phase begin..")
-            interruptible_wait(3)
+            interruptible_wait(0.5)
             
             # TODO: Alternative hero selection
             if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
@@ -372,8 +380,8 @@ def do_lane_push_step(team):
 
     lane = LANE_BY_NUMBER[lane_number]
 
-    x1, y1 = coordLibrary.get_friendly_tower_coord(map, team, lane, 3)
-    x2, y2 = coordLibrary.get_enemy_base_coord(map, team)
+    x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, lane, 3)
+    x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
 
     pyautogui.moveTo(x1, y1, duration=0.3)
     pyautogui.hotkey("alt", "t")
@@ -425,18 +433,26 @@ def do_foc_stuff():
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
             interruptible_wait(0.5)
-            # find boots
-            if image_exists("ingame-shop-boots-icon.png", region=constant.INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-boots-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+            
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
             if image_exists("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
                 find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION)
-            interruptible_wait(0.3)
-            # find Jade Spire
+            time.sleep(0.5)
+            # find Jade Spire recipe
             if image_exists("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
-                find_and_click("ingame-shop-jade-spire-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")            
+                find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION) 
+                time.sleep(0.3)
+                if image_exists("ingame-shop-jade-spire-recipe-icon.png", region=constant.INGAME_SHOP_REGION):
+                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+
             interruptible_wait(0.3)
             # close ingame shop
             pyautogui.press("esc")
@@ -458,8 +474,11 @@ def do_foc_stuff():
 
         if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
             state.SCAN_LOBBY_MESSAGE_EVENT.clear()
-            check_lobby_message()
-            break
+
+            if check_lobby_message():
+                pyautogui.keyUp("c") # stop spamming                
+                state.STOP_EVENT.set()
+                break
         
         if elapsed >= matchTimedout:
             logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
@@ -469,16 +488,14 @@ def do_foc_stuff():
         interruptible_wait(0.03)
 
 def check_lobby_message():
-    if any_image_exists([
+    return any_image_exists([
         f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
-    ], region=constant.LOBBY_MESSAGE_REGION):
-        pyautogui.keyUp("c") # stop spamming                
-        state.STOP_EVENT.set()
+    ], region=constant.LOBBY_MESSAGE_REGION)        
 
 def ingame(): 
     #

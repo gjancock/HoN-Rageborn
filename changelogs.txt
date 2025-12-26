@@ -1,9 +1,9 @@
 # =========================================================================== #
 # v1.1.9 - Feature Enhancement (26 December 2025)
 # =========================================================================== #
-- [x] Enhancement on QoL stuff.
-- [x] Now heroes will purchase 1x "Boots" and 1x "Jade Spire recipe" instead to speed up the purchasing progress.
+- [x] Enhancement dataset for QoL stuff.
 - [x] Now bot will portal to random lane on each iteration.
+- [x] Added support on handling "fetch to fetch mmr" case.
 
 # =========================================================================== #
 # v1.1.8b - Feature Enhancement (25 December 2025)

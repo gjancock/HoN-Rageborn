@@ -155,3 +155,20 @@ def get_enemy_base_coord(map, team):
         raise ValueError(
             f"Missing coord: in_game.{map}.{team}.enemy_base"
         ) from e
+    
+#
+def get_app_icon():
+    try:
+        return _coords["meta"]["app_icon"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: meta.app_icon"
+        ) from e
+    
+def get_app_icon_default():
+    try:
+        return _coords["meta"]["app_icon_default"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: meta.app_icon_default"
+        ) from e
