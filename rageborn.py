@@ -213,6 +213,7 @@ def unpin_jokevio():
 #
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
+    time.sleep(0.7)
     if enter:
         pyautogui.press("enter")
 
@@ -299,6 +300,10 @@ def startQueue():
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
             if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
                 logger.info("[INFO] Message dismissed!")
+                pyautogui.moveTo(x, y, duration=0.3)
+                interruptible_wait(0.3)
+                pyautogui.click()
+                last_click_time = now
             else:
                 logger.info("[ERROR] Unable to locate OK button.")
 

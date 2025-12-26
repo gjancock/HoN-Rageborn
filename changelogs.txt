@@ -1,4 +1,10 @@
 # =========================================================================== #
+# v1.2.1 - Various Bug Fixes (27 December 2025)
+# =========================================================================== #
+- [x] Added 0.7 seconds as interval after password entered.
+- [x] Fixed issue where after message box "Failed to fetch mmr" pops and queue wasn't start.
+
+# =========================================================================== #
 # v1.2.0 - Feature Enhancement (26 December 2025)
 # =========================================================================== #
 - [x] Overall UI/UX overhaul.
