@@ -1,13 +1,41 @@
 import pyautogui
 import time
 import os
+import sys
 from utilities.common import resource_path, wait
 from utilities.constants import GAME_REGION, BASE_IMAGE_DIR, CONFIDENCE
 from utilities.loggerSetup import setup_logger
 from core.parameters import TARGETING_HERO
+import pyscreeze
 
 # Initialize Logger
 logger = setup_logger()
+
+def resolve_image_path(image_name: str) -> str:
+    """
+    Resolves absolute path to an image inside the /images directory.
+
+    Works for:
+    - python script execution
+    - VS Code
+    - PyInstaller --onefile EXE
+    """
+
+    # PyInstaller EXE
+    if hasattr(sys, "_MEIPASS"):
+        base_dir = sys._MEIPASS
+    else:
+        # project_root = Rageborn/
+        base_dir = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+        )
+
+    image_path = os.path.join(base_dir, "images", image_name)
+
+    if not os.path.exists(image_path):
+        logger.error(f"[IMAGE] File does not exist: {image_path}")
+
+    return image_path
 
 def image_exists(image_rel_path, region=None, confidence=None, throwException=False):
     full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
@@ -39,36 +67,51 @@ def wait_until_appears(image_rel_path, timeout=30, region=None, confidence=None,
         logger.info(f"[APP_ERROR] {image_rel_path} did not appear.")
         raise TimeoutError(f"{image_rel_path} did not appear")
     
-def find_and_click(image_rel_path, timeout=10, click=True, doubleClick=False, rightClick=False, region=None):
-    """
-    Finds an image on screen and clicks it.
-    """
-    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
-    start_time = time.time()
+def find_and_click(
+    image,
+    rightClick=False,
+    doubleClick=False,
+    region=None,
+    confidence=CONFIDENCE,
+    log_missing=False
+):
+    try:
+        image_path = resolve_image_path(image)
 
-    while time.time() - start_time < timeout:
         location = pyautogui.locateCenterOnScreen(
-            full_path,
-            confidence=CONFIDENCE,
-            region=region if region is not None else GAME_REGION
+            image_path,
+            confidence=confidence,
+            region=region
         )
 
-        if location:
-            if doubleClick:
-                pyautogui.doubleClick(location)
+        if not location:
+            return False
 
-            if click:
-                pyautogui.click(location)
+        pyautogui.moveTo(location, duration=0.15)
 
-            if rightClick:
-                pyautogui.rightClick(location)
-            
-            return True
+        if doubleClick:
+            pyautogui.doubleClick()
+        elif rightClick:
+            pyautogui.rightClick()
+        else:
+            pyautogui.click()
 
-        time.sleep(0.5)
+        return True
 
-    logger.info(f"[APP_ERROR] Could not find {image_rel_path}")
-    pass
+    except (pyautogui.ImageNotFoundException,
+            pyscreeze.ImageNotFoundException):
+        if log_missing:
+            logger.debug(f"[IMAGE] Not found: {image}")
+        return False
+
+    except OSError as e:
+        logger.error(f"[IMAGE] Failed to load image file: {image}")
+        logger.error(str(e))
+        return False
+
+    except Exception:
+        logger.exception(f"[IMAGE] Unexpected error while finding {image}")
+        return False
 
 def click_until_image_appears(
     click_image_rel_path,

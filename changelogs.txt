@@ -1,4 +1,13 @@
 # =========================================================================== #
+# v1.2.0 - Feature Enhancement (26 December 2025)
+# =========================================================================== #
+- [x] Overall UI/UX overhaul.
+- [x] Added new feature which allow user to use the bot by login their own account.
+- [x] Added new feature which allow user to generate and sign up account without running the bot.
+- [x] Fixed issue where item trying to be purchase not found and crashing the program.
+- [x] Change requeue button click interval from 0.5 seconds to 1 seconds.
+
+# =========================================================================== #
 # v1.1.10 - Various Bug Fixes (26 December 2025)
 # =========================================================================== #
 - [x] Fixed issue where invalid password occurring during login screen with slow connection.

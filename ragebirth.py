@@ -42,6 +42,14 @@ DEFAULT_PASSWORD = "@Abc12345"
 # ============================================================
 # APPLICATION SETTINGS
 # ============================================================
+def global_thread_exception_handler(args):
+    logger.exception(
+        "[THREAD-CRASH] Unhandled exception",
+        exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
+    )
+
+threading.excepthook = global_thread_exception_handler
+
 def resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS
@@ -188,20 +196,26 @@ def resetState():
     state.STOP_EVENT.clear()
 
 def run_rageborn_flow(username, password):
-    import rageborn
+    try:
+        import rageborn
 
-    resetState()
-    rageborn.start(username, password)
+        resetState()
+        rageborn.start(username, password)
 
-    # after rageborn finishes
-    kill_jokevio()
+    except Exception:
+        logger.exception("[FATAL] Rageborn crashed")
+
+    finally:
+        kill_jokevio()
+        logger.info("[MAIN] Rageborn thread exited")
 
 def start_rageborn_async(username, password):    
-    threading.Thread(
+    t = threading.Thread(
         target=run_rageborn_flow,
         args=(username, password),
         daemon=True
-    ).start()
+    )
+    t.start()
 
 # ----------------- UI callbacks -----------------
 def get_effective_password():
@@ -249,8 +263,16 @@ def kill_jokevio():
         logger.info(f"[INFO] Intend to kill Jokevio.exe, but its not running")
 
 # ============================================================
-# AUTOMATION
+# UI Application 
 # ============================================================
+root = tk.Tk()
+root.update_idletasks()  # ensure geometry info is ready
+root.title(f"{INFO_NAME} v{VERSION}")
+
+auto_mode_var = tk.BooleanVar(value=False)
+duration_var = tk.StringVar(value="Duration: 00:00:00")
+iteration_var = tk.StringVar(value="Iterations completed: 0")
+
 def one_full_cycle():
     try:
         while True:
@@ -296,7 +318,7 @@ def one_full_cycle():
         time.sleep(10)
 
 def auto_loop_worker():
-    logger.info("[INFO] Endless mode started")
+    logger.info(f"[INFO] --Endless mode started--v{VERSION}")
 
     root.after(0, set_start_time)
 
@@ -322,15 +344,6 @@ def auto_loop_worker():
 
     logger.info("[INFO] Endless mode stopped")
 
-def on_auto_toggle():
-    if auto_mode_var.get():
-        threading.Thread(
-            target=auto_loop_worker,
-            daemon=True
-        ).start()
-    else:
-        duration_var.set("Duration: 00:00:00")
-
 def set_start_time():
     global auto_start_time
     auto_start_time = datetime.now()
@@ -352,19 +365,74 @@ def increment_iteration():
         elapsed = int((datetime.now() - auto_start_time).total_seconds())
         duration_var.set(f"Duration: {format_duration(elapsed)}")
 
-# ============================================================
-# TKINTER UI
-# ============================================================
-
 def poll_log_queue():
     while not log_queue.empty():
         msg = log_queue.get()
+
         log_text.config(state="normal")
-        log_text.insert("end", msg + "\n")
+
+        # ---- LOG LEVEL DETECTION ----
+        tag = "INFO"
+
+        if (
+            "[FATAL]" in msg
+            or "Traceback" in msg
+            or "RuntimeError" in msg
+            or "Exception" in msg
+        ):
+            tag = "ERROR"
+        elif "[WARN]" in msg:
+            tag = "WARN"
+
+        log_text.insert("end", msg + "\n", tag)
         log_text.see("end")
         log_text.config(state="disabled")
 
     root.after(100, poll_log_queue)
+
+def on_login_only():
+    user = username_entry.get().strip()
+    pwd = get_effective_password()
+
+    if not user or not pwd:
+        messagebox.showerror("Error", "Username and password are required")
+        return
+
+    logger.info(f"[INFO] Logging in with existing account: {user}")
+    start_rageborn_async(user, pwd)
+
+def on_signup_only():
+    """Sign up ONLY, no Rageborn"""
+    on_submit()
+
+def on_signup_and_run_once():
+    """Sign up, then run Rageborn once"""
+    first = first_name_entry.get()
+    last = last_name_entry.get()
+    email = email_entry.get()
+    user = username_entry.get()
+    pwd = get_effective_password()
+
+    if not all([first, last, email, user, pwd]):
+        messagebox.showerror("Error", "All fields are required")
+        return
+
+    success, msg = signup_user(first, last, email, user, pwd)
+
+    if success:
+        start_rageborn_async(user, pwd)
+    else:
+        messagebox.showerror("Failed", msg)
+
+
+def on_start_endless_mode():
+    """Start endless mode (replaces checkbox)"""
+    if not auto_mode_var.get():
+        auto_mode_var.set(True)
+        threading.Thread(
+            target=auto_loop_worker,
+            daemon=True
+        ).start()
 
 def on_submit():
     first = first_name_entry.get()
@@ -380,16 +448,12 @@ def on_submit():
     success, msg = signup_user(first, last, email, user, pwd)
 
     if success:
-        on_signup_success()
+        messagebox.showinfo("Success", "Signup successful!")
     else:
         messagebox.showerror("Failed", msg)
 
-root = tk.Tk()
-root.update_idletasks()  # ensure geometry info is ready
-root.title(f"{INFO_NAME} v{VERSION}")
-
-WINDOW_WIDTH = 425
-WINDOW_HEIGHT = 590
+WINDOW_WIDTH = 750
+WINDOW_HEIGHT = 800
 
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
@@ -399,78 +463,98 @@ y = screen_height - 90 - WINDOW_HEIGHT
 
 root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
 
-tk.Label(root, text="Password").pack()
-password_entry = tk.Entry(root)
-password_entry.pack()
+main_frame = tk.Frame(root)
+main_frame.pack(fill="both", expand=True)
 
-tk.Label(root, text="First Name").pack()
-first_name_entry = tk.Entry(root)
-first_name_entry.pack()
+left_frame = tk.Frame(main_frame)
+left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+left_frame.rowconfigure(0, weight=1)
 
-tk.Label(root, text="Last Name").pack()
-last_name_entry = tk.Entry(root)
-last_name_entry.pack()
+form_frame = tk.Frame(left_frame)
+form_frame.pack(fill="x", anchor="n")
 
-tk.Label(root, text="Prefix (optional)").pack()
-prefix_entry = tk.Entry(root)
-prefix_entry.pack()
+spacer = tk.Frame(left_frame)
+spacer.pack(fill="both", expand=True)
 
-tk.Label(root, text="Postfix (optional)").pack()
-postfix_entry = tk.Entry(root)
-postfix_entry.pack()
+right_frame = tk.Frame(main_frame)
+right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 
-tk.Label(root, text="Email Domain").pack()
-domain_entry = tk.Entry(root)
-domain_entry.insert(0, "mail.com")
-domain_entry.pack()
+main_frame.columnconfigure(0, weight=0)
+main_frame.columnconfigure(1, weight=1)
+main_frame.rowconfigure(0, weight=1)
 
-tk.Button(root, text="Generate Username & Email", command=on_generate).pack(pady=10)
+def labeled_entry(parent, label, default=""):
+    tk.Label(parent, text=label, anchor="w").pack(fill="x")
+    e = tk.Entry(parent)
+    e.pack(fill="x", pady=2)
+    if default:
+        e.insert(0, default)
+    return e
 
-tk.Label(root, text="Username").pack()
-username_entry = tk.Entry(root)
-username_entry.pack()
+first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
+last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
+domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
+email_entry = labeled_entry(form_frame, "Email")
+username_entry = labeled_entry(form_frame, "Username")
+password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
 
-tk.Label(root, text="Email").pack()
-email_entry = tk.Entry(root)
-email_entry.pack()
+tk.Button(
+    form_frame,
+    text="Generate Username & Email",
+    command=on_generate
+).pack(fill="x", pady=6)
 
-auto_mode_var = tk.BooleanVar(value=False)
+action_row = tk.Frame(form_frame)
+action_row.pack(fill="x", pady=6)
 
-auto_mode_checkbox = tk.Checkbutton(
-    root,
-    text="Auto Generate & Run",
-    variable=auto_mode_var
-)
-auto_mode_checkbox.pack(pady=5)
+tk.Button(
+    action_row,
+    text="Sign Up",
+    command=on_submit,
+    width=12
+).pack(side="left", expand=True, padx=2)
 
-auto_mode_checkbox.config(command=on_auto_toggle)
+tk.Button(
+    action_row,
+    text="Login",
+    command=on_login_only,
+    width=12
+).pack(side="left", expand=True, padx=2)
 
-duration_var = tk.StringVar(value="Duration: 00:00:00")
-duration_label = tk.Label(root, textvariable=duration_var)
-duration_label.pack(pady=2)
+tk.Button(
+    form_frame,
+    text="Sign up and run once",
+    command=on_signup_and_run_once
+).pack(fill="x", pady=4)
 
-iteration_var = tk.StringVar(value="Iterations completed: 0")
+status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
+status_frame.pack(fill="x", side="bottom", pady=10)
 
-iteration_label = tk.Label(root, textvariable=iteration_var)
-iteration_label.pack(pady=2)
+duration_label = tk.Label(status_frame, textvariable=duration_var)
+duration_label.pack(anchor="w")
 
-tk.Button(root, text="Sign Up", command=on_submit).pack(pady=10)
+iteration_label = tk.Label(status_frame, textvariable=iteration_var)
+iteration_label.pack(anchor="w")
+
+tk.Button(
+    status_frame,
+    text="Start Endless Mode",
+    command=on_start_endless_mode
+).pack(fill="x", pady=6)
 
 log_text = tk.Text(
-    root,
-    height=20,
-    width=100,
-    state="disabled",
+    right_frame,
     bg="black",
     fg="lime",
-    font=("Consolas", 9)
+    font=("Consolas", 9),
+    state="disabled"
 )
-log_text.pack(fill="both", expand=True, padx=5, pady=5)
-
-#
-first_name_entry.insert(0, DEFAULT_FIRST_NAME)
-last_name_entry.insert(0, DEFAULT_LAST_NAME)
-password_entry.insert(0, DEFAULT_PASSWORD)
+log_text.pack(fill="both", expand=True)
+log_text.tag_configure("INFO", foreground="lime")
+log_text.tag_configure("WARN", foreground="orange")
+log_text.tag_configure("ERROR", foreground="red")
 
 poll_log_queue()
 
