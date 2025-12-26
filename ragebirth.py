@@ -4,7 +4,6 @@ import requests
 import re
 from urllib.parse import urlencode
 import random
-import string
 import subprocess
 import threading
 import time
@@ -17,6 +16,7 @@ import core.state as state
 from utilities.usernameGenerator import generate_word_username, generate_random_string
 from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
+import configparser
 
 # Logger
 log_queue = Queue()
@@ -38,6 +38,14 @@ MAX_USERNAME_LENGTH = 16
 DEFAULT_FIRST_NAME = "Maliken"
 DEFAULT_LAST_NAME = "DeForest"
 DEFAULT_PASSWORD = "@Abc12345"
+
+#
+auto_start_timer_id = None
+AUTO_START_DELAY_MS = 5000  # 5 seconds
+auto_start_countdown_id = None
+AUTO_START_DELAY_SECONDS = 5
+auto_start_remaining = 0
+
 
 # ============================================================
 # APPLICATION SETTINGS
@@ -70,6 +78,34 @@ def read_version():
 #
 INFO_NAME = "Rageborn"
 VERSION = read_version()
+
+# ============================================================
+# CONFIG (INI)
+# ============================================================
+
+CONFIG_FILE = resource_path("rageborn.ini")
+
+def load_config():
+    config = configparser.ConfigParser()
+    if os.path.exists(CONFIG_FILE):
+        config.read(CONFIG_FILE)
+    return config
+
+def save_config(config):
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        config.write(f)
+
+def get_auto_start_endless():
+    config = load_config()
+    return config.getboolean("endless", "auto_start", fallback=False)
+
+def set_auto_start_endless(value: bool):
+    config = load_config()
+    if "endless" not in config:
+        config["endless"] = {}
+    config["endless"]["auto_start"] = "true" if value else "false"
+    save_config(config)
+
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -192,6 +228,41 @@ def generate_email(prefix="", postfix="", domain="mail.com", length=6):
 # UI CALLBACKS
 # ============================================================
 
+def schedule_auto_start_endless():
+    global auto_start_timer_id
+
+    # Avoid double scheduling
+    if auto_start_timer_id is not None:
+        return
+
+    logger.info("[INFO] Auto-start Endless Mode scheduled in 5 seconds")
+
+    auto_start_timer_id = root.after(
+        AUTO_START_DELAY_MS,
+        execute_auto_start_endless
+    )
+
+
+def cancel_auto_start_endless():
+    global auto_start_timer_id
+
+    if auto_start_timer_id is not None:
+        root.after_cancel(auto_start_timer_id)
+        auto_start_timer_id = None
+        logger.info("[INFO] Auto-start Endless Mode cancelled")
+
+
+def execute_auto_start_endless():
+    global auto_start_timer_id
+    auto_start_timer_id = None
+
+    # Final guard: user might untick at the last moment
+    if auto_start_endless_var.get():
+        logger.info("[INFO] Auto-starting Endless Mode now")
+        on_start_endless_mode()
+    else:
+        logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
+
 def resetState():
     state.STOP_EVENT.clear()
 
@@ -272,6 +343,9 @@ root.title(f"{INFO_NAME} v{VERSION}")
 auto_mode_var = tk.BooleanVar(value=False)
 duration_var = tk.StringVar(value="Duration: 00:00:00")
 iteration_var = tk.StringVar(value="Iterations completed: 0")
+auto_start_endless_var = tk.BooleanVar(value=get_auto_start_endless())
+auto_start_countdown_var = tk.StringVar(value="")
+
 
 def one_full_cycle():
     try:
@@ -532,6 +606,88 @@ tk.Button(
 status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
 status_frame.pack(fill="x", side="bottom", pady=10)
 
+def on_auto_start_checkbox_changed():
+    value = auto_start_endless_var.get()
+    set_auto_start_endless(value)
+
+    if value:
+        schedule_auto_start_endless()
+    else:
+        cancel_auto_start_endless()
+
+def update_auto_start_countdown():
+    global auto_start_remaining, auto_start_countdown_id
+
+    if auto_start_remaining <= 0:
+        auto_start_countdown_var.set("")
+        auto_start_countdown_id = None
+        execute_auto_start_endless()
+        return
+
+    auto_start_countdown_var.set(
+        f"Auto start in {auto_start_remaining}…"
+    )
+    auto_start_remaining -= 1
+
+    auto_start_countdown_id = root.after(1000, update_auto_start_countdown)
+
+
+def schedule_auto_start_endless():
+    global auto_start_timer_id, auto_start_remaining
+
+    if auto_start_timer_id is not None:
+        return  # already scheduled
+
+    auto_start_remaining = AUTO_START_DELAY_SECONDS
+    auto_start_countdown_var.set(
+        f"Auto start in {auto_start_remaining}…"
+    )
+
+    logger.info("[INFO] Auto-start Endless Mode scheduled")
+
+    auto_start_timer_id = True  # logical flag
+    update_auto_start_countdown()
+
+
+def cancel_auto_start_endless():
+    global auto_start_timer_id, auto_start_countdown_id
+
+    if auto_start_countdown_id is not None:
+        root.after_cancel(auto_start_countdown_id)
+        auto_start_countdown_id = None
+
+    auto_start_timer_id = None
+    auto_start_countdown_var.set("")
+
+    logger.info("[INFO] Auto-start Endless Mode cancelled")
+
+
+def execute_auto_start_endless():
+    global auto_start_timer_id
+
+    auto_start_timer_id = None
+
+    if auto_start_endless_var.get():
+        logger.info("[INFO] Auto-starting Endless Mode now")
+        on_start_endless_mode()
+    else:
+        logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
+
+
+tk.Checkbutton(
+    status_frame,
+    text="Auto start Endless Mode on launch",
+    variable=auto_start_endless_var,
+    command=on_auto_start_checkbox_changed
+).pack(anchor="w", pady=(2, 4))
+
+countdown_label = tk.Label(
+    status_frame,
+    textvariable=auto_start_countdown_var,
+    fg="orange"
+)
+countdown_label.pack(anchor="w")
+
 duration_label = tk.Label(status_frame, textvariable=duration_var)
 duration_label.pack(anchor="w")
 
@@ -557,6 +713,14 @@ log_text.tag_configure("WARN", foreground="orange")
 log_text.tag_configure("ERROR", foreground="red")
 
 poll_log_queue()
+
+# ============================================================
+# AUTO START ENDLESS MODE (DELAYED & CANCELLABLE)
+# ============================================================
+
+if auto_start_endless_var.get():
+    schedule_auto_start_endless()
+
 
 if __name__ == "__main__":
     root.mainloop()

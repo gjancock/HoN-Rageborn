@@ -6,6 +6,7 @@
 - [x] Added new feature which allow user to generate and sign up account without running the bot.
 - [x] Fixed issue where item trying to be purchase not found and crashing the program.
 - [x] Change requeue button click interval from 0.5 seconds to 1 seconds.
+- [x] Added new feature which allow user to set "Auto run program on next startup".
 
 # =========================================================================== #
 # v1.1.10 - Various Bug Fixes (26 December 2025)
