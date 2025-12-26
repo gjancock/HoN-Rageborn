@@ -1,4 +1,11 @@
 # =========================================================================== #
+# v1.1.10 - Various Bug Fixes (26 December 2025)
+# =========================================================================== #
+- [x] Fixed issue where invalid password occurring during login screen with slow connection.
+- [x] Fixed issue where bot doesn't buy item from in-game shop.
+- [x] Added heroes picking phase coordinate in dataset.
+
+# =========================================================================== #
 # v1.1.9 - Feature Enhancement (26 December 2025)
 # =========================================================================== #
 - [x] Enhancement dataset for QoL stuff.

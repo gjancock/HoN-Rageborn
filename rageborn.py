@@ -234,20 +234,32 @@ def account_Login(username, password):
     # Click password field (reuse if same)
     pyautogui.press("tab")
     type_text(password, enter=True)
-    logger.info("[INFO] Waiting account to login...")
-    interruptible_wait(3)
+    start_time = time.time()
+    timeout = 10
 
-    # 
-    if any_image_exists([
-        "startup/startup-account-not-found.png",
-        "startup/startup-invalid-password.png"
-    ]):
-        logger.info("[INFO] Invalid account / password detected.")
-        logger.info("[INFO] Aborting...")
-        return False
-    else:
-        logger.info(f"[INFO] Login as {username}")
-        return True
+    while not state.STOP_EVENT.is_set():
+        # ⛔ Timeout protection
+        if time.time() - start_time > timeout:
+            logger.warning("[LOGIN] Timeout waiting for login result")
+            return False
+
+        # ❌ Login failed
+        if any_image_exists([
+            "startup/startup-account-not-found.png",
+            "startup/startup-invalid-password.png"
+        ]):
+            logger.warning("[LOGIN] Invalid account or password detected")
+            return False
+
+        # ✅ Login success (pick a reliable UI signal)
+        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+            logger.info(f"[LOGIN] Successfully logged in as {username}")
+            return True
+
+        time.sleep(0.3)
+
+    logger.warning("[LOGIN] Login aborted due to STOP_EVENT")
+    return False
 
 def prequeue():
     # Queue options
@@ -289,7 +301,7 @@ def startQueue():
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
-            find_and_click("message-ok.png")
+            find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
             logger.info("[INFO] Message dismissed!")
 
         if not image_exists("waiting-for-players.png", region=constant.MATCHMAKING_PANEL_REGION):
@@ -460,15 +472,17 @@ def do_foc_stuff():
             # find Jade Spire recipe
             if image_exists("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
                 find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION) 
-                time.sleep(0.3)
+                time.sleep(0.5)
                 if image_exists("ingame-shop-jade-spire-recipe-icon.png", region=constant.INGAME_SHOP_REGION):
                     find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
                     logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
                     logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
                     logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                    find_and_click("ingame-shop-jade-spire-recipe-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
+                    logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                    find_and_click("ingame-shop-jade-spire-recipe-owned-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION)
                     logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
 
             interruptible_wait(0.3)
