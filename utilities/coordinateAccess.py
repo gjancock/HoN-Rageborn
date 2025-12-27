@@ -157,6 +157,70 @@ def get_enemy_base_coord(map, team):
         ) from e
     
 #
+def get_in_game_shop_initiation_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["initiation"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.initiation"
+        ) from e
+    
+def get_in_game_shop_consumables_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["consumables"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.consumables"
+        ) from e
+    
+def get_in_game_shop_boots_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["boots"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.boots"
+        ) from e
+    
+def get_in_game_shop_damage_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["damage"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.damage"
+        ) from e
+    
+def get_in_game_shop_defense_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["defense"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.defense"
+        ) from e
+    
+def get_in_game_shop_supportive_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["supportive"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.supportive"
+        ) from e
+    
+def get_in_game_shop_enchantment_category_coord():
+    try:
+        node = _coords["in_game"]["shop"]["enchantment"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.shop.enchantment"
+        ) from e
+    
+#
 def get_app_icon():
     try:
         return _coords["meta"]["app_icon"]

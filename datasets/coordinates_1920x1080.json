@@ -111,6 +111,15 @@
     }
   },
   "in_game": {
+    "shop": {
+      "initiation": { "x":520, "y":345 },
+      "consumables": { "x":517, "y":369 },
+      "boots": { "x":517, "y":396 },
+      "damage": { "x":517, "y":425 },
+      "defense": { "x":517, "y":453 },
+      "supportive": { "x":518, "y":479 },
+      "enchantment": { "x":518, "y":504 }
+    },
     "foc": {
       "legion": {
         "friendly_base": {"x": 467, "y": 833},
