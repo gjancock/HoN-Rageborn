@@ -386,16 +386,18 @@ def pickingPhase():
 def get_team():
     interruptible_wait(0.5)
 
-    # click minimap
-    pyautogui.click(514,790)
-    interruptible_wait(0.5)
-    if any_image_exists([
-        "foc-legion-mid-tower-sight.png",
-        "foc-legion-mid-tower-sight-2.png"
-        ], region=constant.GAME_REGION):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
+    match state.INGAME_STATE.getCurrentMap():
+        case constant.MAP_FOC:
+            # click minimap
+            pyautogui.click(514,790)
+            interruptible_wait(0.5)
+            if any_image_exists([
+                "foc-legion-mid-tower-sight.png",
+                "foc-legion-mid-tower-sight-2.png"
+                ], region=constant.GAME_REGION):
+                team = constant.TEAM_LEGION
+            else:
+                team = constant.TEAM_HELLBOURNE
     
     state.INGAME_STATE.setCurrentTeam(team)
     logger.info(f"[INFO] We are on {team} team!")
