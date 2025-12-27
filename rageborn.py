@@ -406,6 +406,23 @@ def get_team():
     interruptible_wait(0.5)
     return team
 
+# kick vote: TODO: Not working
+def do_kick_vote():
+    pyautogui.click(1443, 220)
+    pyautogui.click(1425, 297)
+    pyautogui.click(1425, 268)
+    pyautogui.click(1041, 541)
+    pyautogui.click(1010, 561)
+    pyautogui.click(978, 573)
+    return time.time()
+
+# pause vote
+def do_pause_vote():
+    pyautogui.click(1441, 219)
+    pyautogui.click(1431, 257)
+    pyautogui.click(1423, 319)
+    return time.time()
+
 # FOC
 def do_lane_push_step(team):
     # Will go random lane
@@ -431,6 +448,9 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
+    # kick vote
+    #last_kick_time = do_kick_vote()
+
     # check team team
     team = get_team()
 
@@ -441,8 +461,22 @@ def do_foc_stuff():
     #
     matchTimedout = 500 # after 500 seconds from now will automatic leave the game    
     start_time = time.monotonic()
+
+    # vote pause    
+    last_pause_time = do_pause_vote()
+    
     while not state.STOP_EVENT.is_set():
+        now = time.time() # for pause
         elapsed = time.monotonic() - start_time
+
+        if not state.STOP_EVENT.is_set():           
+            if now - last_pause_time >= 60: # every 60s click
+                do_pause_vote()
+                last_pause_time = now
+
+            #if now - last_kick_time >= 180: # every 180s click
+            #    do_kick_vote()
+            #    last_kick_time = now
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
