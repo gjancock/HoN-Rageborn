@@ -1,5 +1,10 @@
 Gjanko: Any thoughts on Rageborn?
 
+Disclaimer
+-------------------------------------
+This program is developed strictly for educational and learning purposes only.
+I am not responsible for any IP bans, hardware bans, account bans, or any other related consequences or legal issues resulting from the use of this tool.
+
 How to Use
 -------------------------------------
 1. Download latest release from https://github.com/gjancock/HoN-Rageborn.
@@ -36,11 +41,6 @@ Hardware Settings
 Notes
 -------------------------------------
 All generated account usernames will be saved in a text file named
-signup_users.txt, located in the same folder as Rageborn.exe.
-
-Disclaimer
--------------------------------------
-I am not responsible for any IP bans, hardware bans, account bans, or any other related consequences or legal issues resulting from the use of this tool.
-   
+signup_users.txt, located in the same folder as Rageborn.exe. 
 
 
