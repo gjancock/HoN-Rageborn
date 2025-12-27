@@ -1,21 +1,24 @@
 import rageborn
 import core.state as state
 import utilities.constants as constant
+import time
 
 def reset_state():
     state.STOP_EVENT.clear()
     state.SCAN_VOTE_EVENT.clear()
     state.SCAN_LOBBY_MESSAGE_EVENT.clear()
     state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)
-    state.INGAME_STATE.setCurrentTeam(constant.TEAM_LEGION)
+    #state.INGAME_STATE.setCurrentTeam(constant.TEAM_LEGION)
 
 def test_ingame():
     print("[TEST] Starting ingame() test only")
+    time.sleep(5)
     reset_state()
 
     try:
         state.init_cycle_number()
-        rageborn.ingame()
+        rageborn.get_team()
+        #rageborn.ingame()
     except KeyboardInterrupt:
         print("[TEST] Interrupted by user")
     finally:

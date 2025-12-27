@@ -383,23 +383,26 @@ def pickingPhase():
         
         interruptible_wait(2)
 
-# TODO: Incomplete code
-def define_team():
-    # check team team 
-    pyautogui.keyDown("x")
+def get_team():
+    interruptible_wait(0.5)
+
+    # click minimap
+    pyautogui.click(514,790)
+    interruptible_wait(0.5)
     if any_image_exists([
-        "foc-fountain-legion.png",
-        "scoreboard-legion.png"
-        ]):
+        "foc-legion-mid-tower-sight.png",
+        "foc-legion-mid-tower-sight-2.png"
+        ], region=constant.GAME_REGION):
         team = constant.TEAM_LEGION
     else:
         team = constant.TEAM_HELLBOURNE
     
     state.INGAME_STATE.setCurrentTeam(team)
     logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
+    interruptible_wait(1)
+    pyautogui.press("c")
     interruptible_wait(0.5)
+    return team
 
 # FOC
 def do_lane_push_step(team):
@@ -426,21 +429,8 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
-    # check team team 
-    pyautogui.keyDown("x")
-    if any_image_exists([
-        "foc-fountain-legion.png",
-        "scoreboard-legion.png"
-        ]):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
-    
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
-    interruptible_wait(0.5)
+    # check team team
+    team = get_team()
 
     #
     bought = False
@@ -469,22 +459,23 @@ def do_foc_stuff():
             
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
-            if find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
-                time.sleep(0.5)
-                # find Jade Spire recipe
-                if find_and_click("ingame-shop-jade-spire-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION):                    
-                    time.sleep(0.5)
-                    if find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
-                        for _ in range(4):
-                            if find_and_click(
-                                "ingame-shop-jade-spire-recipe-owned-icon.png",
-                                rightClick=True,
-                                region=constant.INGAME_SHOP_REGION
-                            ):
-                                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                            else:
-                                logger.info("[INFO] Jade Spire already missing / no gold / UI changed")
-                            time.sleep(0.3)
+            x1, y1 = assetsLibrary.get_in_game_shop_enchantment_category_coord()
+            pyautogui.click(x1, y1)
+            #time.sleep(0.3)
+            pyautogui.click(688, 417)
+            #time.sleep(0.3)
+            for _ in range(5):
+                pyautogui.rightClick(750, 302)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                interruptible_wait(0.2)    
+
+            # buy golden apple
+            x2, y2 = assetsLibrary.get_in_game_shop_consumables_category_coord()    
+            pyautogui.click(x2, y2)
+            for _ in range(1):
+                pyautogui.rightClick(654, 334)
+                logger.info("[INFO] Bought a Golden Apple cost 75g!")
+                interruptible_wait(0.2)
 
             interruptible_wait(0.3)
             # close ingame shop

@@ -58,6 +58,14 @@ def global_thread_exception_handler(args):
 
 threading.excepthook = global_thread_exception_handler
 
+def get_runtime_dir():
+    if getattr(sys, "frozen", False):
+        # PyInstaller EXE location
+        return os.path.dirname(sys.executable)
+    else:
+        # Python script location
+        return os.path.dirname(os.path.abspath(__file__))
+
 def resource_path(relative_path):
     if hasattr(sys, "_MEIPASS"):
         base_path = sys._MEIPASS
@@ -83,7 +91,7 @@ VERSION = read_version()
 # CONFIG (INI)
 # ============================================================
 
-CONFIG_FILE = resource_path("rageborn.ini")
+CONFIG_FILE = os.path.join(get_runtime_dir(), "rageborn.ini")
 
 def load_config():
     config = configparser.ConfigParser()
