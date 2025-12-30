@@ -1,6 +1,7 @@
 from pynput import mouse
 import pyautogui
 from datetime import datetime
+import time
 
 OUTPUT_FILE = "mouse_coordinates.txt"
 
@@ -18,8 +19,10 @@ def main():
     print("===================================")
     print(" Mouse Coordinate Recorder Started ")
     print(" Click anywhere to record position ")
-    print(" Press CTRL+C to stop")
+    print(" Start after 5 seconds")
     print("===================================")
+
+    time.sleep(5)    
 
     with mouse.Listener(on_click=on_click) as listener:
         listener.join()

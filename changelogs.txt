@@ -1,4 +1,16 @@
 # =========================================================================== #
+# v1.2.3 - Game Update (30 December 2025)
+# =========================================================================== #
+- [x] Support game version 0.8.0.
+
+# =========================================================================== #
+# v1.2.2 - Various Bug Fixes (27 December 2025)
+# =========================================================================== #
+- [x] Fixed issue where team not able to recognize correctly.
+- [x] Added new algorithm on item purchasing, fast and direct now.
+- [x] Fixed issue where "auto endless mode" isn't save as expected.
+
+# =========================================================================== #
 # v1.2.1 - Various Bug Fixes (27 December 2025)
 # =========================================================================== #
 - [x] Added 0.7 seconds as interval after password entered.

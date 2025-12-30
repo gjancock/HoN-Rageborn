@@ -250,7 +250,9 @@ def account_Login(username, password):
             return False
 
         # ✅ Login success (pick a reliable UI signal)
-        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+        if any_image_exists([
+            "play-button.png", "play-button-christmas.png"
+            ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {username}")
             return True
 
@@ -266,6 +268,11 @@ def prequeue():
         if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
             logger.info("[INFO] PLAY button clicked!")            
             break
+
+        if find_and_click("play-button-christmas.png", region=constant.SCREEN_REGION):            
+            logger.info("[INFO] PLAY button clicked!")            
+            break
+
         interruptible_wait(0.7)    
 
 def startQueue():
@@ -383,23 +390,46 @@ def pickingPhase():
         
         interruptible_wait(2)
 
-# TODO: Incomplete code
-def define_team():
-    # check team team 
-    pyautogui.keyDown("x")
-    if any_image_exists([
-        "foc-fountain-legion.png",
-        "scoreboard-legion.png"
-        ]):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
+def get_team():
+    interruptible_wait(0.5)
+
+    match state.INGAME_STATE.getCurrentMap():
+        case constant.MAP_FOC:
+            # click minimap
+            pyautogui.click(514,790)
+            interruptible_wait(0.5)
+            if any_image_exists([
+                "foc-legion-mid-tower-sight.png",
+                "foc-legion-mid-tower-sight-2.png",
+                "foc-legion-mid-tower-sight-3.png"
+                ], region=constant.GAME_REGION):
+                team = constant.TEAM_LEGION
+            else:
+                team = constant.TEAM_HELLBOURNE
     
     state.INGAME_STATE.setCurrentTeam(team)
     logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
+    interruptible_wait(1)
+    pyautogui.press("c")
     interruptible_wait(0.5)
+    return team
+
+# kick vote: TODO: Not working
+def do_kick_vote():
+    pyautogui.click(1443, 220)
+    pyautogui.click(1425, 297)
+    pyautogui.click(1425, 268)
+    pyautogui.click(1041, 541)
+    pyautogui.click(1010, 561)
+    pyautogui.click(978, 573)
+    return time.time()
+
+# pause vote
+def do_pause_vote():
+    pyautogui.click(1441, 219)
+    pyautogui.click(1431, 257)
+    pyautogui.click(1423, 319)
+    return time.time()
 
 # FOC
 def do_lane_push_step(team):
@@ -426,21 +456,11 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
-    # check team team 
-    pyautogui.keyDown("x")
-    if any_image_exists([
-        "foc-fountain-legion.png",
-        "scoreboard-legion.png"
-        ]):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
-    
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
-    interruptible_wait(0.5)
+    # kick vote
+    #last_kick_time = do_kick_vote()
+
+    # check team team
+    team = get_team()
 
     #
     bought = False
@@ -449,8 +469,22 @@ def do_foc_stuff():
     #
     matchTimedout = 500 # after 500 seconds from now will automatic leave the game    
     start_time = time.monotonic()
+
+    # vote pause    
+    last_pause_time = do_pause_vote()
+    
     while not state.STOP_EVENT.is_set():
+        now = time.time() # for pause
         elapsed = time.monotonic() - start_time
+
+        if not state.STOP_EVENT.is_set():           
+            if now - last_pause_time >= 60: # every 60s click
+                do_pause_vote()
+                last_pause_time = now
+
+            #if now - last_kick_time >= 180: # every 180s click
+            #    do_kick_vote()
+            #    last_kick_time = now
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
@@ -469,22 +503,23 @@ def do_foc_stuff():
             
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
-            if find_and_click("ingame-shop-enchantment-icon.png", region=constant.INGAME_SHOP_REGION):
-                time.sleep(0.5)
-                # find Jade Spire recipe
-                if find_and_click("ingame-shop-jade-spire-icon.png", rightClick=True, region=constant.INGAME_SHOP_REGION):                    
-                    time.sleep(0.5)
-                    if find_and_click("ingame-shop-jade-spire-icon.png", region=constant.INGAME_SHOP_REGION):
-                        for _ in range(4):
-                            if find_and_click(
-                                "ingame-shop-jade-spire-recipe-owned-icon.png",
-                                rightClick=True,
-                                region=constant.INGAME_SHOP_REGION
-                            ):
-                                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                            else:
-                                logger.info("[INFO] Jade Spire already missing / no gold / UI changed")
-                            time.sleep(0.3)
+            x1, y1 = assetsLibrary.get_in_game_shop_enchantment_category_coord()
+            pyautogui.click(x1, y1)
+            #time.sleep(0.3)
+            pyautogui.click(688, 417)
+            #time.sleep(0.3)
+            for _ in range(5):
+                pyautogui.rightClick(750, 302)
+                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
+                interruptible_wait(0.2)    
+
+            # buy golden apple
+            x2, y2 = assetsLibrary.get_in_game_shop_consumables_category_coord()    
+            pyautogui.click(x2, y2)
+            for _ in range(1):
+                pyautogui.rightClick(654, 334)
+                logger.info("[INFO] Bought a Golden Apple cost 75g!")
+                interruptible_wait(0.2)
 
             interruptible_wait(0.3)
             # close ingame shop
