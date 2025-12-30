@@ -250,7 +250,9 @@ def account_Login(username, password):
             return False
 
         # ✅ Login success (pick a reliable UI signal)
-        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+        if any_image_exists([
+            "play-button.png", "play-button-christmas.png"
+            ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {username}")
             return True
 
@@ -266,6 +268,11 @@ def prequeue():
         if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
             logger.info("[INFO] PLAY button clicked!")            
             break
+
+        if find_and_click("play-button-christmas.png", region=constant.SCREEN_REGION):            
+            logger.info("[INFO] PLAY button clicked!")            
+            break
+
         interruptible_wait(0.7)    
 
 def startQueue():
@@ -393,7 +400,8 @@ def get_team():
             interruptible_wait(0.5)
             if any_image_exists([
                 "foc-legion-mid-tower-sight.png",
-                "foc-legion-mid-tower-sight-2.png"
+                "foc-legion-mid-tower-sight-2.png",
+                "foc-legion-mid-tower-sight-3.png"
                 ], region=constant.GAME_REGION):
                 team = constant.TEAM_LEGION
             else:
