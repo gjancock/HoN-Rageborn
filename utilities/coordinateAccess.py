@@ -252,9 +252,9 @@ def get_role_heroes_coord(role, hero=""):
 
         if hero in library[hero]:
             node = library[hero]
-            return node["x"], node["y"]
+            return hero, node["x"], node["y"]
         else:
-            return False
+            raise ValueError("Invalid hero!")
     except KeyError as e:
         raise ValueError(
             f"Missing item: picking_phase.role.{role}.{hero}"
