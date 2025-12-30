@@ -15,6 +15,54 @@
     "enter_queue_button": {"x": 937, "y": 729}
   },
   "picking_phase": {
+    "legion": {
+      "player_rows": [
+        {
+          "index": 1,
+          "region": { "x": 453, "y": 306, "w": 215, "h1": 54 }
+        },
+        {
+          "index": 2,
+          "region": { "x": 453, "y": 388, "w": 214, "h1": 60 }
+        },
+        {
+          "index": 3,
+          "region": { "x": 453, "y": 471, "w": 215, "h1": 61 }
+        },
+        {
+          "index": 4,
+          "region": { "x": 453, "y": 564, "w": 215, "h1": 55 }
+        },
+        {
+          "index": 5,
+          "region": { "x": 453, "y": 651, "w": 215, "h1": 51 }
+        }
+      ]
+    },
+    "hellbourne": {
+      "player_rows": [
+        {
+          "index": 1,
+          "region": { "x": 1247, "y": 306, "w": 213, "h1": 54 }
+        },
+        {
+          "index": 2,
+          "region": { "x": 1247, "y": 388, "w": 213, "h1": 60 }
+        },
+        {
+          "index": 3,
+          "region": { "x": 1247, "y": 471, "w": 213, "h1": 61 }
+        },
+        {
+          "index": 4,
+          "region": { "x": 1247, "y": 564, "w": 213, "h1": 55 }
+        },
+        {
+          "index": 5,
+          "region": { "x": 1247, "y": 651, "w": 200, "h1": 51 }
+        }
+      ]
+    },
     "role_information": {
       "carry": "foc-role-carry.png",
       "hard_support": "foc-role-hard-support.png",
