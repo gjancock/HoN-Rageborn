@@ -357,7 +357,26 @@ def pickingPhase():
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
 
-            # TODO: Support others mode
+            # TODO: detect role that appear onscreen
+            carryRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_CARRY)
+            softSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
+            hardSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
+            offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
+            midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
+
+            if image_exists(carryRole, region=constant.GAME_REGION):
+                logger.info("[INFO] Assignated Role: Carry")
+            elif image_exists(softSupportRole, region=constant.GAME_REGION):
+                logger.info("[INFO] Assignated Role: Soft Support")
+            elif image_exists(hardSupportRole, region=constant.GAME_REGION):
+                logger.info("[INFO] Assignated Role: Hard Support")
+            elif image_exists(offlaneRole, region=constant.GAME_REGION):
+                logger.info("[INFO] Assignated Role: Offlane")
+            elif image_exists(midRole, region=constant.GAME_REGION):
+                logger.info("[INFO] Assignated Role: Mid")
+            else:
+                logger.info("[INFO] Anyhow pick allowed!")
+
             x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
             pyautogui.moveTo(x, y, duration=0.3)
             pyautogui.click() # dismiss foc role information
