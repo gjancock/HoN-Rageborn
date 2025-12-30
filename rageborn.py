@@ -401,7 +401,8 @@ def get_team():
             if any_image_exists([
                 "foc-legion-mid-tower-sight.png",
                 "foc-legion-mid-tower-sight-2.png",
-                "foc-legion-mid-tower-sight-3.png"
+                "foc-legion-mid-tower-sight-3.png",
+                "foc-legion-mid-tower-sight-4.png"
                 ], region=constant.GAME_REGION):
                 team = constant.TEAM_LEGION
             else:
