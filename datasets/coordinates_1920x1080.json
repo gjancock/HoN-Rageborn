@@ -15,6 +15,13 @@
     "enter_queue_button": {"x": 937, "y": 729}
   },
   "picking_phase": {
+    "role_information": {
+      "carry": "foc-role-carry.png",
+      "hard_support": "foc-role-hard-support.png",
+      "mid": "foc-role-mid.png",
+      "offlane": "foc-role-offlane.png",
+      "soft_support": "foc-role-soft-support.png"
+    },
     "dismiss_safezone": {"x": 968, "y": 336},
     "role": {
       "mid": {
