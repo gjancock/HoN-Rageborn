@@ -236,25 +236,19 @@ def get_heroes_coord(hero):
             f"Missing item: picking_phase.heroes.{hero}"
         ) from e
     
-def get_role_heroes_coord(role, hero=""):
+def get_role_heroes_coord(role):
     try:
         role_allowed = {constant.FOC_ROLE_CARRY, constant.FOC_ROLE_HARD_SUPPORT, constant.FOC_ROLE_MID, constant.FOC_ROLE_OFFLANE, constant.FOC_ROLE_SOFT_SUPPORT}
 
         if role not in role_allowed:
             raise ValueError(f"Invalid role type: {role}")
         
-        library = _coords["picking_phase"]["role"][role]
+        roles = _coords["picking_phase"]["role"]
         
-        if not hero == "":
-            hero = hero.lower()
-        else:
-            hero = random.choice(list(library.keys()))
+        hero = random.choice(list(roles[role].keys()))
 
-        if hero in library[hero]:
-            node = library[hero]
-            return hero, node["x"], node["y"]
-        else:
-            raise ValueError("Invalid hero!")
+        node = roles[role][hero]
+        return hero, node["x"], node["y"]
     except KeyError as e:
         raise ValueError(
             f"Missing item: picking_phase.role.{role}.{hero}"
