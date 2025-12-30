@@ -364,17 +364,24 @@ def pickingPhase():
             offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
             midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
 
+            role = constant.FOC_ROLE_JUNGLE # default role
             if image_exists(carryRole, region=constant.GAME_REGION):
                 logger.info("[INFO] Assignated Role: Carry")
+                role = constant.FOC_ROLE_CARRY
             elif image_exists(softSupportRole, region=constant.GAME_REGION):
                 logger.info("[INFO] Assignated Role: Soft Support")
+                role = constant.FOC_ROLE_SOFT_SUPPORT
             elif image_exists(hardSupportRole, region=constant.GAME_REGION):
                 logger.info("[INFO] Assignated Role: Hard Support")
+                role = constant.FOC_ROLE_HARD_SUPPORT
             elif image_exists(offlaneRole, region=constant.GAME_REGION):
                 logger.info("[INFO] Assignated Role: Offlane")
+                role = constant.FOC_ROLE_OFFLANE
             elif image_exists(midRole, region=constant.GAME_REGION):
                 logger.info("[INFO] Assignated Role: Mid")
+                role = constant.FOC_ROLE_MID
             else:
+                role = constant.FOC_ROLE_JUNGLE
                 logger.info("[INFO] Anyhow pick allowed!")
 
             x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
@@ -383,17 +390,27 @@ def pickingPhase():
             logger.info("[INFO] FOC Role information dismissed..")
             logger.info("[INFO] Picking phase begin..")
             interruptible_wait(0.5)
+
+            # TODO: Able to pick heroes based on role
+            # TODO: what if hero banned?
+            hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+            logger.info(f"[INFO] Selecting {hero}")
+            pyautogui.moveTo(hx1, hy1, duration=0.3)
+            pyautogui.doubleClick()
+            logger.info(f"[INFO] {hero} selected")
+            logger.info("[INFO] Waiting to rageborn")
             
             # TODO: Alternative hero selection
-            if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
-                logger.info(f"[INFO] {TARGETING_HERO} selected")
-                interruptible_wait(0.5)        
-                pyautogui.moveTo(x, y, duration=0.3) # move off hover hero selection
-                logger.info("[INFO] Waiting to rageborn")
-            else:
-                # TODO: Random is just fine?
-                logger.info(f"[INFO] {TARGETING_HERO} banned!")
-                logger.info("[INFO] Waiting to get random hero.")
+            # TODO: Separated grief mode
+            # if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
+            #     logger.info(f"[INFO] {TARGETING_HERO} selected")
+            #     interruptible_wait(0.5)        
+            #     pyautogui.moveTo(x, y, duration=0.3) # move off hover hero selection
+            #     logger.info("[INFO] Waiting to rageborn")
+            # else:
+            #     # TODO: Random is just fine?
+            #     logger.info(f"[INFO] {TARGETING_HERO} banned!")
+            #     logger.info("[INFO] Waiting to get random hero.")
 
     while True:
         if image_exists("ingame-top-left-menu.png", region=constant.SCREEN_REGION):
@@ -467,6 +484,11 @@ def do_lane_push_step(team):
 
     x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, lane, 3)
     x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
+
+    # mouse cursor to team mid tower
+    # alt+t and click to team mid tower
+    # mouse cursor to enemy mid tower
+    # right click to enemy mid tower
 
     pyautogui.moveTo(x1, y1, duration=0.3)
     pyautogui.hotkey("alt", "t")
@@ -550,11 +572,6 @@ def do_foc_stuff():
             interruptible_wait(0.5)
         
         if not state.STOP_EVENT.is_set():
-            # mouse cursor to team mid tower
-            # alt+t and click to team mid tower
-            # mouse cursor to enemy mid tower
-            # right click to enemy mid tower
-
             do_lane_push_step(team)
             
             # TODO: spam taunt (need to calculate or know already ready tower)    
