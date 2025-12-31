@@ -1,5 +1,6 @@
 # Refer to coordinates_resolutionsize.json
 import utilities.constants as constant
+import random
 
 _coords = None
 
@@ -220,7 +221,60 @@ def get_in_game_shop_enchantment_category_coord():
             f"Missing item: in_game.shop.enchantment"
         ) from e
     
-#
+def get_heroes_coord(hero):
+    try:
+        hero = hero.lower()
+
+        if hero in _coords["picking_phase"]["heroes"]:
+            node = _coords["picking_phase"]["heroes"][hero]
+            return node["x"], node["y"]
+        else:
+            return False
+
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: picking_phase.heroes.{hero}"
+        ) from e
+    
+def get_role_heroes_coord(role):
+    try:
+        role_allowed = {constant.FOC_ROLE_CARRY, 
+                        constant.FOC_ROLE_HARD_SUPPORT, 
+                        constant.FOC_ROLE_MID, 
+                        constant.FOC_ROLE_OFFLANE, 
+                        constant.FOC_ROLE_SOFT_SUPPORT, 
+                        constant.FOC_ROLE_JUNGLE,
+                        constant.FOC_ROLE_SOLO_OFFLANE
+                        }
+
+        if role not in role_allowed:
+            raise ValueError(f"Invalid role type: {role}")
+        
+        roles = _coords["picking_phase"]["role"]
+        
+        hero = random.choice(list(roles[role].keys()))
+
+        node = roles[role][hero]
+        return hero, node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: picking_phase.role.{role}.{hero}"
+        ) from e
+    
+# String
+def get_foc_role_information(role):
+    try:
+        role_allowed = {constant.FOC_ROLE_CARRY, constant.FOC_ROLE_HARD_SUPPORT, constant.FOC_ROLE_MID, constant.FOC_ROLE_OFFLANE, constant.FOC_ROLE_SOFT_SUPPORT}
+
+        if role not in role_allowed:
+            raise ValueError(f"Invalid role type: {role}")
+        
+        return _coords["picking_phase"]["role_information"][role]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: picking_phase.role_information.{role}"
+        ) from e
+
 def get_app_icon():
     try:
         return _coords["meta"]["app_icon"]

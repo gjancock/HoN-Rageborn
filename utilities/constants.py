@@ -34,3 +34,12 @@ TEAM_HELLBOURNE = "hellbourne"
 LANE_TOP = "top"
 LANE_MID = "mid"
 LANE_BOT = "bot"
+
+# FOC ROLE
+FOC_ROLE_MID = "mid"
+FOC_ROLE_CARRY = "carry"
+FOC_ROLE_SOFT_SUPPORT = "soft_support"
+FOC_ROLE_HARD_SUPPORT = "hard_support"
+FOC_ROLE_OFFLANE = "offlane"
+FOC_ROLE_JUNGLE = "jungle"
+FOC_ROLE_SOLO_OFFLANE = "solo_offlane"

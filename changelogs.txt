@@ -1,4 +1,14 @@
 # =========================================================================== #
+# v1.2.4 - Feature Enhancement (31 December 2025)
+# =========================================================================== #
+- [x] Fixed hero naming in dataset.
+- [x] Fixed match aborted isn't detected correctly issue.
+- [x] Added designated role of heroes in dataset.
+- [x] Added new feature which able to detect designated role on screen for FoC mode.
+- [x] Added new feature which able to select correct hero based on designated role for FoC mode.
+- [x] Added new feature which able to detect which team and position you were currently on.
+
+# =========================================================================== #
 # v1.2.3 - Game Update (30 December 2025)
 # =========================================================================== #
 - [x] Support game version 0.8.0.

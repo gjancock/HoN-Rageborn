@@ -6,6 +6,8 @@ class InGameState:
         self._lock = threading.Lock()
         self._current_map = ""
         self._current_team = ""
+        self._username = ""
+        self._position = 0
 
     def setCurrentMap(self, map):
         with self._lock:
@@ -15,6 +17,14 @@ class InGameState:
         with self._lock:
             self._current_team = team
 
+    def setUsername(self, username):
+        with self._lock:
+            self._username = username
+
+    def setPosition(self, position):
+        with self._lock:
+            self._position = position
+
     def getCurrentMap(self):
         with self._lock:
             return self._current_map
@@ -22,6 +32,14 @@ class InGameState:
     def getCurrentTeam(self):
         with self._lock:
             return self._current_team
+        
+    def getUsername(self):
+        with self._lock:
+            return self._username
+        
+    def getPosition(self):
+        with self._lock:
+            return self._position
 
 #
 STOP_EVENT = threading.Event()
