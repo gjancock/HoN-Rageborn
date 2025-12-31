@@ -238,7 +238,14 @@ def get_heroes_coord(hero):
     
 def get_role_heroes_coord(role):
     try:
-        role_allowed = {constant.FOC_ROLE_CARRY, constant.FOC_ROLE_HARD_SUPPORT, constant.FOC_ROLE_MID, constant.FOC_ROLE_OFFLANE, constant.FOC_ROLE_SOFT_SUPPORT}
+        role_allowed = {constant.FOC_ROLE_CARRY, 
+                        constant.FOC_ROLE_HARD_SUPPORT, 
+                        constant.FOC_ROLE_MID, 
+                        constant.FOC_ROLE_OFFLANE, 
+                        constant.FOC_ROLE_SOFT_SUPPORT, 
+                        constant.FOC_ROLE_JUNGLE,
+                        constant.FOC_ROLE_SOLO_OFFLANE
+                        }
 
         if role not in role_allowed:
             raise ValueError(f"Invalid role type: {role}")

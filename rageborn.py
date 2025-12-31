@@ -15,6 +15,9 @@ from core.parameters import TARGETING_HERO
 import core.state as state
 from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
+from utilities.playerPosition import detect_team_and_position
+from utilities.uiLayoutLoader import load_ui_layout, get_hero_hover_region
+from utilities.heroHoverDetector import detect_hero_hover_text
 
 # Initialize Logger
 logger = setup_logger()
@@ -254,6 +257,7 @@ def account_Login(username, password):
             "play-button.png", "play-button-christmas.png"
             ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {username}")
+            state.INGAME_STATE.setUsername(username)
             return True
 
         time.sleep(0.3)
@@ -353,9 +357,28 @@ def startQueue():
 
         interruptible_wait(2)
 
+def getTeamAndPosition():    
+    UI_LAYOUT = load_ui_layout()
+    team, position = detect_team_and_position(
+        username=state.INGAME_STATE.getUsername(),
+        ui_layout=UI_LAYOUT
+    )
+
+    if team:
+        state.INGAME_STATE.setCurrentTeam(team)
+        state.INGAME_STATE.setPosition(position)
+        logger.info(f"[INFO] I am on {team.upper()} — position #{position}")
+        return team, position
+    else:
+        logger.warning("[WARN] Could not detect team/position")
+        return None, None
+
+
 def pickingPhase():
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
+
+            logger.info("[INFO] Detecting role..")
 
             # TODO: detect role that appear onscreen
             carryRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_CARRY)
@@ -365,24 +388,32 @@ def pickingPhase():
             midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
 
             role = constant.FOC_ROLE_JUNGLE # default role
-            if image_exists(carryRole, region=constant.GAME_REGION):
-                logger.info("[INFO] Assignated Role: Carry")
-                role = constant.FOC_ROLE_CARRY
-            elif image_exists(softSupportRole, region=constant.GAME_REGION):
-                logger.info("[INFO] Assignated Role: Soft Support")
-                role = constant.FOC_ROLE_SOFT_SUPPORT
-            elif image_exists(hardSupportRole, region=constant.GAME_REGION):
-                logger.info("[INFO] Assignated Role: Hard Support")
-                role = constant.FOC_ROLE_HARD_SUPPORT
-            elif image_exists(offlaneRole, region=constant.GAME_REGION):
-                logger.info("[INFO] Assignated Role: Offlane")
-                role = constant.FOC_ROLE_OFFLANE
-            elif image_exists(midRole, region=constant.GAME_REGION):
-                logger.info("[INFO] Assignated Role: Mid")
-                role = constant.FOC_ROLE_MID
-            else:
-                role = constant.FOC_ROLE_JUNGLE
-                logger.info("[INFO] Anyhow pick allowed!")
+            roleCheckStart = time.time()
+            while True:
+                now = time.time()
+                if image_exists(carryRole):
+                    logger.info("[INFO] Assignated Role: Carry")
+                    role = constant.FOC_ROLE_CARRY
+                    break
+                elif image_exists(softSupportRole):
+                    logger.info("[INFO] Assignated Role: Soft Support")
+                    role = constant.FOC_ROLE_SOFT_SUPPORT
+                    break
+                elif image_exists(hardSupportRole):
+                    logger.info("[INFO] Assignated Role: Hard Support")
+                    role = constant.FOC_ROLE_HARD_SUPPORT
+                    break
+                elif image_exists(offlaneRole):
+                    logger.info("[INFO] Assignated Role: Offlane")
+                    role = constant.FOC_ROLE_OFFLANE
+                    break
+                elif image_exists(midRole):
+                    logger.info("[INFO] Assignated Role: Mid")
+                    role = constant.FOC_ROLE_MID
+                    break
+                elif now - roleCheckStart > 3: # 3 seconds timeout
+                    logger.info(f"[WARN] Unable to detect role.. use {role}")
+                    break
 
             x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
             pyautogui.moveTo(x, y, duration=0.3)
@@ -393,11 +424,28 @@ def pickingPhase():
 
             # TODO: Able to pick heroes based on role
             # TODO: what if hero banned?
-            hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
-            logger.info(f"[INFO] Selecting {hero}")
-            pyautogui.moveTo(hx1, hy1, duration=0.3)
-            pyautogui.doubleClick()
-            logger.info(f"[INFO] {hero} selected")
+            UI_LAYOUT = load_ui_layout()
+            hover_region = get_hero_hover_region(UI_LAYOUT)           
+
+            while True:
+                hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+                logger.info(f"[INFO] Selecting {hero}")
+                pyautogui.moveTo(hx1, hy1, duration=0.3)
+                interruptible_wait(0.45)
+
+                if detect_hero_hover_text(hover_region):
+                    pyautogui.doubleClick()
+                    pyautogui.doubleClick()
+                    logger.info(f"[INFO] {hero} selected")
+                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                    interruptible_wait(0.5)
+                    break
+                else:
+                    logger.info(f"[INFO] {hero} banned! Reshuffle hero")
+
+                interruptible_wait(0.5)
+
+            getTeamAndPosition()
             logger.info("[INFO] Waiting to rageborn")
             
             # TODO: Alternative hero selection
@@ -412,6 +460,7 @@ def pickingPhase():
             #     logger.info(f"[INFO] {TARGETING_HERO} banned!")
             #     logger.info("[INFO] Waiting to get random hero.")
 
+
     while True:
         if image_exists("ingame-top-left-menu.png", region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
@@ -419,47 +468,12 @@ def pickingPhase():
             interruptible_wait(1.5)
             return True
         
-        elif image_exists("play-button.png", region=constant.SCREEN_REGION):
+        elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
             # Back to lobby
             logger.info("[INFO] Match aborted!")
             return False
         
         interruptible_wait(2)
-
-def get_team():
-    interruptible_wait(0.5)
-
-    match state.INGAME_STATE.getCurrentMap():
-        case constant.MAP_FOC:
-            # click minimap
-            pyautogui.click(514,790)
-            interruptible_wait(0.5)
-            if any_image_exists([
-                "foc-legion-mid-tower-sight.png",
-                "foc-legion-mid-tower-sight-2.png",
-                "foc-legion-mid-tower-sight-3.png",
-                "foc-legion-mid-tower-sight-4.png"
-                ], region=constant.GAME_REGION):
-                team = constant.TEAM_LEGION
-            else:
-                team = constant.TEAM_HELLBOURNE
-    
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(1)
-    pyautogui.press("c")
-    interruptible_wait(0.5)
-    return team
-
-# kick vote: TODO: Not working
-def do_kick_vote():
-    pyautogui.click(1443, 220)
-    pyautogui.click(1425, 297)
-    pyautogui.click(1425, 268)
-    pyautogui.click(1041, 541)
-    pyautogui.click(1010, 561)
-    pyautogui.click(978, 573)
-    return time.time()
 
 # pause vote
 def do_pause_vote():
@@ -498,13 +512,9 @@ def do_lane_push_step(team):
 
 # FOC
 def do_foc_stuff():
-    # kick vote
-    #last_kick_time = do_kick_vote()
-
-    # check team team
-    team = get_team()
-
     #
+    team = state.INGAME_STATE.getCurrentTeam()
+    position = state.INGAME_STATE.getPosition()
     bought = False
     pyautogui.keyDown("c") # center hero
 
@@ -523,10 +533,6 @@ def do_foc_stuff():
             if now - last_pause_time >= 60: # every 60s click
                 do_pause_vote()
                 last_pause_time = now
-
-            #if now - last_kick_time >= 180: # every 180s click
-            #    do_kick_vote()
-            #    last_kick_time = now
 
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
@@ -642,7 +648,6 @@ def main(username, password):
 
         # Account Login manually
         if account_Login(username, password):
-
             while not state.STOP_EVENT.is_set():
                 #
                 prequeue()

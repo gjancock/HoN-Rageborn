@@ -15,6 +15,9 @@
     "enter_queue_button": {"x": 937, "y": 729}
   },
   "picking_phase": {
+    "hero_hover_information": {
+      "x": 567, "y": 605, "w": 148, "h": 22
+    },
     "legion": {
       "player_rows": [
         {
