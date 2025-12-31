@@ -81,7 +81,7 @@ def read_version():
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
-        logger.error("[INFO_ERROR] Unable to find VERSION")
+        logger.error("[ERROR] Unable to find VERSION")
         return "unknown"
     
 #
@@ -120,6 +120,22 @@ def set_auto_start_endless(value: bool):
 # SIGNUP LOGIC (NO UI CODE HERE)
 # ============================================================
 
+def is_signup_success(r):
+    try:
+        data = r.json()
+    except ValueError:
+        return False, "Invalid JSON response"
+
+    if data.get("status") != "success":
+        return False, "Failed to signup: username existed or email used"
+
+    tokens = data.get("tokens", "")
+    if "csrf-token" not in tokens:
+        return False, "Missing CSRF token"
+
+    return True, "Signup success"
+
+
 def signup_user(first_name, last_name, email, username, password):
     session = requests.Session()
     session.headers.update({
@@ -136,7 +152,7 @@ def signup_user(first_name, last_name, email, username, password):
 
         match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
         if not match:
-            logger.error("[INFO_ERROR] Failed to get CSRF token.")
+            logger.error("[ERROR] Failed to get CSRF token.")
             return False, "CSRF not found"
 
         csrf = match.group(1)
@@ -178,13 +194,17 @@ def signup_user(first_name, last_name, email, username, password):
             timeout=15,
         )
 
-        if r.status_code == 200:
-            logger.info(f"[INFO] Account {username} created, password: {password}")
+        success, msg = is_signup_success(r)
+
+        if success:
+            logger.info(f"[INFO] Account {username} created")
+            logger.info(f"[INFO] Password: {password}")
             log_username(username)
-            return True, "Signup Successfully"
+            return True, msg
         else:
-            logger.info(f"[INFO] Failed to create account {username}: Error {r.status_code} - {r.text}")
-            return False, f"HTTP {r.status_code}"        
+            logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
+            #logger.info(f"[DEBUG] Raw response: {r.text}")
+            return False, msg       
 
     except (ConnectionError, Timeout, RemoteDisconnected) as e:
         logger.warning(f"[NET] Signup dropped by server: {e}")

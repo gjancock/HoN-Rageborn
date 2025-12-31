@@ -515,7 +515,7 @@ def do_lane_push_step(team):
 
 # FOC
 def do_auto_following(x, y):
-    logger.info("[DEBUG] Auto following the lucky one..")
+    #logger.info("[DEBUG] Auto following the lucky one..")
     pyautogui.keyUp("c") # stop center own hero            
     pyautogui.doubleClick(x, y)
     pyautogui.rightClick(960, 500)
@@ -675,11 +675,11 @@ def main(username, password):
                 #
                 startQueue()
 
-                logger.info("[DEBUG] startQueue finished, entering pickingPhase")
+                #logger.info("[DEBUG] startQueue finished, entering pickingPhase")
                 
                 #
                 result = pickingPhase()
-                logger.info(f"[DEBUG] pickingPhase returned: {result}")                
+                #logger.info(f"[DEBUG] pickingPhase returned: {result}")                
 
                 if not result:
 
