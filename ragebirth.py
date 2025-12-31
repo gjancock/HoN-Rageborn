@@ -182,8 +182,9 @@ def signup_user(first_name, last_name, email, username, password):
             logger.info(f"[INFO] Account {username} created, password: {password}")
             log_username(username)
             return True, "Signup Successfully"
-
-        return False, f"HTTP {r.status_code}"
+        else:
+            logger.info(f"[INFO] Failed to create account {username}: Error {r.status_code} - {r.text}")
+            return False, f"HTTP {r.status_code}"        
 
     except (ConnectionError, Timeout, RemoteDisconnected) as e:
         logger.warning(f"[NET] Signup dropped by server: {e}")

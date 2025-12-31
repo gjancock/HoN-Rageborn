@@ -4,6 +4,7 @@
 - [x] Fixed program unable to detect if the match successfully entered or aborted.
 - [x] Added new feature which the bot able to auto following a random teammate.
 - [x] Added F12 as Failsafe hotkey.
+- [x] Bot will auto following a random teammate instead of proceed to suicide.
 
 # =========================================================================== #
 # v1.2.4 - Feature Enhancement (31 December 2025)
