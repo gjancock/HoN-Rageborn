@@ -376,7 +376,12 @@
           "tower_1": {"x": 582, "y": 792},
           "tower_2": {"x": 582, "y": 769},
           "tower_3": {"x": 582, "y": 751}
-        }
+        },
+        "hero_portrait_1": { "x":690, "y": 220 },
+        "hero_portrait_2": { "x":725, "y": 219 },
+        "hero_portrait_3": { "x":763, "y": 221 },
+        "hero_portrait_4": { "x":800, "y": 219 },
+        "hero_portrait_5": { "x":833, "y": 219 }
       },
       "hellbourne": {
         "friendly_base": {"x": 575, "y": 725},
@@ -410,7 +415,12 @@
           "tower_1": {"x": 568, "y": 833},
           "tower_2": {"x": 521, "y": 833},
           "tower_3": {"x": 495, "y": 833}
-        }
+        },
+        "hero_portrait_1": { "x":1078, "y":222 },
+        "hero_portrait_2": { "x":1115, "y":222 },
+        "hero_portrait_3": { "x":1150, "y":222 },
+        "hero_portrait_4": { "x":1189, "y":223 },
+        "hero_portrait_5": { "x":1225, "y":222 }
       }
     },
     "midwar": {
@@ -426,7 +436,12 @@
           "tower_1": {"x": 534, "y": 769},
           "tower_2": {"x": 553, "y": 756}
         },
-        "enemy_fountain": {"x": 536, "y": 738}
+        "enemy_fountain": {"x": 536, "y": 738},
+        "hero_portrait_1": { "x":690, "y": 220 },
+        "hero_portrait_2": { "x":725, "y": 219 },
+        "hero_portrait_3": { "x":763, "y": 221 },
+        "hero_portrait_4": { "x":800, "y": 219 },
+        "hero_portrait_5": { "x":833, "y": 219 }
       },
       "hellbourne": {
         "friendly_base": {"x": 565, "y": 746},
@@ -440,7 +455,12 @@
           "tower_1": {"x": 507, "y": 793},
           "tower_2": {"x": 491, "y": 813}
         },
-        "enemy_fountain": {"x": 471, "y": 792}
+        "enemy_fountain": {"x": 471, "y": 792},
+        "hero_portrait_1": { "x":1078, "y":222 },
+        "hero_portrait_2": { "x":1115, "y":222 },
+        "hero_portrait_3": { "x":1150, "y":222 },
+        "hero_portrait_4": { "x":1189, "y":223 },
+        "hero_portrait_5": { "x":1225, "y":222 }
       }
     }
   }
