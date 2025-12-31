@@ -290,6 +290,22 @@ def get_in_game_center_hero_coord():
             f"Missing item: in_game.center_hero"
         ) from e
     
+# Region
+def get_player_rows_region(team):
+    return [
+        (
+            row["region"]["x"],
+            row["region"]["y"],
+            row["region"]["w"],
+            row["region"]["h"],
+            row["index"]
+        )
+        for row in _coords["picking_phase"][team]["player_rows"]
+    ]
+
+def get_hero_hover_region():
+    return _coords["picking_phase"]["hero_hover_information"]
+    
 # String
 def get_foc_role_information(role):
     try:

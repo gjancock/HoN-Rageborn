@@ -16,7 +16,6 @@ import core.state as state
 from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
 from utilities.playerPosition import detect_team_and_position
-from utilities.uiLayoutLoader import load_ui_layout, get_hero_hover_region
 from utilities.heroHoverDetector import detect_hero_hover_text
 import random
 import keyboard
@@ -368,10 +367,8 @@ def startQueue():
         interruptible_wait(2)
 
 def getTeamAndPosition():    
-    UI_LAYOUT = load_ui_layout()
     team, position = detect_team_and_position(
-        username=state.INGAME_STATE.getUsername(),
-        ui_layout=UI_LAYOUT
+        username=state.INGAME_STATE.getUsername()
     )
 
     if team:
@@ -430,11 +427,9 @@ def pickingPhase():
             pyautogui.click() # dismiss foc role information
             logger.info("[INFO] FOC Role information dismissed..")
             logger.info("[INFO] Picking phase begin..")
-            interruptible_wait(0.5)
+            interruptible_wait(0.5)            
 
-            UI_LAYOUT = load_ui_layout()
-            hover_region = get_hero_hover_region(UI_LAYOUT)           
-
+            hover_region = assetsLibrary.get_hero_hover_region()
             while True:
                 hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
                 logger.info(f"[INFO] Selecting {hero}")
