@@ -334,6 +334,7 @@
     }
   },
   "in_game": {
+    "center_hero": { "x": 960, "y": 500 },
     "shop": {
       "initiation": { "x":521, "y":345 },
       "consumables": { "x":521, "y":371 },

@@ -263,11 +263,11 @@ def get_role_heroes_coord(role):
     
 def get_hero_top_portrait_coord(map, team, pos):
     try:
-        map_allowed: {constant.MAP_FOC, constant.MAP_MIDWAR}
+        map_allowed = {constant.MAP_FOC, constant.MAP_MIDWAR}
         if map not in map_allowed:
             raise ValueError(f"Invalid map type: {map}")
         
-        team_allowed: {constant.TEAM_HELLBOURNE, constant.TEAM_LEGION}
+        team_allowed = {constant.TEAM_HELLBOURNE, constant.TEAM_LEGION}
         if team not in team_allowed:
             raise ValueError(f"Invalid team type: {team}")
         
@@ -279,6 +279,15 @@ def get_hero_top_portrait_coord(map, team, pos):
     except KeyError as e:
         raise ValueError(
             f"Missing item: in_game.{map}.{team}.hero_portrait_{pos}"
+        ) from e
+    
+def get_in_game_center_hero_coord():
+    try:
+        node = _coords["in_game"]["center_hero"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing item: in_game.center_hero"
         ) from e
     
 # String
