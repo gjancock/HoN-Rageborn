@@ -432,8 +432,6 @@ def pickingPhase():
             logger.info("[INFO] Picking phase begin..")
             interruptible_wait(0.5)
 
-            # TODO: Able to pick heroes based on role
-            # TODO: what if hero banned?
             UI_LAYOUT = load_ui_layout()
             hover_region = get_hero_hover_region(UI_LAYOUT)           
 
@@ -442,8 +440,8 @@ def pickingPhase():
                 logger.info(f"[INFO] Selecting {hero}")
                 pyautogui.moveTo(hx1, hy1, duration=0.3)
                 interruptible_wait(0.45)
-
-                if detect_hero_hover_text(hover_region):
+                
+                if detect_hero_hover_text(hover_region): # if the selected hero not banned, pick it
                     pyautogui.doubleClick()
                     pyautogui.doubleClick()
                     logger.info(f"[INFO] {hero} selected")
