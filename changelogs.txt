@@ -1,5 +1,5 @@
 # =========================================================================== #
-# v1.3.1 - Feature Enhancement (31 December 2025)
+# v1.3.1 - Bug Fixes (31 December 2025)
 # =========================================================================== #
 - [x] Fixed account registration failed but showed successfully issue.
 
