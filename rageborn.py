@@ -19,6 +19,7 @@ from utilities.playerPosition import detect_team_and_position
 from utilities.uiLayoutLoader import load_ui_layout, get_hero_hover_region
 from utilities.heroHoverDetector import detect_hero_hover_text
 import random
+import keyboard
 
 # Initialize Logger
 logger = setup_logger()
@@ -32,6 +33,14 @@ pyautogui.PAUSE = 0.3
 # Load Dataset
 COORDS = load_dataset("coordinates_1920x1080")
 assetsLibrary.init(COORDS)
+
+# ================= EMERGENCY STOP =================
+def emergency_stop():
+    logger.warning("[EMERGENCY] F12 pressed! Stopping Rageborn.")
+    state.STOP_EVENT.set()
+
+keyboard.add_hotkey("F12", emergency_stop)
+# =================================================
 
 #
 def validate_coords(coords):

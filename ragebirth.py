@@ -17,6 +17,7 @@ from utilities.usernameGenerator import generate_word_username, generate_random_
 from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
 import configparser
+import pyautogui
 
 # Logger
 log_queue = Queue()
@@ -283,6 +284,9 @@ def run_rageborn_flow(username, password):
 
     except Exception:
         logger.exception("[FATAL] Rageborn crashed")
+    except pyautogui.FailSafeException:
+        logger.info("[SAFETY] FAILSAFE Triggered! Emergency stop.")
+        state.STOP_EVENT.set()
 
     finally:
         kill_jokevio()
