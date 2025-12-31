@@ -18,6 +18,7 @@ import utilities.coordinateAccess as assetsLibrary
 from utilities.playerPosition import detect_team_and_position
 from utilities.uiLayoutLoader import load_ui_layout, get_hero_hover_region
 from utilities.heroHoverDetector import detect_hero_hover_text
+import random
 
 # Initialize Logger
 logger = setup_logger()
@@ -462,7 +463,7 @@ def pickingPhase():
 
 
     while True:
-        if image_exists("ingame-top-left-menu.png", region=constant.SCREEN_REGION):
+        if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
             logger.info("[INFO] Rageborn begin!")
             interruptible_wait(1.5)
@@ -511,12 +512,21 @@ def do_lane_push_step(team):
     pyautogui.rightClick()
 
 # FOC
+def do_auto_following(x, y):
+    logger.info("[DEBUG] Auto following the lucky one..")
+    pyautogui.keyUp("c") # stop center own hero            
+    pyautogui.doubleClick(x, y)
+    pyautogui.rightClick(960, 500)
+    pyautogui.keyDown("c") # start center own hero
+
+# FOC
 def do_foc_stuff():
     #
+    map = state.INGAME_STATE.getCurrentMap()
     team = state.INGAME_STATE.getCurrentTeam()
     position = state.INGAME_STATE.getPosition()
     bought = False
-    pyautogui.keyDown("c") # center hero
+    #pyautogui.keyDown("c") # TODO: center hero # conflict with Grief Mode 2
 
     #
     matchTimedout = 500 # after 500 seconds from now will automatic leave the game    
@@ -524,6 +534,10 @@ def do_foc_stuff():
 
     # vote pause    
     last_pause_time = do_pause_vote()
+
+    # Grief Mode 2
+    unluckyOne = random.choice([i for i in range(1, 6) if i != position]) # not working on custom match if team size lesser than 5
+    badluckX, badluckY = assetsLibrary.get_hero_top_portrait_coord(map, team, unluckyOne)
     
     while not state.STOP_EVENT.is_set():
         now = time.time() # for pause
@@ -578,7 +592,11 @@ def do_foc_stuff():
             interruptible_wait(0.5)
         
         if not state.STOP_EVENT.is_set():
-            do_lane_push_step(team)
+            #do_lane_push_step(team)
+
+            # auto following teammate
+            do_auto_following(badluckX, badluckY)
+            
             
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
