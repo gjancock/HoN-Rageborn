@@ -529,9 +529,9 @@ def do_foc_stuff():
     position = state.INGAME_STATE.getPosition()
     bought = False
     #pyautogui.keyDown("c") # TODO: center hero # conflict with Grief Mode 2
-
-    #
-    matchTimedout = 500 # after 500 seconds from now will automatic leave the game    
+    
+    # after 500 / 660 seconds from now will automatic leave the game   
+    matchTimedout = 660
     start_time = time.monotonic()
 
     # vote pause    
@@ -540,6 +540,8 @@ def do_foc_stuff():
     # Grief Mode 2
     unluckyOne = random.choice([i for i in range(1, 6) if i != position]) # not working on custom match if team size lesser than 5
     badluckX, badluckY = assetsLibrary.get_hero_top_portrait_coord(map, team, unluckyOne)
+
+    # TODO: All chat
     
     while not state.STOP_EVENT.is_set():
         now = time.time() # for pause
