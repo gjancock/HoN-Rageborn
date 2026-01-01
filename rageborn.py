@@ -394,7 +394,7 @@ def pickingPhase():
             offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
             midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
 
-            role = constant.FOC_ROLE_JUNGLE # default role
+            role = constant.FOC_ROLE_HARD_SUPPORT # default role
             roleCheckStart = time.time()
             while True:
                 now = time.time()
