@@ -18,6 +18,9 @@ from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
 import configparser
 import pyautogui
+from utilities.common import resource_path
+import pytesseract
+from utilities.ocrConfig import OCR_CONFIG, ensure_tesseract_configured
 
 # Logger
 log_queue = Queue()
@@ -67,13 +70,6 @@ def get_runtime_dir():
         # Python script location
         return os.path.dirname(os.path.abspath(__file__))
 
-def resource_path(relative_path):
-    if hasattr(sys, "_MEIPASS"):
-        base_path = sys._MEIPASS
-    else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-
-    return os.path.join(base_path, relative_path)
 
 def read_version():
     try:
@@ -298,6 +294,7 @@ def resetState():
 
 def run_rageborn_flow(username, password):
     try:
+        ensure_tesseract_configured()
         import rageborn
 
         resetState()
@@ -559,6 +556,52 @@ def on_submit():
     else:
         messagebox.showerror("Failed", msg)
 
+def ocr_self_test():
+    ensure_tesseract_configured()
+
+    import numpy as np
+
+    img = np.zeros((60, 200), dtype=np.uint8)
+    cv2 = __import__("cv2")
+    cv2.putText(
+        img,
+        "TEST123",
+        (5, 45),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        255,
+        2
+    )
+
+    text = pytesseract.image_to_string(img, config=OCR_CONFIG).strip()
+    return text
+
+def on_test_ocr():
+    try:
+        result = ocr_self_test()
+
+        if result:
+            logger.info(f"[OCR TEST] Success: '{result}'")
+            messagebox.showinfo(
+                "OCR Test",
+                f"OCR succeeded!\n\nResult:\n{result}"
+            )
+        else:
+            logger.warning("[OCR TEST] OCR ran but returned empty text")
+            messagebox.showwarning(
+                "OCR Test",
+                "OCR ran, but returned empty text.\n"
+                "Check tessdata / whitelist / config."
+            )
+
+    except Exception as e:
+        logger.error(f"[OCR TEST] Failed: {e}")
+        messagebox.showerror(
+            "OCR Test Failed",
+            f"OCR test failed:\n\n{e}"
+        )
+
+
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
 
@@ -635,6 +678,14 @@ tk.Button(
     text="Sign up and run once",
     command=on_signup_and_run_once
 ).pack(fill="x", pady=4)
+
+tk.Button(
+    form_frame,
+    text="Test OCR",
+    command=on_test_ocr,
+    fg="blue"
+).pack(fill="x", pady=(0, 8))
+
 
 status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
 status_frame.pack(fill="x", side="bottom", pady=10)
@@ -730,7 +781,8 @@ iteration_label.pack(anchor="w")
 tk.Button(
     status_frame,
     text="Start Endless Mode",
-    command=on_start_endless_mode
+    command=on_start_endless_mode,
+    fg="red"
 ).pack(fill="x", pady=6)
 
 log_text = tk.Text(
