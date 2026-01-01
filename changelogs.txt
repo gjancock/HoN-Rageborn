@@ -2,7 +2,8 @@
 # v1.3.2 - Bug Fixes (01 January 2026)
 # =========================================================================== #
 - [x] Fixed program crash due to missing tesseract installation issue.
-
+- [x] Changed ingame termination timeout from 500 seconds to 660 seconds when grief mode 2 is activated.
+- [x] Change default FoC role to Hard Support instead of Jungle.
 
 # =========================================================================== #
 # v1.3.1 - Bug Fixes (31 December 2025)
