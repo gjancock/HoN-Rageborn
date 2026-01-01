@@ -366,19 +366,25 @@ def startQueue():
 
         interruptible_wait(2)
 
-def getTeamAndPosition():    
-    team, position = detect_team_and_position(
-        username=state.INGAME_STATE.getUsername()
-    )
+def getTeamAndPosition(timeout=30):
+    start = time.time()
+    while True:
 
-    if team:
-        state.INGAME_STATE.setCurrentTeam(team)
-        state.INGAME_STATE.setPosition(position)
-        logger.info(f"[INFO] I am on {team.upper()} — position #{position}")
-        return team, position
-    else:
-        logger.warning("[WARN] Could not detect team/position")
-        return None, None
+        team, position = detect_team_and_position(
+            username=state.INGAME_STATE.getUsername()
+        )
+
+        if time.time() - start > timeout:
+            logger.info(f"[WARN] Unable to find team/position")
+            break
+
+        if team:
+            state.INGAME_STATE.setCurrentTeam(team)
+            state.INGAME_STATE.setPosition(position)
+            logger.info(f"[INFO] I am on {team.upper()} — position #{position}")
+            return team, position        
+    
+    return None, None
 
 
 def pickingPhase():
@@ -531,7 +537,7 @@ def do_foc_stuff():
     #pyautogui.keyDown("c") # TODO: center hero # conflict with Grief Mode 2
     
     # after 500 / 660 seconds from now will automatic leave the game   
-    matchTimedout = 660
+    matchTimedout = 1200
     start_time = time.monotonic()
 
     # vote pause    
