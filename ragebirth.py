@@ -20,7 +20,7 @@ import configparser
 import pyautogui
 from utilities.common import resource_path
 import pytesseract
-from utilities.ocrConfig import OCR_CONFIG, ensure_tesseract_configured
+from utilities.ocrConfig import ensure_tesseract_configured, get_config
 
 # Logger
 log_queue = Queue()
@@ -573,7 +573,10 @@ def ocr_self_test():
         2
     )
 
-    text = pytesseract.image_to_string(img, config=OCR_CONFIG).strip()
+    cfg = get_config()
+    logger.info(f"[OCR DEBUG] OCR config = {cfg}")
+
+    text = pytesseract.image_to_string(img, config=get_config()).strip()
     return text
 
 def on_test_ocr():

@@ -1,6 +1,6 @@
 from PIL import ImageGrab, ImageOps
 import pytesseract
-from utilities.ocrConfig import OCR_CONFIG
+from utilities.ocrConfig import get_config
 
 def detect_hero_hover_text(region):
     """
@@ -28,7 +28,7 @@ def detect_hero_hover_text(region):
     # 3️⃣ OCR
     text = pytesseract.image_to_string(
         img,
-        config=OCR_CONFIG
+        config=get_config()
     )
 
     # 4️⃣ Clean result

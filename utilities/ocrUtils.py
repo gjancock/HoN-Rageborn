@@ -1,6 +1,6 @@
 from PIL import ImageGrab, ImageOps
 import pytesseract
-from utilities.ocrConfig import OCR_CONFIG
+from utilities.ocrConfig import get_config
 
 def ocr_region(x, y, w, h):
     img = ImageGrab.grab(bbox=(x, y, x + w, y + h))
@@ -11,7 +11,7 @@ def ocr_region(x, y, w, h):
 
     text = pytesseract.image_to_string(
         img,
-        config=OCR_CONFIG
+        config=get_config()
     )
 
     return text.strip()
