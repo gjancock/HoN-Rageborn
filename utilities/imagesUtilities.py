@@ -56,6 +56,17 @@ def any_image_exists(image_rel_paths, region=None, confidence=None):
         if image_exists(img, region, confidence):
             return True
     return False
+
+def image_exists_in_any_region(image_path, regions):
+    """
+    Returns True if image is found in ANY region.
+    Stops scanning immediately once found.
+    """
+    for region in regions:
+        if image_exists(image_path, region=region):
+            return True
+    return False
+
     
 def wait_until_appears(image_rel_path, timeout=30, region=None, confidence=None, throw=False):
     start = time.time()

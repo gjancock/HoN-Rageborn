@@ -1,4 +1,12 @@
 # =========================================================================== #
+# v1.3.3 - Reverted Changes (3 January 2026)
+# =========================================================================== #
+- [x] Reverted grief mode to suicide mode due to team/position detect is not working well.
+- [x] In-game match timeout changed from 1200 seconds to 660 seconds.
+- [x] Added allchat and teamchat.
+- [x] Removed underscore from username generator concatenate whenever prefix/postfix value is not empty.
+
+# =========================================================================== #
 # v1.3.2 - Bug Fixes (01 January 2026)
 # =========================================================================== #
 - [x] Fixed program crash due to missing tesseract installation issue.
