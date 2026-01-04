@@ -372,14 +372,11 @@ def getTeam():
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
             # click minimap
-            pyautogui.click(514,790)
+            pyautogui.click(511,792)
             interruptible_wait(0.5)
             if any_image_exists([
-                "foc-legion-mid-tower-sight.png",
-                "foc-legion-mid-tower-sight-2.png",
-                "foc-legion-mid-tower-sight-3.png",
-                "foc-legion-mid-tower-sight-4.png"
-                ], region=constant.GAME_REGION, confidence=0.6):
+                "foc-mid-tower-legion.png"
+                ]):
                 team = constant.TEAM_LEGION
             else:
                 team = constant.TEAM_HELLBOURNE
@@ -415,10 +412,10 @@ def getTeamViaScoreboard():
     return side
 
 def getTeamViaMinimap():
-    pyautogui.click(455, 541)
+    pyautogui.click(455, 845)
     interruptible_wait(2)
 
-    if image_exists("foc-bottom-left-fountain.png", region=constant.GAME_REGION):
+    if image_exists("foc-fountain-bot-left.png"):
         team = constant.TEAM_LEGION
     else:
         team = constant.TEAM_HELLBOURNE
@@ -590,7 +587,8 @@ def allChat():
         "^:^988m a^977 l i^966 k e^955 n i^944 s a^933 n o^922 o b",
         "...",
         "WAHUEHAHHAHAHAUHAHAHAHEHAHAHAH!!",
-        "^:I blame zaniir for his bot comment! ^rxD"
+        "^:I blame zaniir for his bot comment!",
+        "demoasselborn Alan (777) proud to team up with me like you guys do ^r<3"
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
@@ -607,7 +605,7 @@ def do_foc_stuff():
     #
     map = state.INGAME_STATE.getCurrentMap()
     #team = getTeamViaScoreboard()
-    team = getTeamViaMinimap()
+    team = getTeam()
     #position = state.INGAME_STATE.getPosition()
     bought = False
     pyautogui.keyDown("c")
