@@ -10,15 +10,13 @@ import threading
 import utilities.constants as constant
 from threads.ingame import vote_requester, lobby_message_check_requester
 from utilities.common import interruptible_wait, interruptible_wait
-from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, click_until_image_appears
+from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, image_exists_in_any_region
 from core.parameters import TARGETING_HERO
 import core.state as state
 from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
-from utilities.playerPosition import detect_team_and_position
-from utilities.heroHoverDetector import detect_hero_hover_text
-import random
 import keyboard
+import random
 
 # Initialize Logger
 logger = setup_logger()
@@ -366,19 +364,77 @@ def startQueue():
 
         interruptible_wait(2)
 
-def getTeamAndPosition():    
-    team, position = detect_team_and_position(
-        username=state.INGAME_STATE.getUsername()
-    )
 
-    if team:
-        state.INGAME_STATE.setCurrentTeam(team)
-        state.INGAME_STATE.setPosition(position)
-        logger.info(f"[INFO] I am on {team.upper()} — position #{position}")
-        return team, position
+def getTeam():
+    interruptible_wait(0.5)
+    team = constant.TEAM_LEGION # Default
+
+    match state.INGAME_STATE.getCurrentMap():
+        case constant.MAP_FOC:
+            # click minimap
+            pyautogui.click(511,792)
+            interruptible_wait(0.5)
+            if any_image_exists([
+                "foc-mid-tower-legion.png"
+                ]):
+                team = constant.TEAM_LEGION
+            else:
+                team = constant.TEAM_HELLBOURNE
+    
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[INFO] We are on {team} team!")
+    interruptible_wait(1)
+    pyautogui.press("c")
+    interruptible_wait(0.5)
+    return team
+
+def getTeamViaScoreboard():
+    # check team side 
+    pyautogui.keyDown("x")
+
+    REGIONS = [
+        (596, 339, 57, 48),
+        (597, 392, 56, 43),
+        (596, 438, 57, 42),
+        (596, 484, 56, 42),
+        (600, 531, 56, 43),
+    ]
+
+    #isLegion = image_exists_in_any_region("scoreboard-legion.png", REGIONS) and any_image_exists(["foc-fountain-legion.png", "foc-fountain-legion-2.png"])
+    isLegion = any_image_exists(["foc-legion-identifier.png"], region=(598, 723, 142, 118))
+    side = constant.TEAM_LEGION if isLegion else constant.TEAM_HELLBOURNE
+    state.INGAME_STATE.setCurrentTeam(constant.TEAM_LEGION if isLegion else constant.TEAM_HELLBOURNE)
+    logger.info(f"[DEBUG] We are on {side.upper()} side!")
+    
+    interruptible_wait(2)
+    pyautogui.keyUp("x")
+    interruptible_wait(0.5)
+    return side
+
+def getTeamViaMinimap():
+    pyautogui.click(455, 845)
+    interruptible_wait(2)
+
+    if image_exists("foc-fountain-bot-left.png"):
+        team = constant.TEAM_LEGION
     else:
-        logger.warning("[WARN] Could not detect team/position")
-        return None, None
+        team = constant.TEAM_HELLBOURNE
+
+    state.INGAME_STATE.setCurrentTeam(team)
+    logger.info(f"[DEBUG] We are on {team.upper()} side!")
+    return team
+
+def pickingPhaseChat():
+    randomString = [
+        "ezwin",
+        "got me got win game",
+        "glhf!!"
+    ]
+    text = random.choice(randomString)
+
+    pyautogui.moveTo(921, 831)
+    pyautogui.click()
+    type_text(text=text, enter=True)
 
 
 def pickingPhase():
@@ -429,27 +485,21 @@ def pickingPhase():
             logger.info("[INFO] Picking phase begin..")
             interruptible_wait(0.5)            
 
-            hover_region = assetsLibrary.get_hero_hover_region()
-            while True:
-                hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
-                logger.info(f"[INFO] Selecting {hero}")
-                pyautogui.moveTo(hx1, hy1, duration=0.3)
-                interruptible_wait(0.45)
-                
-                if detect_hero_hover_text(hover_region): # if the selected hero not banned, pick it
-                    pyautogui.doubleClick()
-                    pyautogui.doubleClick()
-                    logger.info(f"[INFO] {hero} selected")
-                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
-                    interruptible_wait(0.5)
-                    break
-                else:
-                    logger.info(f"[INFO] {hero} banned! Reshuffle hero")
+            hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+            logger.info(f"[INFO] Selecting {hero}")
+            pyautogui.moveTo(hx1, hy1, duration=0.3)
+            interruptible_wait(0.45)
 
-                interruptible_wait(0.5)
+            pyautogui.doubleClick()
+            pyautogui.doubleClick()
+            logger.info(f"[INFO] {hero} selected")
+            pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+            interruptible_wait(0.5)
 
-            getTeamAndPosition()
             logger.info("[INFO] Waiting to rageborn")
+
+            # team chat
+            pickingPhaseChat()
             
             # TODO: Alternative hero selection
             # TODO: Separated grief mode
@@ -480,8 +530,10 @@ def pickingPhase():
 
 # pause vote
 def do_pause_vote():
-    pyautogui.click(1441, 219)
-    pyautogui.click(1431, 257)
+    pyautogui.click(1441, 221)
+    interruptible_wait(0.05)
+    pyautogui.click(1426, 261)
+    interruptible_wait(0.05)
     pyautogui.click(1423, 319)
     return time.time()
 
@@ -513,6 +565,8 @@ def do_lane_push_step(team):
     pyautogui.moveTo(x2, y2, duration=0.3)
     pyautogui.rightClick()
 
+    return True
+
 # FOC
 def do_auto_following(x, y):
     #logger.info("[DEBUG] Auto following the lucky one..")
@@ -521,28 +575,51 @@ def do_auto_following(x, y):
     pyautogui.rightClick(960, 500)
     pyautogui.keyDown("c") # start center own hero
 
+def allChat():
+    import pyperclip
+    randomString = [
+        "yugen0x from discord community summon me!",
+        "^:Having not a Steam release also is like wanting to fack and having no butt or other hole to put your cok !",
+        "^:^rFAIL PC GAME",
+        "^:Haven't had a maliken bot in a week now feels ^ggood",
+        "I'm trolling because anyone genuinely believing there are bots in matchmaking is way ^rbelow intelligence average",
+        "I have ^rragebbs in 10% of my games. Matchmaking is a complete ^:^yjoke.",
+        "^:^988m a^977 l i^966 k e^955 n i^944 s a^933 n o^922 o b",
+        "...",
+        "WAHUEHAHHAHAHAUHAHAHAHEHAHAHAH!!",
+        "^:I blame zaniir for his bot comment!",
+        "demoasselborn Alan (777) proud to team up with me like you guys do ^r<3"
+    ]
+    text = random.choice(randomString)
+    pyperclip.copy(text)
+    interruptible_wait(0.5)
+
+    pyautogui.keyUp("c")
+    pyautogui.hotkey("shift", "enter")
+    pyautogui.hotkey("ctrl", "v")
+    pyautogui.press("enter")
+    pyautogui.keyDown("c")
+
 # FOC
 def do_foc_stuff():
     #
     map = state.INGAME_STATE.getCurrentMap()
-    team = state.INGAME_STATE.getCurrentTeam()
-    position = state.INGAME_STATE.getPosition()
+    #team = getTeamViaScoreboard()
+    team = getTeam()
+    #position = state.INGAME_STATE.getPosition()
     bought = False
-    #pyautogui.keyDown("c") # TODO: center hero # conflict with Grief Mode 2
+    pyautogui.keyDown("c")
     
     # after 500 / 660 seconds from now will automatic leave the game   
-    matchTimedout = 660
+    matchTimedout = 600
     start_time = time.monotonic()
 
     # vote pause    
     last_pause_time = do_pause_vote()
 
-    # Grief Mode 2
-    unluckyOne = random.choice([i for i in range(1, 6) if i != position]) # not working on custom match if team size lesser than 5
-    badluckX, badluckY = assetsLibrary.get_hero_top_portrait_coord(map, team, unluckyOne)
+    #
+    isPathSet = False
 
-    # TODO: All chat
-    
     while not state.STOP_EVENT.is_set():
         now = time.time() # for pause
         elapsed = time.monotonic() - start_time
@@ -596,14 +673,14 @@ def do_foc_stuff():
             interruptible_wait(0.5)
         
         if not state.STOP_EVENT.is_set():
-            #do_lane_push_step(team)
+            isPathSet = do_lane_push_step(team)
 
-            # auto following teammate
-            do_auto_following(badluckX, badluckY)
-            
-            
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
+
+        if not state.STOP_EVENT.is_set() and isPathSet:
+            allChat()
+            isPathSet = False
 
         if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
             state.SCAN_LOBBY_MESSAGE_EVENT.clear()
