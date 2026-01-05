@@ -1,5 +1,11 @@
 # =========================================================================== #
-# v1.3.3 - Reverted Changes (3 January 2026)
+# v1.3.4 - Feature Enhancement (5 January 2026)
+# =========================================================================== #
+- [x] Added percentages to cast pause vote.
+- [x] Added allchat string text.
+
+# =========================================================================== #
+# v1.3.3 - Changes Reverted (3 January 2026)
 # =========================================================================== #
 - [x] Reverted grief mode to suicide mode due to team/position detect is not working well.
 - [x] In-game match timeout changed from 1200 seconds to 660 seconds.

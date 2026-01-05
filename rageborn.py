@@ -388,41 +388,6 @@ def getTeam():
     interruptible_wait(0.5)
     return team
 
-def getTeamViaScoreboard():
-    # check team side 
-    pyautogui.keyDown("x")
-
-    REGIONS = [
-        (596, 339, 57, 48),
-        (597, 392, 56, 43),
-        (596, 438, 57, 42),
-        (596, 484, 56, 42),
-        (600, 531, 56, 43),
-    ]
-
-    #isLegion = image_exists_in_any_region("scoreboard-legion.png", REGIONS) and any_image_exists(["foc-fountain-legion.png", "foc-fountain-legion-2.png"])
-    isLegion = any_image_exists(["foc-legion-identifier.png"], region=(598, 723, 142, 118))
-    side = constant.TEAM_LEGION if isLegion else constant.TEAM_HELLBOURNE
-    state.INGAME_STATE.setCurrentTeam(constant.TEAM_LEGION if isLegion else constant.TEAM_HELLBOURNE)
-    logger.info(f"[DEBUG] We are on {side.upper()} side!")
-    
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
-    interruptible_wait(0.5)
-    return side
-
-def getTeamViaMinimap():
-    pyautogui.click(455, 845)
-    interruptible_wait(2)
-
-    if image_exists("foc-fountain-bot-left.png"):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
-
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[DEBUG] We are on {team.upper()} side!")
-    return team
 
 def pickingPhaseChat():
     randomString = [
@@ -549,7 +514,7 @@ def do_lane_push_step(team):
         3: constant.LANE_BOT,
     }
 
-    lane = LANE_BY_NUMBER[lane_number]
+    lane = LANE_BY_NUMBER[2]
 
     x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, lane, 3)
     x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
@@ -577,6 +542,8 @@ def do_auto_following(x, y):
 
 def allChat():
     import pyperclip
+    team = state.INGAME_STATE.getCurrentTeam()
+    opponent = constant.TEAM_HELLBOURNE if team == constant.TEAM_LEGION else constant.TEAM_LEGION
     randomString = [
         "yugen0x from discord community summon me!",
         "^:Having not a Steam release also is like wanting to fack and having no butt or other hole to put your cok !",
@@ -588,7 +555,18 @@ def allChat():
         "...",
         "WAHUEHAHHAHAHAUHAHAHAHEHAHAHAH!!",
         "^:I blame zaniir for his bot comment!",
-        "demoasselborn Alan (777) proud to team up with me like you guys do ^r<3"
+        "demoasselborn Alan (777) proud to team up with me like you guys do ^r<3",
+        "Stop being toxic and you won't get kicked Bub",
+        "are they actually legit BOTS, or just someone pretending to be a BOT?",
+        "^:Why is there a ^rkick vote ^999for toxic communication if free speech is the first thing in the code of conduct and there is a mute button?",
+        "^:WELCOME TO HON REBORN GAMER!",
+        "Whoever came up with this must love destroying / killing their own game.",
+        "^:tollski love to have me in his game, you guys know that? secretly take a photo of me.. admire everywhere",
+        "^:^bi think they should make some business with ^gNvidia ^bto promote this game.... look for example i have on ^gnvidia ^bconstant advertising about Doom... which is a ^rbullshit easy boring game",
+        "^:GOD, HOW AWFUL IS PLINKO 100% TICKET 0% CHEST!",
+        "if fun to have extra time... drop some extra taunts and having fun in enemy pool !!! And don't forget about deaht animations FFS ! _l_",
+        f"^:Hey {opponent.upper()}! Enjoy your free MMR, come to mid lane get free kills",
+        f"^:^rGET REKT NOOB LOSER BRAINDEAD {team.upper()} TEAM.. ENJOY YOUR BEST SHITTY GAME"
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
@@ -602,11 +580,10 @@ def allChat():
 
 # FOC
 def do_foc_stuff():
+    import pyperclip
     #
     map = state.INGAME_STATE.getCurrentMap()
-    #team = getTeamViaScoreboard()
     team = getTeam()
-    #position = state.INGAME_STATE.getPosition()
     bought = False
     pyautogui.keyDown("c")
     
@@ -615,7 +592,11 @@ def do_foc_stuff():
     start_time = time.monotonic()
 
     # vote pause    
-    last_pause_time = do_pause_vote()
+    pauseChance = 0.4
+    if random.random() < pauseChance:
+        last_pause_time = do_pause_vote()
+    else:
+        last_pause_time = time.time()
 
     #
     isPathSet = False
@@ -634,9 +615,25 @@ def do_foc_stuff():
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
+                pyperclip.copy("why kick? Relax its beta...")
+                interruptible_wait(0.5)
+
+                pyautogui.keyUp("c")
+                pyautogui.hotkey("shift", "enter")
+                pyautogui.hotkey("ctrl", "v")
+                pyautogui.press("enter")
+                pyautogui.keyDown("c")
 
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
+                pyperclip.copy("why remake? Relax its beta...")
+                interruptible_wait(0.5)
+
+                pyautogui.keyUp("c")
+                pyautogui.hotkey("shift", "enter")
+                pyautogui.hotkey("ctrl", "v")
+                pyautogui.press("enter")
+                pyautogui.keyDown("c")
         
         if not state.STOP_EVENT.is_set() and not bought:
             # open ingame shop
