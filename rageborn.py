@@ -390,16 +390,18 @@ def getTeam():
 
 
 def pickingPhaseChat():
-    randomString = [
-        "ezwin",
-        "got me got win game",
-        "glhf!!"
-    ]
-    text = random.choice(randomString)
+    chatChance = 0.5
+    if random.random() < chatChance:
+        randomString = [
+            "ezwin",
+            "got me got win game",
+            "glhf!!"
+        ]
+        text = random.choice(randomString)
 
-    pyautogui.moveTo(921, 831)
-    pyautogui.click()
-    type_text(text=text, enter=True)
+        pyautogui.moveTo(921, 831)
+        pyautogui.click()
+        type_text(text=text, enter=True)
 
 
 def pickingPhase():
@@ -547,7 +549,7 @@ def allChat():
     randomString = [
         "yugen0x from discord community summon me!",
         "^:Having not a Steam release also is like wanting to fack and having no butt or other hole to put your cok !",
-        "^:^rFAIL PC GAME",
+        "^:^rFAIL PC GAME - NO DEATH ANIMATIONS !",
         "^:Haven't had a maliken bot in a week now feels ^ggood",
         "I'm trolling because anyone genuinely believing there are bots in matchmaking is way ^rbelow intelligence average",
         "I have ^rragebbs in 10% of my games. Matchmaking is a complete ^:^yjoke.",
@@ -562,11 +564,11 @@ def allChat():
         "^:WELCOME TO HON REBORN GAMER!",
         "Whoever came up with this must love destroying / killing their own game.",
         "^:tollski love to have me in his game, you guys know that? secretly take a photo of me.. admire everywhere",
-        "^:^bi think they should make some business with ^gNvidia ^bto promote this game.... look for example i have on ^gnvidia ^bconstant advertising about Doom... which is a ^rbullshit easy boring game",
         "^:GOD, HOW AWFUL IS PLINKO 100% TICKET 0% CHEST!",
         "if fun to have extra time... drop some extra taunts and having fun in enemy pool !!! And don't forget about deaht animations FFS ! _l_",
         f"^:Hey {opponent.upper()}! Enjoy your free MMR, come to mid lane get free kills",
-        f"^:^rGET REKT NOOB LOSER BRAINDEAD {team.upper()} TEAM.. ENJOY YOUR BEST SHITTY GAME"
+        f"^:GET REKT NOOB LOSER BRAINDEAD ^r{team.upper()} TEAM.. ENJOY YOUR BEST SHITTY GAME",
+        "I doubt I was toxic in any of the games =)"
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
@@ -676,18 +678,21 @@ def do_foc_stuff():
             # TODO: death recap or respawn time show then stop spam
 
         if not state.STOP_EVENT.is_set() and isPathSet:
-            allChat()
-            isPathSet = False
+            allChatSpamChance = 0.8
+            if random.random() < allChatSpamChance:
+                allChat()
+                isPathSet = False
 
         if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
             state.SCAN_LOBBY_MESSAGE_EVENT.clear()
 
-            if check_lobby_message():
-                pyautogui.keyUp("c") # stop spamming                
+            if check_lobby_message():    
+                pyautogui.keyUp("c") # stop spamming
                 state.STOP_EVENT.set()
                 break
         
-        if elapsed >= matchTimedout:
+        if elapsed >= matchTimedout:    
+            pyautogui.keyUp("c") # stop spamming
             logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
             state.STOP_EVENT.set()
             break
