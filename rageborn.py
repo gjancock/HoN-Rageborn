@@ -310,9 +310,7 @@ def startQueue():
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
-    last_click_time = time.time()
     while True:
-        now = time.time()
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
@@ -321,26 +319,8 @@ def startQueue():
                 pyautogui.moveTo(x, y, duration=0.3)
                 interruptible_wait(0.3)
                 pyautogui.click()
-                last_click_time = now
             else:
-                logger.info("[ERROR] Unable to locate OK button.")
-
-        if not image_exists("waiting-for-players.png", region=constant.MATCHMAKING_PANEL_REGION):
-        
-            if now - last_click_time > 95:
-                logger.info("[INFO] Performing requeuing, due to timeout")
-                pyautogui.moveTo(x, y, duration=0.3)
-                interruptible_wait(1)
-                pyautogui.click() # Unqueue
-                logger.info("[INFO] Stop queuing")
-                interruptible_wait(1)
-                pyautogui.click() # Requeue
-                logger.info("[INFO] Start queuing")
-                last_click_time = now
-        else:            
-            # Reset timer (Requeue)
-            last_click_time = time.time()
-            now = time.time()
+                logger.info("[ERROR] Unable to locate OK button.")        
 
         interruptible_wait(0.1)
 
@@ -493,34 +473,57 @@ def pickingPhase():
 
             randomWaitingChance = 0.6
             if random.random() < randomWaitingChance:
-                interruptible_wait(5)
+                interruptible_wait(round(random.uniform(5, 10), 2))
 
-            x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
-            pyautogui.moveTo(x, y, duration=0.3)
-            pyautogui.click() # dismiss foc role information
-            logger.info("[INFO] FOC Role information dismissed..")
-            logger.info("[INFO] Picking phase begin..")
-            interruptible_wait(0.5)            
+            notafkChance = 0.87
+            if random.random() < notafkChance: 
+                x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
+                pyautogui.moveTo(x, y, duration=0.3)
+                pyautogui.click() # dismiss foc role information
+                logger.info("[INFO] FOC Role information dismissed..")
+                logger.info("[INFO] Picking phase begin..")
+                interruptible_wait(round(random.uniform(0.5, 1), 2))            
 
-            hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
-            logger.info(f"[INFO] Selecting {hero}")
-            pyautogui.moveTo(hx1, hy1, duration=0.3)
-            interruptible_wait(0.45)
+                hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+                logger.info(f"[INFO] Selecting {hero}")
+                pyautogui.moveTo(hx1, hy1, duration=0.3)
+                interruptible_wait(round(random.uniform(0.4, 1), 2))
 
-            pyautogui.doubleClick()
-            pyautogui.doubleClick()
-            logger.info(f"[INFO] {hero} selected")
-            pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
-            interruptible_wait(0.5)
+                shadowpickChance = 0.45
+                if random.random() < shadowpickChance:
+                    pyautogui.click()
+                    interruptible_wait(round(random.uniform(4, 7), 2))                    
+                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+
+                    reselectChance = 0.25
+                    if random.random() < reselectChance:
+                        hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
+                        logger.info(f"[INFO] Re-selecting {hero}")
+                        pyautogui.moveTo(hx2, hy2, duration=0.3)
+
+                        chance = 0.5
+                        if random.random() < chance:
+                            pyautogui.click()
+                        else:
+                            pyautogui.doubleClick()
+                        pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                        interruptible_wait(round(random.uniform(0.3, 0.6), 2))
+
+                else:
+                    pyautogui.doubleClick()
+                    pyautogui.doubleClick()
+                    logger.info(f"[INFO] {hero} selected")
+                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                    interruptible_wait(0.5)
+
+                # team chat
+                pickingPhaseChat()
+                interruptible_wait(round(random.uniform(4, 6), 2))
+                continuePickingPhaseChat()            
+            else:
+                logger.info("[INFO] Bot decided to AFK")
 
             logger.info("[INFO] Waiting to rageborn")
-
-            # team chat
-            pickingPhaseChat()
-            interruptible_wait(6)
-            continuePickingPhaseChat()
-
-            
             # TODO: Alternative hero selection
             # TODO: Separated grief mode
             # if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
@@ -625,7 +628,7 @@ def allChat():
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
-    interruptible_wait(0.5)
+    interruptible_wait(round(random.uniform(0.3, 0.5), 2))
 
     pyautogui.keyUp("c")
     pyautogui.hotkey("shift", "enter")
@@ -637,19 +640,37 @@ def allChat():
 def do_foc_stuff():
     import pyperclip
     #
-    map = state.INGAME_STATE.getCurrentMap()
+    start_time = time.monotonic()
     team = getTeam()
     bought = False
     pyautogui.keyDown("c")
     
-    # after 500 / 660 seconds from now will automatic leave the game   
-    matchTimedout = 600
-    start_time = time.monotonic()
+    # after 600 seconds will timeout and leave the game 
+    matchTimedout = round(random.uniform(600, 660), 2)
 
     # vote pause    
     pauseChance = 0.2
     if random.random() < pauseChance:
+        randomString = [
+            "sorry i need a pause.. 1 minutes",
+            "i need a pause",
+            "1 pause",
+            "pause",
+            "brb",
+            "be right back",
+            "zzzz somebody ring door"
+        ]
+        text = random.choice(randomString)
+        pyperclip.copy(text)
+
+        pyautogui.keyUp("c")
+        pyautogui.hotkey("shift", "enter")
+        pyautogui.hotkey("ctrl", "v")
+        pyautogui.press("enter")
+        pyautogui.keyDown("c")
         last_pause_time = do_pause_vote()
+        interruptible_wait(round(random.uniform(30, 50), 2))
+        start_time = time.monotonic()
     else:
         last_pause_time = time.time()
 
@@ -665,13 +686,18 @@ def do_foc_stuff():
                 do_pause_vote()
                 last_pause_time = now
 
+            if now - start_time >= 90: # every 90 seconds click tower defense
+                pyautogui.keyUp("c")
+                pyautogui.hotkey("alt", "b")
+                pyautogui.keyDown("c")
+
         if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
             state.SCAN_VOTE_EVENT.clear()
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
                 pyperclip.copy("why kick? Relax its beta...")
-                interruptible_wait(0.5)
+                interruptible_wait(round(random.uniform(0.3, 0.5), 2))
 
                 pyautogui.keyUp("c")
                 pyautogui.hotkey("shift", "enter")
@@ -682,7 +708,7 @@ def do_foc_stuff():
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
                 pyperclip.copy("why remake? Relax its beta...")
-                interruptible_wait(0.5)
+                interruptible_wait(round(random.uniform(0.3, 0.5), 2))
 
                 pyautogui.keyUp("c")
                 pyautogui.hotkey("shift", "enter")
@@ -694,7 +720,7 @@ def do_foc_stuff():
             # open ingame shop
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
-            interruptible_wait(0.5)
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2))
             
             # locate to enchantment icon
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
@@ -704,7 +730,7 @@ def do_foc_stuff():
             for _ in range(5):
                 pyautogui.rightClick(750, 302)
                 logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                interruptible_wait(0.2)    
+                interruptible_wait(round(random.uniform(0.2, 0.5), 2))    
 
             # buy golden apple
             x2, y2 = assetsLibrary.get_in_game_shop_consumables_category_coord()    
@@ -712,7 +738,7 @@ def do_foc_stuff():
             for _ in range(1):
                 pyautogui.rightClick(654, 334)
                 logger.info("[INFO] Bought a Golden Apple cost 75g!")
-                interruptible_wait(0.2)
+                interruptible_wait(round(random.uniform(0.2, 0.5), 2))
 
             interruptible_wait(0.3)
             # close ingame shop
@@ -720,7 +746,7 @@ def do_foc_stuff():
             logger.info("[INFO] Ingame shop closed")
             bought = True
             logger.info("[INFO] Waiting to get kick by the team...")
-            interruptible_wait(0.5)
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2))
         
         if not state.STOP_EVENT.is_set():
             isPathSet = do_lane_push_step(team)

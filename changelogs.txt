@@ -3,6 +3,10 @@
 # =========================================================================== #
 - [x] Fixed username generation algorithm.
 - [x] Added chances on team chat conversation.
+- [x] Added new feature that bot will reconsidering of selecting the first hero.
+- [x] Added new feature that bot will have chance to afk while picking phase.
+- [x] Added random way of picking heroes.
+- [x] Removing requeue technique as it causing issue.
 
 # =========================================================================== #
 # v1.3.4 - Feature Enhancement (5 January 2026)

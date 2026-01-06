@@ -30,7 +30,8 @@ WORDS_REAL = [
     "Atlas", "Nova", "Orion", "Apollo", "Echo",
     "Neo", "Zen", "Apex", "Prime", "Vector",
     "Pixel", "Matrix", "Signal", "Orbit",
-    "Google", "Apple", "iPhone"
+    "Google", "Apple", "iPhone", "Silly", "Dumb",
+    "Ugly", "Racer"
 ]
 
 WORDS_TECH = [
