@@ -2,7 +2,7 @@
 # v1.3.4 - Feature Enhancement (5 January 2026)
 # =========================================================================== #
 - [x] Added chancess to cast pause vote / team chat / all chat instead of constant full confidence.
-- [x] Added allchat string text.
+- [x] Added new string text for chats
 
 # =========================================================================== #
 # v1.3.3 - Changes Reverted (3 January 2026)
