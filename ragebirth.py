@@ -213,8 +213,8 @@ def signup_user(first_name, last_name, email, username, password):
 # ============================================================
 
 def generate_username(prefix="", postfix=""):
-    prefix = prefix.strip()
-    postfix = postfix.strip()
+    prefix = str(prefix).strip().lower()
+    postfix = str(postfix).strip().lower()
 
     has_prefix = bool(prefix)
     has_postfix = bool(postfix)
@@ -227,11 +227,9 @@ def generate_username(prefix="", postfix=""):
         MAX_USERNAME_LENGTH
     )
 
-    remaining = target_length - fixed_length
-    if remaining < 1:
-        remaining = 1
+    remaining = max(1, target_length - fixed_length)
 
-    random_part = generate_random_string(remaining)
+    random_part = generate_random_string(remaining, remaining)
 
     if has_prefix and has_postfix:
         return f"{prefix}{random_part}{postfix}"
@@ -242,10 +240,16 @@ def generate_username(prefix="", postfix=""):
     else:
         return random_part
 
-def generate_email(prefix="", postfix="", domain="mail.com", length=6):
-    rand = generate_random_string(length)
+
+def generate_email(prefix="", postfix="", domain="mail.com", length=12):
+    prefix = str(prefix).strip().lower()
+    postfix = str(postfix).strip().lower()
+
+    rand = generate_random_string(length, length)
     local = "".join(p for p in [prefix, rand, postfix] if p)
+
     return f"{local}@{domain}"
+
 
 
 # ============================================================

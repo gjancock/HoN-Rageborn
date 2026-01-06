@@ -22,19 +22,22 @@ WORDS_GAMING = [
     "Shadow", "Ghost", "Rage", "Storm", "Blade",
     "Hunter", "Reaper", "Viper", "Phantom",
     "Titan", "Knight", "Sniper", "Warden",
-    "Fury", "Slayer", "Specter", "Riot"
+    "Fury", "Slayer", "Specter", "Riot",
+    "Dog", "Reborn", "Hon", "Silo"
 ]
 
 WORDS_REAL = [
     "Atlas", "Nova", "Orion", "Apollo", "Echo",
     "Neo", "Zen", "Apex", "Prime", "Vector",
-    "Pixel", "Matrix", "Signal", "Orbit"
+    "Pixel", "Matrix", "Signal", "Orbit",
+    "Google", "Apple", "iPhone"
 ]
 
 WORDS_TECH = [
     "Byte", "Cipher", "Kernel", "Logic",
     "Quantum", "Syntax", "Binary", "Crypto",
-    "Circuit", "Node", "Protocol"
+    "Circuit", "Node", "Protocol", "RTX5090", "GTX2080",
+    "DDR5"
 ]
 
 WORDS_FANTASY = [
@@ -49,7 +52,11 @@ FIRST_NAMES = [
     "Jack", "James", "Jason", "John", "Kevin",
     "Lucas", "Mark", "Marcus", "Michael", "Nathan",
     "Oliver", "Ryan", "Samuel", "Sean", "Steven",
-    "Thomas", "William"
+    "Thomas", "William", "Edmond", "Wong", "Ong", "Lim", "Tan", "Jay",
+    "G", "Gala", "Malboro", "Owen", "Ocean", "Khaw", "Benjamin",
+    "Benji", "Jonathan", "Chu", "Teoh", "Maverick", "Salihin",
+    "Lee", "Melwin", "Melvin", "Louis", "Breaky", "Piggy",
+    "Loo", "Johnson", "Jovin", "Ian", "Eend", "Wilson"
 ]
 
 FIRST_NAMES_FEMALE = [
@@ -82,73 +89,53 @@ WORD_POOL = (
     NICKNAME_STYLE
 )
 
-# =========================
-# RANDOM STRING
-# =========================
+random.shuffle(WORD_POOL)
+WORD_INDEX = 0
 
-def generate_random_string(length):
-    normal_chars = (
-        string.ascii_lowercase +
-        string.ascii_uppercase +
-        string.digits
-    )
+def generate_random_string(min_len=2, max_len=3):
+    length = random.randint(min_len, max_len)
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choices(chars, k=length))
 
-    weighted_chars = (
-        normal_chars * NORMAL_CHAR_WEIGHT +
-        "_" * UNDERSCORE_WEIGHT
-    )
-
-    return ''.join(random.choices(weighted_chars, k=length))
-
-# =========================
-# WORD-BASED USERNAME
-# =========================
 
 def generate_word_username(prefix="", postfix=""):
-    prefix = prefix.strip()
-    postfix = postfix.strip()
+    global WORD_INDEX
 
-    sep_prefix = "_" if prefix else ""
-    sep_postfix = "_" if postfix else ""
+    prefix = str(prefix).strip().lower()
+    postfix = str(postfix).strip().lower()
 
-    fixed_length = (
-        len(prefix) +
-        len(sep_prefix) +
-        len(sep_postfix) +
-        len(postfix)
-    )
+    parts = []
 
-    # 🔒 HARD SAFETY: prefix/postfix too long
-    if fixed_length >= MAX_USERNAME_LENGTH:
-        # preserve prefix/postfix, trim safely if needed
-        result = f"{prefix}{sep_prefix}{sep_postfix}{postfix}"
-        return result[:MAX_USERNAME_LENGTH]
+    if prefix:
+        parts.append(prefix)
 
-    # space available for generated content
-    available = MAX_USERNAME_LENGTH - fixed_length
-
-    # ensure at least 1 char generated
-    available = max(1, available)
-
-    # choose random total length safely
-    target_length = random.randint(
-        MIN_USERNAME_LENGTH,
-        fixed_length + available
-    )
-
-    generated_space = target_length - fixed_length
-
-    # choose base + suffix split
-    base = random.choice(WORD_POOL)
-
-    base_len = min(len(base), max(1, generated_space - 1))
-    suffix_len = generated_space - base_len
-
-    # allow generated part to start with number or underscore
-    if random.choice([True, False]):
-        generated = base[:base_len] + generate_random_string(suffix_len)
+    if WORD_POOL:
+        base = str(WORD_POOL[WORD_INDEX % len(WORD_POOL)]).lower()
     else:
-        generated = generate_random_string(suffix_len) + base[:base_len]
+        base = "user"
 
-    username = f"{prefix}{sep_prefix}{generated}{sep_postfix}{postfix}"
+    WORD_INDEX += 1
+
+    parts.append(base)
+
+    filler = generate_random_string(2, 3)
+    parts.append(filler)
+
+    if postfix:
+        parts.append(postfix)
+
+    underscoreChance = 0.25
+    if random.random() < underscoreChance:
+        username = "_".join(parts)
+    else:
+        username = "".join(parts)
+
+    captilizeChance = 0.45
+    if random.random() < captilizeChance:
+        username = username.capitalize()
+
+    everyFirstCaptilizeChance = 0.25
+    if random.random() < everyFirstCaptilizeChance:
+        username = username[0].upper() + username[1:] if username else username
+
     return username

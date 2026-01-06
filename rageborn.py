@@ -388,6 +388,10 @@ def getTeam():
     interruptible_wait(0.5)
     return team
 
+def enterChat(text):
+    pyautogui.moveTo(921, 831)
+    pyautogui.click()
+    type_text(text=text, enter=True)
 
 def pickingPhaseChat():
     chatChance = 0.5
@@ -395,13 +399,53 @@ def pickingPhaseChat():
         randomString = [
             "ezwin",
             "got me got win game",
-            "glhf!!"
+            "glhf!!",
+            "hi guys",
+            "hello team",
+            "yo",
+            "show pick",
+            "show pick please"
         ]
         text = random.choice(randomString)
+        enterChat(text)
 
-        pyautogui.moveTo(921, 831)
-        pyautogui.click()
-        type_text(text=text, enter=True)
+
+def continuePickingPhaseChat():
+    chatChance = 0.4
+    if random.random() < chatChance:
+        randomString = [
+            "?",
+            "??",
+            "what",
+            "?"
+        ]
+        text = random.choice(randomString)
+        enterChat(text)
+        interruptible_wait(3)
+
+        chatChance = 0.35
+        if random.random() < chatChance:
+            role = state.INGAME_STATE.getFocRole()
+            randomString = [
+                "you ok?",
+                "you sure?",
+                "what you talking about",
+                f"did i made a mistake on picking a hero from {role}?"
+            ]
+            text = random.choice(randomString)
+            enterChat(text)
+            interruptible_wait(4)
+
+            chatChance = 0.3
+            if random.random() < chatChance:
+                randomString = [
+                    "are you out of your mind?",
+                    "bot your mum",
+                    "your mum is the bot, why dont you kick her? stupid idiot",
+                    "new player not welcoming to play this game?"
+                ]
+                text = random.choice(randomString)
+                enterChat(text)
 
 
 def pickingPhase():
@@ -441,9 +485,15 @@ def pickingPhase():
                     logger.info("[INFO] Assignated Role: Mid")
                     role = constant.FOC_ROLE_MID
                     break
-                elif now - roleCheckStart > 3: # 3 seconds timeout
+                elif now - roleCheckStart > 5: # 5 seconds timeout
                     logger.info(f"[WARN] Unable to detect role.. use {role}")
                     break
+
+            state.INGAME_STATE.setFocRole(role=role)
+
+            randomWaitingChance = 0.6
+            if random.random() < randomWaitingChance:
+                interruptible_wait(5)
 
             x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
             pyautogui.moveTo(x, y, duration=0.3)
@@ -467,6 +517,9 @@ def pickingPhase():
 
             # team chat
             pickingPhaseChat()
+            interruptible_wait(6)
+            continuePickingPhaseChat()
+
             
             # TODO: Alternative hero selection
             # TODO: Separated grief mode
@@ -567,7 +620,7 @@ def allChat():
         "^:GOD, HOW AWFUL IS PLINKO 100% TICKET 0% CHEST!",
         "if fun to have extra time... drop some extra taunts and having fun in enemy pool !!! And don't forget about deaht animations FFS ! _l_",
         f"^:Hey {opponent.upper()}! Enjoy your free MMR, come to mid lane get free kills",
-        f"^:GET REKT NOOB LOSER BRAINDEAD ^r{team.upper()} TEAM.. ENJOY YOUR BEST SHITTY GAME",
+        f"^:GET REKT NOOB LOSER BRAINDEAD ^r{team.upper()} TEAM.. ^999ENJOY YOUR BEST SHITTY GAME",
         "I doubt I was toxic in any of the games =)"
     ]
     text = random.choice(randomString)
@@ -594,7 +647,7 @@ def do_foc_stuff():
     start_time = time.monotonic()
 
     # vote pause    
-    pauseChance = 0.4
+    pauseChance = 0.2
     if random.random() < pauseChance:
         last_pause_time = do_pause_vote()
     else:
@@ -647,9 +700,7 @@ def do_foc_stuff():
             logger.info("[INFO] Finding Jade Spire from enchantment tab")
             x1, y1 = assetsLibrary.get_in_game_shop_enchantment_category_coord()
             pyautogui.click(x1, y1)
-            #time.sleep(0.3)
             pyautogui.click(688, 417)
-            #time.sleep(0.3)
             for _ in range(5):
                 pyautogui.rightClick(750, 302)
                 logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
