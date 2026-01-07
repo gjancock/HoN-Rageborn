@@ -19,6 +19,7 @@ from http.client import RemoteDisconnected
 import configparser
 import pyautogui
 from utilities.common import resource_path
+from requests.exceptions import RequestException
 
 # Logger
 log_queue = Queue()
@@ -130,6 +131,16 @@ def is_signup_success(r):
     return True, "Signup success"
 
 
+def safe_get(session, url, retries=3, delay=3):
+    for i in range(retries):
+        try:
+            return session.get(url, timeout=15)
+        except Exception as e:
+            logger.warning(f"[RETRY] GET failed ({i+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise RuntimeError("DNS resolution failed after retries")
+
+
 def signup_user(first_name, last_name, email, username, password):
     session = requests.Session()
     session.headers.update({
@@ -141,7 +152,7 @@ def signup_user(first_name, last_name, email, username, password):
 
     try:
         # 1️⃣ GET signup page
-        resp = session.get(SIGNUP_URL, timeout=15)
+        resp = safe_get(session, SIGNUP_URL)
         resp.raise_for_status()
 
         match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
@@ -203,6 +214,10 @@ def signup_user(first_name, last_name, email, username, password):
     except (ConnectionError, Timeout, RemoteDisconnected) as e:
         logger.warning(f"[NET] Signup dropped by server: {e}")
         return False, "connection_dropped"
+    
+    except RequestException as e:
+        logger.error(f"[NETWORK_ERROR] Signup dropped by server: {e}")
+        return False, "Network error (DNS / connection failed)"
 
     except Exception as e:
         logger.exception("[FATAL] Unexpected signup error")

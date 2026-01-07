@@ -384,14 +384,15 @@ def pickingPhaseChat():
             "hello team",
             "yo",
             "show pick",
-            "show pick please"
+            "show pick please",
+            "go pick"
         ]
         text = random.choice(randomString)
         enterChat(text)
 
 
 def continuePickingPhaseChat():
-    chatChance = 0.4
+    chatChance = 0.375
     if random.random() < chatChance:
         randomString = [
             "?",
@@ -401,7 +402,7 @@ def continuePickingPhaseChat():
         ]
         text = random.choice(randomString)
         enterChat(text)
-        interruptible_wait(3)
+        interruptible_wait(round(random.uniform(5, 11), 2))
 
         chatChance = 0.35
         if random.random() < chatChance:
@@ -414,7 +415,7 @@ def continuePickingPhaseChat():
             ]
             text = random.choice(randomString)
             enterChat(text)
-            interruptible_wait(4)
+            interruptible_wait(round(random.uniform(5, 11), 2))
 
             chatChance = 0.3
             if random.random() < chatChance:
@@ -489,13 +490,28 @@ def pickingPhase():
                 pyautogui.moveTo(hx1, hy1, duration=0.3)
                 interruptible_wait(round(random.uniform(0.4, 1), 2))
 
-                shadowpickChance = 0.45
+                shuffleSelectionChance = 0.3
+                if random.random() < shuffleSelectionChance:
+                    number = random.randint(3, 6)
+                    for i in range(number):
+                        hero, hx, hy = assetsLibrary.get_role_heroes_coord(role)
+                        logger.info(f"[INFO] Showcasing shuffle hero")
+                        pyautogui.moveTo(hx, hy, duration=0.3)
+                        pyautogui.click()
+                        interruptible_wait(round(random.uniform(0.7, 1.5), 2))
+                    pyautogui.moveTo(hx1, hy1, duration=0.3)
+
+                shadowpickChance = 0.65
                 if random.random() < shadowpickChance:
                     pyautogui.click()
                     interruptible_wait(round(random.uniform(4, 7), 2))                    
                     pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
 
-                    reselectChance = 0.25
+                    randomWaitChance = 0.3
+                    if random.random() < randomWaitChance:
+                        interruptible_wait(round(random.uniform(5, 8), 2))
+
+                    reselectChance = 0.3
                     if random.random() < reselectChance:
                         hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
                         logger.info(f"[INFO] Re-selecting {hero}")
@@ -518,10 +534,21 @@ def pickingPhase():
 
                 # team chat
                 pickingPhaseChat()
-                interruptible_wait(round(random.uniform(4, 6), 2))
+                interruptible_wait(round(random.uniform(7, 11), 2))
                 continuePickingPhaseChat()            
             else:
                 logger.info("[INFO] Bot decided to AFK")
+                state.INGAME_STATE.setIsAfk(True)
+                interruptible_wait(round(random.uniform(35, 45), 2))
+                comebackChance = 0.2
+                if random.random() < comebackChance:
+                    state.INGAME_STATE.setIsAfk(False)
+                    logger.info("[INFO] Bot is back from AFK")
+                    hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+                    logger.info(f"[INFO] Selecting {hero}")
+                    pyautogui.moveTo(hx1, hy1, duration=0.3)
+                    pyautogui.doubleClick()
+                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
 
             logger.info("[INFO] Waiting to rageborn")
             # TODO: Alternative hero selection
@@ -572,7 +599,7 @@ def do_lane_push_step(team):
         3: constant.LANE_BOT,
     }
 
-    lane = LANE_BY_NUMBER[2]
+    lane = LANE_BY_NUMBER[2] # constant mid lane only
 
     x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, lane, 3)
     x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
@@ -582,10 +609,10 @@ def do_lane_push_step(team):
     # mouse cursor to enemy mid tower
     # right click to enemy mid tower
 
-    pyautogui.moveTo(x1, y1, duration=0.3)
+    pyautogui.moveTo(x1, y1, duration=0.15)
     pyautogui.hotkey("alt", "t")
     pyautogui.click()
-    pyautogui.moveTo(x2, y2, duration=0.3)
+    pyautogui.moveTo(x2, y2, duration=0.15)
     pyautogui.rightClick()
 
     return True
@@ -618,13 +645,19 @@ def allChat():
         "are they actually legit BOTS, or just someone pretending to be a BOT?",
         "^:Why is there a ^rkick vote ^999for toxic communication if free speech is the first thing in the code of conduct and there is a mute button?",
         "^:WELCOME TO HON REBORN GAMER!",
-        "Whoever came up with this must love destroying / killing their own game.",
         "^:tollski love to have me in his game, you guys know that? secretly take a photo of me.. admire everywhere",
         "^:GOD, HOW AWFUL IS PLINKO 100% TICKET 0% CHEST!",
-        "if fun to have extra time... drop some extra taunts and having fun in enemy pool !!! And don't forget about deaht animations FFS ! _l_",
         f"^:Hey {opponent.upper()}! Enjoy your free MMR, come to mid lane get free kills",
         f"^:GET REKT NOOB LOSER BRAINDEAD ^r{team.upper()} TEAM.. ^999ENJOY YOUR BEST SHITTY GAME",
-        "I doubt I was toxic in any of the games =)"
+        "I doubt I was toxic in any of the games =)",
+        "Now can you work on the bots on the AUS servers? ^:^ySure! More bots!",
+        "^:Thank you once again for your time, we will see you in Newerth. ^y^:^_^",
+        "im here to reward Atticah for getting a new monitor to play this retarded game!!!!",
+        "^:unknownuser asked to push mid!! HERE I COME",
+        "^:unknownuser asked to push mid!! HERE I COME",
+        "^:unknownuser asked to push mid!! HERE I COME",
+        "^:unknownuser asked to push mid!! HERE I COME",
+        "^:unknownuser asked to push mid!! HERE I COME",
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
@@ -651,31 +684,48 @@ def do_foc_stuff():
     # vote pause    
     pauseChance = 0.2
     if random.random() < pauseChance:
+        state.INGAME_STATE.setIsAfk(True)
         randomString = [
-            "sorry i need a pause.. 1 minutes",
+            "sorry i need a pause.. 1 minute",
             "i need a pause",
             "1 pause",
+            "1 pause please",
             "pause",
             "brb",
             "be right back",
-            "zzzz somebody ring door"
+            "zzzz somebody ring door",
+            "brb phone call",
+            "1 minute plz. on call"
         ]
         text = random.choice(randomString)
         pyperclip.copy(text)
 
         pyautogui.keyUp("c")
-        pyautogui.hotkey("shift", "enter")
+        acChance = 0.4
+        if random.random() < acChance:
+            pyautogui.hotkey("shift", "enter")
+        else:
+            pyautogui.press("enter")
         pyautogui.hotkey("ctrl", "v")
         pyautogui.press("enter")
         pyautogui.keyDown("c")
         last_pause_time = do_pause_vote()
-        interruptible_wait(round(random.uniform(30, 50), 2))
+        interruptible_wait(round(random.uniform(40, 60), 2))
+        state.INGAME_STATE.setIsAfk(False)
         start_time = time.monotonic()
     else:
+        state.INGAME_STATE.setIsAfk(False)
         last_pause_time = time.time()
+        afkChance = 0.15
+        if random.random() < afkChance:
+            state.INGAME_STATE.setIsAfk(True)
+            logger.info("[INFO] Bot decided to go AFK ingame")
+            time.sleep(round(random.uniform(30, 50), 2))
+            state.INGAME_STATE.setIsAfk(False)
 
     #
     isPathSet = False
+    isAfk = state.INGAME_STATE.getIsAfk()
 
     while not state.STOP_EVENT.is_set():
         now = time.time() # for pause
@@ -696,25 +746,27 @@ def do_foc_stuff():
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
-                pyperclip.copy("why kick? Relax its beta...")
-                interruptible_wait(round(random.uniform(0.3, 0.5), 2))
-
-                pyautogui.keyUp("c")
-                pyautogui.hotkey("shift", "enter")
-                pyautogui.hotkey("ctrl", "v")
-                pyautogui.press("enter")
-                pyautogui.keyDown("c")
+                reactChance = 0.4
+                if not isAfk and random.random() < reactChance:
+                    pyperclip.copy("why kick? Relax its beta...")
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2))
+                    pyautogui.keyUp("c")
+                    pyautogui.hotkey("shift", "enter")
+                    pyautogui.hotkey("ctrl", "v")
+                    pyautogui.press("enter")
+                    pyautogui.keyDown("c")
 
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
-                pyperclip.copy("why remake? Relax its beta...")
-                interruptible_wait(round(random.uniform(0.3, 0.5), 2))
-
-                pyautogui.keyUp("c")
-                pyautogui.hotkey("shift", "enter")
-                pyautogui.hotkey("ctrl", "v")
-                pyautogui.press("enter")
-                pyautogui.keyDown("c")
+                reactChance = 0.4
+                if not isAfk and random.random() < reactChance:
+                    pyperclip.copy("why remake? Relax its beta...")
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2))
+                    pyautogui.keyUp("c")
+                    pyautogui.hotkey("shift", "enter")
+                    pyautogui.hotkey("ctrl", "v")
+                    pyautogui.press("enter")
+                    pyautogui.keyDown("c")
         
         if not state.STOP_EVENT.is_set() and not bought:
             # open ingame shop
@@ -756,7 +808,10 @@ def do_foc_stuff():
 
         if not state.STOP_EVENT.is_set() and isPathSet:
             allChatSpamChance = 0.8
-            if random.random() < allChatSpamChance:
+            if not isAfk and random.random() < allChatSpamChance:
+                delayChance = 0.45
+                if random.random() < delayChance:
+                    interruptible_wait(round(random.uniform(1, 1.5), 2))
                 allChat()
                 isPathSet = False
 

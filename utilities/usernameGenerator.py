@@ -31,7 +31,7 @@ WORDS_REAL = [
     "Neo", "Zen", "Apex", "Prime", "Vector",
     "Pixel", "Matrix", "Signal", "Orbit",
     "Google", "Apple", "iPhone", "Silly", "Dumb",
-    "Ugly", "Racer"
+    "Ugly", "Racer", "weed", "lickmyD"
 ]
 
 WORDS_TECH = [

@@ -1,4 +1,13 @@
 # =========================================================================== #
+# v1.3.6 - Feature Enhancement (7 January 2026)
+# =========================================================================== #
+- [x] Fixed unable to signup due to connection drop issue.
+- [x] Added random chances on shuffling heroes selection, just to showcase.
+- [x] Added random chances on kick/remake vote reaction.
+- [x] Added random chances on AFK ingame without vote a pause.
+- [x] Added random chances on delaying reaction on kick/remate vote.
+
+# =========================================================================== #
 # v1.3.5 - Feature Enhancement (6 January 2026)
 # =========================================================================== #
 - [x] Fixed username generation algorithm.
