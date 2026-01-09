@@ -28,11 +28,11 @@ Windows Settings
 
 1. Set the Windows display resolution to 1920×1080.
 2. Set the scale to 100%.
-3. Make sure a “Heroes of Newerth Reborn” desktop shortcut exists and is visible when running the script.
-4. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
-5. Do not move the mouse cursor or click anywhere while the script is running.
-6. Ensure keyboard CAPSLOCK is off.
-7. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
+3. Make sure the “Heroes of Newerth Reborn” desktop shortcut (Phoenix icon) exists and is visible when running the script.
+5. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
+6. Do not move the mouse cursor or click anywhere while the script is running.
+7. Ensure keyboard CAPSLOCK is off.
+8. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
 
 Hardware Settings
 
