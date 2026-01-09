@@ -8,6 +8,8 @@ class InGameState:
         self._current_team = ""
         self._username = ""
         self._position = 0
+        self._focRole = ""
+        self._isAfk = False
 
     def setCurrentMap(self, map):
         with self._lock:
@@ -25,6 +27,14 @@ class InGameState:
         with self._lock:
             self._position = position
 
+    def setFocRole(self, role):
+        with self._lock:
+            self._focRole = role
+
+    def setIsAfk(self, isAfk):
+        with self._lock:
+            self._isAfk = isAfk
+
     def getCurrentMap(self):
         with self._lock:
             return self._current_map
@@ -40,6 +50,14 @@ class InGameState:
     def getPosition(self):
         with self._lock:
             return self._position
+        
+    def getFocRole(self):
+        with self._lock:
+            return self._focRole
+        
+    def getIsAfk(self):
+        with self._lock:
+            return self._isAfk
 
 #
 STOP_EVENT = threading.Event()
