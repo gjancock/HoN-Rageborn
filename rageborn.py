@@ -548,6 +548,7 @@ def pickingPhase():
                     logger.info(f"[INFO] Selecting {hero}")
                     pyautogui.moveTo(hx1, hy1, duration=0.3)
                     pyautogui.doubleClick()
+                    x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
                     pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
 
             logger.info("[INFO] Waiting to rageborn")
@@ -711,7 +712,6 @@ def do_foc_stuff():
         pyautogui.keyDown("c")
         last_pause_time = do_pause_vote()
         interruptible_wait(round(random.uniform(40, 60), 2))
-        state.INGAME_STATE.setIsAfk(False)
         start_time = time.monotonic()
     else:
         state.INGAME_STATE.setIsAfk(False)
@@ -721,13 +721,12 @@ def do_foc_stuff():
             state.INGAME_STATE.setIsAfk(True)
             logger.info("[INFO] Bot decided to go AFK ingame")
             time.sleep(round(random.uniform(30, 50), 2))
-            state.INGAME_STATE.setIsAfk(False)
 
     #
     isPathSet = False
-    isAfk = state.INGAME_STATE.getIsAfk()
 
     while not state.STOP_EVENT.is_set():
+        isAfk = state.INGAME_STATE.getIsAfk()
         now = time.time() # for pause
         elapsed = time.monotonic() - start_time
 
@@ -801,6 +800,12 @@ def do_foc_stuff():
             interruptible_wait(round(random.uniform(0.3, 0.5), 2))
         
         if not state.STOP_EVENT.is_set():
+            # remain silence until try vote pause to delay the kick
+            if isAfk:
+                state.INGAME_STATE.setIsAfk(False)
+                do_pause_vote()
+                last_pause_time = now
+
             isPathSet = do_lane_push_step(team)
 
             # TODO: spam taunt (need to calculate or know already ready tower)    
