@@ -1,5 +1,14 @@
 Gjanko: Any thoughts on Rageborn?
 
+## License
+
+This project is licensed under **CC BY-NC 4.0**.
+
+- ✔ Free for personal and educational use
+- ✔ Modification and redistribution allowed
+- ✖ Commercial use, resale, or monetization is prohibited
+
+
 Disclaimer
 -------------------------------------
 This program is developed strictly for educational and learning purposes only.
