@@ -1,13 +1,30 @@
 Gjanko: Any thoughts on Rageborn?
 
-## License
+License
+-------------------------------------
+This project is licensed under Creative Commons Attribution–NonCommercial 4.0 International (CC BY-NC 4.0).
 
-This project is licensed under **CC BY-NC 4.0**.
+You are allowed to:
 
-- ✔ Free for personal and educational use
-- ✔ Modification and redistribution allowed
-- ✖ Commercial use, resale, or monetization is prohibited
+  ✔ Use this project freely for personal and educational purposes  
+  ✔ Modify the source code  
+  ✔ Redistribute the project (with proper attribution)
 
+You are NOT allowed to:
+
+  ✖ Use this project for commercial purposes  
+  ✖ Sell the software or any derivative works  
+  ✖ Monetize the project in any form
+
+Commercial use includes (but is not limited to):
+
+  - Selling the software or compiled binaries  
+  - Offering paid services based on this code  
+  - Bundling this project with paid products or subscriptions  
+  - Using the code in monetized bots, automation services, or SaaS platforms
+
+For full license terms, see:
+https://creativecommons.org/licenses/by-nc/4.0/
 
 Disclaimer
 -------------------------------------
