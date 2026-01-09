@@ -655,10 +655,8 @@ def allChat():
         "^:Thank you once again for your time, we will see you in Newerth. ^y^:^_^",
         "im here to reward Atticah for getting a new monitor to play this retarded game!!!!",
         "^:unknownuser asked to push mid!! HERE I COME",
-        "^:unknownuser asked to push mid!! HERE I COME",
-        "^:unknownuser asked to push mid!! HERE I COME",
-        "^:unknownuser asked to push mid!! HERE I COME",
-        "^:unknownuser asked to push mid!! HERE I COME",
+        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised",        
+        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised"
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
