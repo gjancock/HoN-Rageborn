@@ -40,7 +40,7 @@ Hardware Settings
 2. Use a "Dummy Adapter" if you don't have a physical monitor to run this bot.
 
 Known Issue
-
+-------------------------------------
 1. Team recognition may failed due to minimap and fogging isn't visible very well at the current stage of the game.
 
 Notes
