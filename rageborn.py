@@ -151,17 +151,11 @@ def force_foreground_and_topmost(hwnd):
     except Exception as e:
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
 
-def launch_focus_and_pin_jokevio():
 
-    # 1️⃣ Launch via desktop icon
-    icon1 = assetsLibrary.get_app_icon()
-    icon2 = assetsLibrary.get_app_icon_default()
-    if find_and_click(icon1, doubleClick=True, region=constant.SCREEN_REGION):
-        logger.info("[INFO] Launching game...")
-    elif find_and_click(icon2, doubleClick=True, region=constant.SCREEN_REGION):        
-        logger.info("[INFO] Launching game...")
-    else:
-        raise RuntimeError("Failed to click Juvio desktop icon")
+
+def pin_jokevio():
+
+    # 1 Launch .exe from ragebirth
 
     # Give launcher a moment to bootstrap
     interruptible_wait(2.0)
@@ -880,7 +874,7 @@ def main(username, password):
 
     try:
         #
-        launch_focus_and_pin_jokevio()
+        pin_jokevio()
 
         # Account Login manually
         if account_Login(username, password):

@@ -20,6 +20,9 @@ import configparser
 import pyautogui
 from utilities.common import resource_path
 from requests.exceptions import RequestException
+from utilities.ipAddressGenerator import random_public_ip
+from tkinter import filedialog
+
 
 # Logger
 log_queue = Queue()
@@ -110,6 +113,17 @@ def set_auto_start_endless(value: bool):
     config["endless"]["auto_start"] = "true" if value else "false"
     save_config(config)
 
+def get_game_executable():
+    config = load_config()
+    return config.get("paths", "game_executable", fallback="")
+
+def set_game_executable(path: str):
+    config = load_config()
+    if "paths" not in config:
+        config["paths"] = {}
+    config["paths"]["game_executable"] = path
+    save_config(config)
+
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -162,6 +176,8 @@ def signup_user(first_name, last_name, email, username, password):
 
         csrf = match.group(1)
 
+        fakeIp = random_public_ip()
+
         payload = {
             "_csrf": csrf,
             "User[first_name]": first_name,
@@ -173,7 +189,7 @@ def signup_user(first_name, last_name, email, username, password):
             "User[repeat_password]": password,
             "User[role_id]": "player",
             "User[timezone_id]": 1,
-            "User[ip_address]": "127.0.0.1",
+            "User[ip_address]": fakeIp,
             "User[status_id]": 1,
             "User[user_referral_code]": "",
             "User[send_sms]": 1,
@@ -311,6 +327,10 @@ def resetState():
 
 def run_rageborn_flow(username, password):
     try:
+        if not launch_game_process():
+            logger.error("[ERROR] Game launch aborted")
+            return
+
         import rageborn
 
         resetState()
@@ -572,6 +592,70 @@ def on_submit():
     else:
         messagebox.showerror("Failed", msg)
 
+def on_browse_executable():
+    exe_path = filedialog.askopenfilename(
+        title="Select Juvio Game Executable",
+        filetypes=[("Executable files", "*.exe")]
+    )
+
+    if not exe_path:
+        return  # user cancelled
+
+    filename = os.path.basename(exe_path).lower()
+
+    if filename != "juvio.exe":
+        messagebox.showerror(
+            "Invalid Game Launcher",
+            "Invalid executable selected.\n\n"
+            "Please select:\n"
+            "juvio.exe"
+        )
+        return
+
+    if not os.path.isfile(exe_path):
+        messagebox.showerror("Error", "Selected file does not exist")
+        return
+
+    game_exe_var.set(exe_path)
+    set_game_executable(exe_path)
+
+    logger.info(f"[INFO] Game executable set: {exe_path}")
+    exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
+
+
+
+def launch_game_process():
+    exe = game_exe_var.get()
+
+    if not exe:
+        messagebox.showerror(
+            "Error",
+            "Please select game launcher first."
+        )
+        return False
+
+    if not os.path.isfile(exe):
+        messagebox.showerror(
+            "Executable missing",
+            "The selected executable no longer exists."
+        )
+        return False
+
+    if os.path.basename(exe).lower() != "juvio.exe":
+        messagebox.showerror(
+            "Invalid Game Launcher",
+            "Configured executable is not juvio.exe.\n"
+            "Please re-select the correct file."
+        )
+        return False
+
+    subprocess.Popen(
+        [exe],
+        cwd=os.path.dirname(exe)
+    )
+    return True
+
+
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -621,6 +705,29 @@ email_entry = labeled_entry(form_frame, "Email")
 username_entry = labeled_entry(form_frame, "Username")
 password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
 
+game_exe_var = tk.StringVar(value=get_game_executable())
+exe_header = tk.Frame(form_frame)
+exe_header.pack(fill="x", pady=(8, 0))
+
+tk.Label(
+    exe_header,
+    text="Game Launcher"
+).pack(side="left")
+
+tk.Button(
+    exe_header,
+    text="Browse",
+    command=on_browse_executable,
+    width=10
+).pack(side="right")
+
+exe_entry = tk.Entry(
+    form_frame,
+    textvariable=game_exe_var,
+    state="readonly"
+)
+exe_entry.pack(fill="x", pady=(4, 0))
+
 tk.Button(
     form_frame,
     text="Generate Username & Email",
@@ -649,14 +756,6 @@ tk.Button(
     text="Sign up and run once",
     command=on_signup_and_run_once
 ).pack(fill="x", pady=4)
-
-# tk.Button(
-#     form_frame,
-#     text="Test OCR",
-#     command=on_test_ocr,
-#     fg="blue"
-# ).pack(fill="x", pady=(0, 8))
-
 
 status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
 status_frame.pack(fill="x", side="bottom", pady=10)
@@ -769,6 +868,7 @@ log_text.tag_configure("WARN", foreground="orange")
 log_text.tag_configure("ERROR", foreground="red")
 
 poll_log_queue()
+exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 
 # ============================================================
 # AUTO START ENDLESS MODE (DELAYED & CANCELLABLE)
