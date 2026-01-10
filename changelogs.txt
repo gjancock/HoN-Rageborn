@@ -2,6 +2,7 @@
 # v1.3.7 - Feature Enhancement (10 January 2026)
 # =========================================================================== #
 - [x] Added fake ip address generator.
+- [x] Added game executable selection to replace the existing launcher logic.
 
 
 # =========================================================================== #
