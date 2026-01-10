@@ -27,16 +27,48 @@ Game Settings
 Windows Settings
 
 1. Set the Windows display resolution to 1920×1080.
-2. Make sure a “Heroes of Newerth Reborn” desktop shortcut exists and is visible when running the script.
-3. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
-4. Do not move the mouse cursor or click anywhere while the script is running.
-5. Ensure keyboard CAPSLOCK is off.
-6. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
+2. Set the scale to 100%.
+3. Make sure the “Heroes of Newerth Reborn” desktop shortcut (Phoenix icon) exists and is visible when running the script.
+5. Minimize all other applications below starting the script to avoid interruptions (this will be improved in future updates).
+6. Do not move the mouse cursor or click anywhere while the script is running.
+7. Ensure keyboard CAPSLOCK is off.
+8. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
 
 Hardware Settings
 
 1. If you experiencing program stucked or failed unintentionally, try keep the screen opened while the script is running.
 2. Use a "Dummy Adapter" if you don't have a physical monitor to run this bot.
+
+Known Issue
+-------------------------------------
+1. Team recognition may failed due to minimap and fogging isn't visible very well at the current stage of the game.
+
+License
+-------------------------------------
+This project is licensed under Creative Commons Attribution–NonCommercial 4.0 International (CC BY-NC 4.0).
+
+You are allowed to:
+
+  ✔ Use this project freely for personal and educational purposes  
+  ✔ Modify the source code  
+  ✔ Redistribute the project (with proper attribution)
+
+You are NOT allowed to:
+
+  ✖ Use this project for commercial purposes  
+  ✖ Sell the software or any derivative works  
+  ✖ Monetize the project in any form
+
+Commercial use includes (but is not limited to):
+
+  - Selling the software or compiled binaries  
+  - Offering paid services based on this code  
+  - Bundling this project with paid products or subscriptions  
+  - Using the code in monetized bots, automation services, or SaaS platforms
+
+For full license terms, see:
+https://creativecommons.org/licenses/by-nc/4.0/
+
 
 Notes
 -------------------------------------
