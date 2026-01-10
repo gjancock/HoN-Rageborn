@@ -760,11 +760,16 @@ tk.Button(
 status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
 status_frame.pack(fill="x", side="bottom", pady=10)
 
-def on_auto_start_checkbox_changed():
+def on_auto_start_checkbox_changed():    
     value = auto_start_endless_var.get()
     set_auto_start_endless(value)
 
-    if value:
+    if value:    
+        if not launch_game_process():
+            set_auto_start_endless(False)
+            auto_start_endless_var.set(False)
+            logger.error("[ERROR] Game launch aborted")
+            return
         schedule_auto_start_endless()
     else:
         cancel_auto_start_endless()
@@ -786,7 +791,7 @@ def update_auto_start_countdown():
     auto_start_countdown_id = root.after(1000, update_auto_start_countdown)
 
 
-def schedule_auto_start_endless():
+def schedule_auto_start_endless():    
     global auto_start_timer_id, auto_start_remaining
 
     if auto_start_timer_id is not None:
