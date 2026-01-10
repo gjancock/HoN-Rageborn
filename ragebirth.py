@@ -20,6 +20,7 @@ import configparser
 import pyautogui
 from utilities.common import resource_path
 from requests.exceptions import RequestException
+from utilities.ipAddressGenerator import random_public_ip
 
 # Logger
 log_queue = Queue()
@@ -162,6 +163,8 @@ def signup_user(first_name, last_name, email, username, password):
 
         csrf = match.group(1)
 
+        fakeIp = random_public_ip()
+
         payload = {
             "_csrf": csrf,
             "User[first_name]": first_name,
@@ -173,7 +176,7 @@ def signup_user(first_name, last_name, email, username, password):
             "User[repeat_password]": password,
             "User[role_id]": "player",
             "User[timezone_id]": 1,
-            "User[ip_address]": "127.0.0.1",
+            "User[ip_address]": fakeIp,
             "User[status_id]": 1,
             "User[user_referral_code]": "",
             "User[send_sms]": 1,
