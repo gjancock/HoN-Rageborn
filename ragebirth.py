@@ -629,8 +629,8 @@ def launch_game_process():
 
     if not exe:
         messagebox.showerror(
-            "Executable not set",
-            "Please select juvio.exe first."
+            "Error",
+            "Please select game launcher first."
         )
         return False
 
