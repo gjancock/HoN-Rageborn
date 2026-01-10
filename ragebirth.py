@@ -809,6 +809,28 @@ def on_auto_start_checkbox_changed():
         cancel_auto_start_endless()
 
 
+def try_auto_start_from_config():
+    """
+    Called on app startup when auto_start=true in config.
+    Must validate executable before scheduling countdown.
+    """
+    if not auto_start_endless_var.get():
+        return
+
+    if not validate_game_executable(show_error=False):
+        logger.error(
+            "[ERROR] Auto-start enabled in config, but game executable is invalid. Auto-start disabled."
+        )
+
+        auto_start_endless_var.set(False)
+        set_auto_start_endless(False)
+        auto_start_countdown_var.set("")
+        return
+
+    schedule_auto_start_endless()
+
+
+
 def update_auto_start_countdown():
     global auto_start_remaining, auto_start_countdown_id
 
@@ -915,7 +937,7 @@ exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 # ============================================================
 
 if auto_start_endless_var.get():
-    schedule_auto_start_endless()
+    try_auto_start_from_config()
 
 
 if __name__ == "__main__":
