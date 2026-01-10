@@ -656,6 +656,35 @@ def launch_game_process():
     return True
 
 
+def validate_game_executable(show_error=True):
+    exe = game_exe_var.get()
+
+    if not exe:
+        if show_error:
+            messagebox.showerror(
+                "Error",
+                "Please select game launcher first."
+            )
+        return False
+
+    if not os.path.isfile(exe):
+        if show_error:
+            messagebox.showerror(
+                "Executable missing",
+                "The selected executable no longer exists."
+            )
+        return False
+
+    if os.path.basename(exe).lower() != "juvio.exe":
+        if show_error:
+            messagebox.showerror(
+                "Invalid Game Launcher",
+                "Configured executable is not juvio.exe."
+            )
+        return False
+
+    return True
+
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -764,15 +793,21 @@ def on_auto_start_checkbox_changed():
     value = auto_start_endless_var.get()
     set_auto_start_endless(value)
 
-    if value:    
-        if not launch_game_process():
-            set_auto_start_endless(False)
+    if value:
+        # ✅ validate only (DO NOT LAUNCH)
+        if not validate_game_executable():
             auto_start_endless_var.set(False)
-            logger.error("[ERROR] Game launch aborted")
+            set_auto_start_endless(False)
+            cancel_auto_start_endless()
+            logger.error("[ERROR] Invalid game executable, auto-start cancelled")
             return
+
+        # ✅ only schedule countdown
         schedule_auto_start_endless()
+
     else:
         cancel_auto_start_endless()
+
 
 def update_auto_start_countdown():
     global auto_start_remaining, auto_start_countdown_id
