@@ -656,6 +656,35 @@ def launch_game_process():
     return True
 
 
+def validate_game_executable(show_error=True):
+    exe = game_exe_var.get()
+
+    if not exe:
+        if show_error:
+            messagebox.showerror(
+                "Error",
+                "Please select game launcher first."
+            )
+        return False
+
+    if not os.path.isfile(exe):
+        if show_error:
+            messagebox.showerror(
+                "Executable missing",
+                "The selected executable no longer exists."
+            )
+        return False
+
+    if os.path.basename(exe).lower() != "juvio.exe":
+        if show_error:
+            messagebox.showerror(
+                "Invalid Game Launcher",
+                "Configured executable is not juvio.exe."
+            )
+        return False
+
+    return True
+
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -760,14 +789,47 @@ tk.Button(
 status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
 status_frame.pack(fill="x", side="bottom", pady=10)
 
-def on_auto_start_checkbox_changed():
+def on_auto_start_checkbox_changed():    
     value = auto_start_endless_var.get()
     set_auto_start_endless(value)
 
     if value:
+        # ✅ validate only (DO NOT LAUNCH)
+        if not validate_game_executable():
+            auto_start_endless_var.set(False)
+            set_auto_start_endless(False)
+            cancel_auto_start_endless()
+            logger.error("[ERROR] Invalid game executable, auto-start cancelled")
+            return
+
+        # ✅ only schedule countdown
         schedule_auto_start_endless()
+
     else:
         cancel_auto_start_endless()
+
+
+def try_auto_start_from_config():
+    """
+    Called on app startup when auto_start=true in config.
+    Must validate executable before scheduling countdown.
+    """
+    if not auto_start_endless_var.get():
+        return
+
+    if not validate_game_executable(show_error=False):
+        logger.error(
+            "[ERROR] Auto-start enabled in config, but game executable is invalid. Auto-start disabled."
+        )
+
+        auto_start_endless_var.set(False)
+        set_auto_start_endless(False)
+        auto_start_countdown_var.set("")
+        return
+
+    schedule_auto_start_endless()
+
+
 
 def update_auto_start_countdown():
     global auto_start_remaining, auto_start_countdown_id
@@ -786,7 +848,7 @@ def update_auto_start_countdown():
     auto_start_countdown_id = root.after(1000, update_auto_start_countdown)
 
 
-def schedule_auto_start_endless():
+def schedule_auto_start_endless():    
     global auto_start_timer_id, auto_start_remaining
 
     if auto_start_timer_id is not None:
@@ -875,7 +937,7 @@ exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 # ============================================================
 
 if auto_start_endless_var.get():
-    schedule_auto_start_endless()
+    try_auto_start_from_config()
 
 
 if __name__ == "__main__":
