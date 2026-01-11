@@ -1,3 +1,4 @@
+import logging
 import tkinter as tk
 from tkinter import messagebox
 import requests
@@ -23,11 +24,16 @@ from requests.exceptions import RequestException
 from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
 from tkinter import ttk
+from utilities.accountVerification import AccountVerifier
 
 
 # Logger
 log_queue = Queue()
 logger = setup_logger(ui_queue=log_queue)
+ui_formatter = logging.Formatter(
+    "%(asctime)s | %(message)s",
+    "%H:%M:%S"
+)
 
 #
 auto_start_time = None
@@ -125,6 +131,38 @@ def set_game_executable(path: str):
     config["paths"]["game_executable"] = path
     save_config(config)
 
+def set_auto_email_verification(value: bool):
+    config = load_config()
+    if "verification" not in config:
+        config["verification"] = {}
+    config["verification"]["auto_email"] = "true" if value else "false"
+    save_config(config)
+
+def set_auto_mobile_verification(value: bool):
+    config = load_config()
+    if "verification" not in config:
+        config["verification"] = {}
+    config["verification"]["auto_mobile"] = "true" if value else "false"
+    save_config(config)
+
+
+def get_auto_email_verification():
+    config = load_config()
+    return config.getboolean(
+        "verification",
+        "auto_email",
+        fallback=False
+    )
+
+def get_auto_mobile_verification():
+    config = load_config()
+    return config.getboolean(
+        "verification",
+        "auto_mobile",
+        fallback=False
+    )
+
+
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -154,6 +192,24 @@ def safe_get(session, url, retries=3, delay=3):
             logger.warning(f"[RETRY] GET failed ({i+1}/{retries}): {e}")
             time.sleep(delay)
     raise RuntimeError("DNS resolution failed after retries")
+
+def start_account_verification_async(username: str):
+    def worker():
+        try:
+            logger.info(f"[INFO] Starting verification process for {username}")
+            verifier = AccountVerifier(logger)
+            verifier.run(
+                mobile=get_auto_mobile_verification(),
+                email=get_auto_email_verification()
+            )
+            logger.info(f"[INFO] Account verification completed.")
+        except Exception:
+            logger.exception("[ERROR] Verification failed")
+
+    threading.Thread(
+        target=worker,
+        daemon=True
+    ).start()
 
 
 def signup_user(first_name, last_name, email, username, password):
@@ -221,7 +277,13 @@ def signup_user(first_name, last_name, email, username, password):
         if success:
             logger.info(f"[INFO] Account {username} created")
             logger.info(f"[INFO] Password: {password}")
+            state.INGAME_STATE.setUsername(username)
+            state.INGAME_STATE.setPassword(password)
             log_username(username)
+
+            if get_auto_email_verification() or get_auto_mobile_verification():
+                start_account_verification_async(username)
+
             return True, msg
         else:
             logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
@@ -412,6 +474,13 @@ duration_var = tk.StringVar(value="Duration: 00:00:00")
 iteration_var = tk.StringVar(value="Iterations completed: 0")
 auto_start_endless_var = tk.BooleanVar(value=get_auto_start_endless())
 auto_start_countdown_var = tk.StringVar(value="")
+auto_email_verification_var = tk.BooleanVar(
+    value=get_auto_email_verification()
+)
+
+auto_mobile_verification_var = tk.BooleanVar(
+    value=get_auto_mobile_verification()
+)
 
 
 def one_full_cycle():
@@ -508,7 +577,10 @@ def increment_iteration():
 
 def poll_log_queue():
     while not log_queue.empty():
-        msg = log_queue.get()
+        record = log_queue.get()
+
+        # 1️⃣ Convert LogRecord → string
+        msg = ui_formatter.format(record)
 
         log_text.config(state="normal")
 
@@ -520,16 +592,19 @@ def poll_log_queue():
             or "Traceback" in msg
             or "RuntimeError" in msg
             or "Exception" in msg
+            or record.levelname in ("ERROR", "CRITICAL")
         ):
             tag = "ERROR"
-        elif "[WARN]" in msg:
+        elif record.levelname == "WARNING" or "[WARN]" in msg:
             tag = "WARN"
 
+        # 2️⃣ Insert formatted string
         log_text.insert("end", msg + "\n", tag)
         log_text.see("end")
         log_text.config(state="disabled")
 
     root.after(100, poll_log_queue)
+
 
 def on_login_only():
     user = username_entry.get().strip()
@@ -592,9 +667,9 @@ def on_submit():
     success, msg = signup_user(first, last, email, user, pwd)
 
     if success:
-        messagebox.showinfo("Success", "Signup successful!")
+        logger.info("[INFO] Signup successful!")
     else:
-        messagebox.showerror("Failed", msg)
+        logger.error(f"[ERROR] Signup failed: {msg}")
 
 def on_browse_executable():
     exe_path = filedialog.askopenfilename(
@@ -813,6 +888,17 @@ def set_endless_mode_ui_idle():
         state="normal"
     )
 
+def on_auto_email_verification_changed():
+    set_auto_email_verification(
+        auto_email_verification_var.get()
+    )
+
+def on_auto_mobile_verification_changed():
+    set_auto_mobile_verification(
+        auto_mobile_verification_var.get()
+    )
+
+
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -941,12 +1027,42 @@ right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 notebook = ttk.Notebook(right_frame)
 notebook.pack(fill="both", expand=True)
 
-settings_tab = tk.Frame(notebook)
+extra_settings_tab = tk.Frame(notebook)
 logs_tab = tk.Frame(notebook)
 
-notebook.add(settings_tab, text="Extra Settings")
+notebook.add(extra_settings_tab, text="Extra Settings")
+account_verification_frame = tk.LabelFrame(
+    extra_settings_tab,
+    text="Account Verification",
+    padx=10,
+    pady=8
+)
+account_verification_frame.pack(
+    fill="x",
+    padx=10,
+    pady=10,
+    anchor="n"
+)
+
+verification_row = tk.Frame(account_verification_frame)
+verification_row.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    verification_row,
+    text="Auto Email Verification",
+    variable=auto_email_verification_var,
+    command=on_auto_email_verification_changed
+).grid(row=0, column=0, sticky="w", padx=(0, 20))
+
+tk.Checkbutton(
+    verification_row,
+    text="Auto Mobile Verification",
+    variable=auto_mobile_verification_var,
+    command=on_auto_mobile_verification_changed
+).grid(row=0, column=1, sticky="w")
+
+
 notebook.add(logs_tab, text="Logs")
-notebook.select(logs_tab)
 
 log_text = tk.Text(
     logs_tab,
@@ -960,6 +1076,8 @@ log_text.pack(fill="both", expand=True)
 log_text.tag_configure("INFO", foreground="lime")
 log_text.tag_configure("WARN", foreground="orange")
 log_text.tag_configure("ERROR", foreground="red")
+
+notebook.select(logs_tab)
 
 style = ttk.Style()
 style.theme_use("default")
