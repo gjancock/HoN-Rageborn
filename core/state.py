@@ -7,6 +7,7 @@ class InGameState:
         self._current_map = ""
         self._current_team = ""
         self._username = ""
+        self._password = ""
         self._position = 0
         self._focRole = ""
         self._isAfk = False
@@ -22,6 +23,10 @@ class InGameState:
     def setUsername(self, username):
         with self._lock:
             self._username = username
+
+    def setPassword(self, password):
+        with self._lock:
+            self._password = password
 
     def setPosition(self, position):
         with self._lock:
@@ -46,6 +51,10 @@ class InGameState:
     def getUsername(self):
         with self._lock:
             return self._username
+        
+    def getPassword(self):
+        with self._lock:
+            return self._password
         
     def getPosition(self):
         with self._lock:
