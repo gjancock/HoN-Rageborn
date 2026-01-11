@@ -17,6 +17,7 @@ from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
 import keyboard
 import random
+import os
 
 # Initialize Logger
 logger = setup_logger()
@@ -33,10 +34,11 @@ assetsLibrary.init(COORDS)
 
 # ================= EMERGENCY STOP =================
 def emergency_stop():
-    logger.warning("[EMERGENCY] F12 pressed! Stopping Rageborn.")
-    state.STOP_EVENT.set()
+    logger.critical("[EMERGENCY] F11 pressed! HARD STOP triggered.")
+    os._exit(0)   # 🔥 immediate hard kill
 
-keyboard.add_hotkey("F12", emergency_stop)
+
+keyboard.add_hotkey("F11", emergency_stop)
 # =================================================
 
 #
@@ -900,7 +902,8 @@ def main(username, password):
                         f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
                         f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
                         f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+                        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png",
+                        f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
                     ], region=constant.LOBBY_MESSAGE_REGION):
                         location = image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
                         if location == True:

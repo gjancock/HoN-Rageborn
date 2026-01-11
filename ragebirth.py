@@ -819,35 +819,6 @@ form_frame.pack(fill="x", anchor="n")
 spacer = tk.Frame(left_frame)
 spacer.pack(fill="both", expand=True)
 
-right_frame = tk.Frame(main_frame)
-right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-
-notebook = ttk.Notebook(right_frame)
-notebook.pack(fill="both", expand=True)
-
-settings_tab = tk.Frame(notebook)
-logs_tab = tk.Frame(notebook)
-
-notebook.add(settings_tab, text="Extra Settings")
-notebook.add(logs_tab, text="Logs")
-notebook.select(logs_tab)
-
-log_text = tk.Text(
-    logs_tab,
-    bg="black",
-    fg="lime",
-    font=("Consolas", 9),
-    state="disabled"
-)
-log_text.pack(fill="both", expand=True)
-
-log_text.tag_configure("INFO", foreground="lime")
-log_text.tag_configure("WARN", foreground="orange")
-log_text.tag_configure("ERROR", foreground="red")
-
-style = ttk.Style()
-style.theme_use("default")
-
 main_frame.columnconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 main_frame.rowconfigure(0, weight=1)
@@ -942,6 +913,35 @@ tk.Button(
     command=on_start_endless_mode,
     fg="red"
 ).pack(fill="x", pady=6)
+
+right_frame = tk.Frame(main_frame)
+right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+notebook = ttk.Notebook(right_frame)
+notebook.pack(fill="both", expand=True)
+
+settings_tab = tk.Frame(notebook)
+logs_tab = tk.Frame(notebook)
+
+notebook.add(settings_tab, text="Extra Settings")
+notebook.add(logs_tab, text="Logs")
+notebook.select(logs_tab)
+
+log_text = tk.Text(
+    logs_tab,
+    bg="black",
+    fg="lime",
+    font=("Consolas", 9),
+    state="disabled"
+)
+log_text.pack(fill="both", expand=True)
+
+log_text.tag_configure("INFO", foreground="lime")
+log_text.tag_configure("WARN", foreground="orange")
+log_text.tag_configure("ERROR", foreground="red")
+
+style = ttk.Style()
+style.theme_use("default")
 
 poll_log_queue()
 exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
