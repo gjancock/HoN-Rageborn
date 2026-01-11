@@ -163,6 +163,22 @@ def get_auto_mobile_verification():
     )
 
 
+def set_auto_update(value: bool):
+    config = load_config()
+    if "settings" not in config:
+        config["settings"] = {}
+    config["settings"]["auto_update"] = "true" if value else "false"
+    save_config(config)
+
+
+def get_auto_update():
+    config = load_config()
+    return config.getboolean(
+        "settings",
+        "auto_update",
+        fallback=False
+    )
+
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -477,9 +493,11 @@ auto_start_countdown_var = tk.StringVar(value="")
 auto_email_verification_var = tk.BooleanVar(
     value=get_auto_email_verification()
 )
-
 auto_mobile_verification_var = tk.BooleanVar(
     value=get_auto_mobile_verification()
+)
+auto_update_var = tk.BooleanVar(
+    value=get_auto_update()
 )
 
 
@@ -898,6 +916,10 @@ def on_auto_mobile_verification_changed():
         auto_mobile_verification_var.get()
     )
 
+def on_auto_update_changed():
+    set_auto_update(
+        auto_update_var.get()
+    )
 
 
 WINDOW_WIDTH = 750
@@ -1033,7 +1055,7 @@ logs_tab = tk.Frame(notebook)
 notebook.add(extra_settings_tab, text="Extra Settings")
 account_verification_frame = tk.LabelFrame(
     extra_settings_tab,
-    text="Account Verification",
+    text="Account Verification Settings",
     padx=10,
     pady=8
 )
@@ -1060,6 +1082,29 @@ tk.Checkbutton(
     variable=auto_mobile_verification_var,
     command=on_auto_mobile_verification_changed
 ).grid(row=0, column=1, sticky="w")
+
+app_settings_frame = tk.LabelFrame(
+    extra_settings_tab,
+    text="Application Settings",
+    padx=10,
+    pady=8
+)
+app_settings_frame.pack(
+    fill="x",
+    padx=10,
+    pady=10,
+    anchor="n"
+)
+
+app_settings_row = tk.Frame(app_settings_frame)
+app_settings_row.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    app_settings_row,
+    text="Auto Updates",
+    variable=auto_update_var,
+    command=on_auto_update_changed
+).grid(row=0, column=0, sticky="w", padx=(0, 20))
 
 
 notebook.add(logs_tab, text="Logs")
