@@ -570,6 +570,9 @@ def on_start_endless_mode():
     """Start endless mode (replaces checkbox)"""
     if not auto_mode_var.get():
         auto_mode_var.set(True)
+
+        root.after(0, set_endless_mode_ui_running)
+
         threading.Thread(
             target=auto_loop_worker,
             daemon=True
@@ -782,6 +785,7 @@ def execute_auto_start_endless():
 
     if auto_start_endless_var.get():
         logger.info("[INFO] Auto-starting Endless Mode now")
+        root.after(0, set_endless_mode_ui_running)
         on_start_endless_mode()
     else:
         logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
@@ -794,6 +798,21 @@ def labeled_entry(parent, label, default=""):
     if default:
         e.insert(0, default)
     return e
+
+def set_endless_mode_ui_running():
+    start_endless_btn.config(
+        text="Hit F11 to stop",
+        fg="red",
+        state="disabled"
+    )
+
+def set_endless_mode_ui_idle():
+    start_endless_btn.config(
+        text="Start Endless Mode",
+        fg="black",
+        state="normal"
+    )
+
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -907,12 +926,14 @@ duration_label.pack(anchor="w")
 iteration_label = tk.Label(status_frame, textvariable=iteration_var)
 iteration_label.pack(anchor="w")
 
-tk.Button(
+start_endless_btn = tk.Button(
     status_frame,
     text="Start Endless Mode",
     command=on_start_endless_mode,
-    fg="red"
-).pack(fill="x", pady=6)
+    fg="black"
+)
+start_endless_btn.pack(fill="x", pady=6)
+
 
 right_frame = tk.Frame(main_frame)
 right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)

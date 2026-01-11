@@ -5,7 +5,6 @@
 - [x] Fixed program stucked when 'not the roaster of the match' pop up showed issue.
 - [x] Changed emergency terminate hotkey to F11.
 
-
 # =========================================================================== #
 # v1.3.7 - Feature Enhancement (10 January 2026)
 # =========================================================================== #
