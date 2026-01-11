@@ -22,6 +22,7 @@ from utilities.common import resource_path
 from requests.exceptions import RequestException
 from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
+from tkinter import ttk
 
 
 # Logger
@@ -685,110 +686,6 @@ def validate_game_executable(show_error=True):
 
     return True
 
-
-WINDOW_WIDTH = 750
-WINDOW_HEIGHT = 800
-
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-x = screen_width - 10 - WINDOW_WIDTH
-y = screen_height - 90 - WINDOW_HEIGHT
-
-root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
-
-main_frame = tk.Frame(root)
-main_frame.pack(fill="both", expand=True)
-
-left_frame = tk.Frame(main_frame)
-left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-left_frame.rowconfigure(0, weight=1)
-
-form_frame = tk.Frame(left_frame)
-form_frame.pack(fill="x", anchor="n")
-
-spacer = tk.Frame(left_frame)
-spacer.pack(fill="both", expand=True)
-
-right_frame = tk.Frame(main_frame)
-right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-
-main_frame.columnconfigure(0, weight=0)
-main_frame.columnconfigure(1, weight=1)
-main_frame.rowconfigure(0, weight=1)
-
-def labeled_entry(parent, label, default=""):
-    tk.Label(parent, text=label, anchor="w").pack(fill="x")
-    e = tk.Entry(parent)
-    e.pack(fill="x", pady=2)
-    if default:
-        e.insert(0, default)
-    return e
-
-first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
-last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
-prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
-postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
-domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
-email_entry = labeled_entry(form_frame, "Email")
-username_entry = labeled_entry(form_frame, "Username")
-password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
-
-game_exe_var = tk.StringVar(value=get_game_executable())
-exe_header = tk.Frame(form_frame)
-exe_header.pack(fill="x", pady=(8, 0))
-
-tk.Label(
-    exe_header,
-    text="Game Launcher"
-).pack(side="left")
-
-tk.Button(
-    exe_header,
-    text="Browse",
-    command=on_browse_executable,
-    width=10
-).pack(side="right")
-
-exe_entry = tk.Entry(
-    form_frame,
-    textvariable=game_exe_var,
-    state="readonly"
-)
-exe_entry.pack(fill="x", pady=(4, 0))
-
-tk.Button(
-    form_frame,
-    text="Generate Username & Email",
-    command=on_generate
-).pack(fill="x", pady=6)
-
-action_row = tk.Frame(form_frame)
-action_row.pack(fill="x", pady=6)
-
-tk.Button(
-    action_row,
-    text="Sign Up",
-    command=on_submit,
-    width=12
-).pack(side="left", expand=True, padx=2)
-
-tk.Button(
-    action_row,
-    text="Login",
-    command=on_login_only,
-    width=12
-).pack(side="left", expand=True, padx=2)
-
-tk.Button(
-    form_frame,
-    text="Sign up and run once",
-    command=on_signup_and_run_once
-).pack(fill="x", pady=4)
-
-status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
-status_frame.pack(fill="x", side="bottom", pady=10)
-
 def on_auto_start_checkbox_changed():    
     value = auto_start_endless_var.get()
     set_auto_start_endless(value)
@@ -890,6 +787,135 @@ def execute_auto_start_endless():
         logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
 
 
+def labeled_entry(parent, label, default=""):
+    tk.Label(parent, text=label, anchor="w").pack(fill="x")
+    e = tk.Entry(parent)
+    e.pack(fill="x", pady=2)
+    if default:
+        e.insert(0, default)
+    return e
+
+WINDOW_WIDTH = 750
+WINDOW_HEIGHT = 800
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+x = screen_width - 10 - WINDOW_WIDTH
+y = screen_height - 90 - WINDOW_HEIGHT
+
+root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
+
+main_frame = tk.Frame(root)
+main_frame.pack(fill="both", expand=True)
+
+left_frame = tk.Frame(main_frame)
+left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+left_frame.rowconfigure(0, weight=1)
+
+form_frame = tk.Frame(left_frame)
+form_frame.pack(fill="x", anchor="n")
+
+spacer = tk.Frame(left_frame)
+spacer.pack(fill="both", expand=True)
+
+right_frame = tk.Frame(main_frame)
+right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+notebook = ttk.Notebook(right_frame)
+notebook.pack(fill="both", expand=True)
+
+settings_tab = tk.Frame(notebook)
+logs_tab = tk.Frame(notebook)
+
+notebook.add(settings_tab, text="Extra Settings")
+notebook.add(logs_tab, text="Logs")
+notebook.select(logs_tab)
+
+log_text = tk.Text(
+    logs_tab,
+    bg="black",
+    fg="lime",
+    font=("Consolas", 9),
+    state="disabled"
+)
+log_text.pack(fill="both", expand=True)
+
+log_text.tag_configure("INFO", foreground="lime")
+log_text.tag_configure("WARN", foreground="orange")
+log_text.tag_configure("ERROR", foreground="red")
+
+style = ttk.Style()
+style.theme_use("default")
+
+main_frame.columnconfigure(0, weight=0)
+main_frame.columnconfigure(1, weight=1)
+main_frame.rowconfigure(0, weight=1)
+
+first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
+last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
+domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
+email_entry = labeled_entry(form_frame, "Email")
+username_entry = labeled_entry(form_frame, "Username")
+password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
+
+game_exe_var = tk.StringVar(value=get_game_executable())
+exe_header = tk.Frame(form_frame)
+exe_header.pack(fill="x", pady=(8, 0))
+
+tk.Label(
+    exe_header,
+    text="Game Launcher"
+).pack(side="left")
+
+tk.Button(
+    exe_header,
+    text="Browse",
+    command=on_browse_executable,
+    width=10
+).pack(side="right")
+
+exe_entry = tk.Entry(
+    form_frame,
+    textvariable=game_exe_var,
+    state="readonly"
+)
+exe_entry.pack(fill="x", pady=(4, 0))
+
+tk.Button(
+    form_frame,
+    text="Generate Username & Email",
+    command=on_generate
+).pack(fill="x", pady=6)
+
+action_row = tk.Frame(form_frame)
+action_row.pack(fill="x", pady=6)
+
+tk.Button(
+    action_row,
+    text="Sign Up",
+    command=on_submit,
+    width=12
+).pack(side="left", expand=True, padx=2)
+
+tk.Button(
+    action_row,
+    text="Login",
+    command=on_login_only,
+    width=12
+).pack(side="left", expand=True, padx=2)
+
+tk.Button(
+    form_frame,
+    text="Sign up and run once",
+    command=on_signup_and_run_once
+).pack(fill="x", pady=4)
+
+status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
+status_frame.pack(fill="x", side="bottom", pady=10)
+
 tk.Checkbutton(
     status_frame,
     text="Auto start Endless Mode on launch",
@@ -917,18 +943,6 @@ tk.Button(
     fg="red"
 ).pack(fill="x", pady=6)
 
-log_text = tk.Text(
-    right_frame,
-    bg="black",
-    fg="lime",
-    font=("Consolas", 9),
-    state="disabled"
-)
-log_text.pack(fill="both", expand=True)
-log_text.tag_configure("INFO", foreground="lime")
-log_text.tag_configure("WARN", foreground="orange")
-log_text.tag_configure("ERROR", foreground="red")
-
 poll_log_queue()
 exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 
@@ -938,7 +952,6 @@ exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 
 if auto_start_endless_var.get():
     try_auto_start_from_config()
-
 
 if __name__ == "__main__":
     root.mainloop()
