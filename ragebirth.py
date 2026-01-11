@@ -1,3 +1,4 @@
+import logging
 import tkinter as tk
 from tkinter import messagebox
 import requests
@@ -22,11 +23,17 @@ from utilities.common import resource_path
 from requests.exceptions import RequestException
 from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
+from tkinter import ttk
+from utilities.accountVerification import AccountVerifier
 
 
 # Logger
 log_queue = Queue()
 logger = setup_logger(ui_queue=log_queue)
+ui_formatter = logging.Formatter(
+    "%(asctime)s | %(message)s",
+    "%H:%M:%S"
+)
 
 #
 auto_start_time = None
@@ -124,6 +131,38 @@ def set_game_executable(path: str):
     config["paths"]["game_executable"] = path
     save_config(config)
 
+def set_auto_email_verification(value: bool):
+    config = load_config()
+    if "verification" not in config:
+        config["verification"] = {}
+    config["verification"]["auto_email"] = "true" if value else "false"
+    save_config(config)
+
+def set_auto_mobile_verification(value: bool):
+    config = load_config()
+    if "verification" not in config:
+        config["verification"] = {}
+    config["verification"]["auto_mobile"] = "true" if value else "false"
+    save_config(config)
+
+
+def get_auto_email_verification():
+    config = load_config()
+    return config.getboolean(
+        "verification",
+        "auto_email",
+        fallback=False
+    )
+
+def get_auto_mobile_verification():
+    config = load_config()
+    return config.getboolean(
+        "verification",
+        "auto_mobile",
+        fallback=False
+    )
+
+
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -153,6 +192,24 @@ def safe_get(session, url, retries=3, delay=3):
             logger.warning(f"[RETRY] GET failed ({i+1}/{retries}): {e}")
             time.sleep(delay)
     raise RuntimeError("DNS resolution failed after retries")
+
+def start_account_verification_async(username: str):
+    def worker():
+        try:
+            logger.info(f"[INFO] Starting verification process for {username}")
+            verifier = AccountVerifier(logger)
+            verifier.run(
+                mobile=get_auto_mobile_verification(),
+                email=get_auto_email_verification()
+            )
+            logger.info(f"[INFO] Account verification completed.")
+        except Exception:
+            logger.exception("[ERROR] Verification failed")
+
+    threading.Thread(
+        target=worker,
+        daemon=True
+    ).start()
 
 
 def signup_user(first_name, last_name, email, username, password):
@@ -220,7 +277,13 @@ def signup_user(first_name, last_name, email, username, password):
         if success:
             logger.info(f"[INFO] Account {username} created")
             logger.info(f"[INFO] Password: {password}")
+            state.INGAME_STATE.setUsername(username)
+            state.INGAME_STATE.setPassword(password)
             log_username(username)
+
+            if get_auto_email_verification() or get_auto_mobile_verification():
+                start_account_verification_async(username)
+
             return True, msg
         else:
             logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
@@ -411,6 +474,13 @@ duration_var = tk.StringVar(value="Duration: 00:00:00")
 iteration_var = tk.StringVar(value="Iterations completed: 0")
 auto_start_endless_var = tk.BooleanVar(value=get_auto_start_endless())
 auto_start_countdown_var = tk.StringVar(value="")
+auto_email_verification_var = tk.BooleanVar(
+    value=get_auto_email_verification()
+)
+
+auto_mobile_verification_var = tk.BooleanVar(
+    value=get_auto_mobile_verification()
+)
 
 
 def one_full_cycle():
@@ -507,7 +577,10 @@ def increment_iteration():
 
 def poll_log_queue():
     while not log_queue.empty():
-        msg = log_queue.get()
+        record = log_queue.get()
+
+        # 1️⃣ Convert LogRecord → string
+        msg = ui_formatter.format(record)
 
         log_text.config(state="normal")
 
@@ -519,16 +592,19 @@ def poll_log_queue():
             or "Traceback" in msg
             or "RuntimeError" in msg
             or "Exception" in msg
+            or record.levelname in ("ERROR", "CRITICAL")
         ):
             tag = "ERROR"
-        elif "[WARN]" in msg:
+        elif record.levelname == "WARNING" or "[WARN]" in msg:
             tag = "WARN"
 
+        # 2️⃣ Insert formatted string
         log_text.insert("end", msg + "\n", tag)
         log_text.see("end")
         log_text.config(state="disabled")
 
     root.after(100, poll_log_queue)
+
 
 def on_login_only():
     user = username_entry.get().strip()
@@ -569,6 +645,9 @@ def on_start_endless_mode():
     """Start endless mode (replaces checkbox)"""
     if not auto_mode_var.get():
         auto_mode_var.set(True)
+
+        root.after(0, set_endless_mode_ui_running)
+
         threading.Thread(
             target=auto_loop_worker,
             daemon=True
@@ -588,9 +667,9 @@ def on_submit():
     success, msg = signup_user(first, last, email, user, pwd)
 
     if success:
-        messagebox.showinfo("Success", "Signup successful!")
+        logger.info("[INFO] Signup successful!")
     else:
-        messagebox.showerror("Failed", msg)
+        logger.error(f"[ERROR] Signup failed: {msg}")
 
 def on_browse_executable():
     exe_path = filedialog.askopenfilename(
@@ -684,110 +763,6 @@ def validate_game_executable(show_error=True):
         return False
 
     return True
-
-
-WINDOW_WIDTH = 750
-WINDOW_HEIGHT = 800
-
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-x = screen_width - 10 - WINDOW_WIDTH
-y = screen_height - 90 - WINDOW_HEIGHT
-
-root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
-
-main_frame = tk.Frame(root)
-main_frame.pack(fill="both", expand=True)
-
-left_frame = tk.Frame(main_frame)
-left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-left_frame.rowconfigure(0, weight=1)
-
-form_frame = tk.Frame(left_frame)
-form_frame.pack(fill="x", anchor="n")
-
-spacer = tk.Frame(left_frame)
-spacer.pack(fill="both", expand=True)
-
-right_frame = tk.Frame(main_frame)
-right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
-
-main_frame.columnconfigure(0, weight=0)
-main_frame.columnconfigure(1, weight=1)
-main_frame.rowconfigure(0, weight=1)
-
-def labeled_entry(parent, label, default=""):
-    tk.Label(parent, text=label, anchor="w").pack(fill="x")
-    e = tk.Entry(parent)
-    e.pack(fill="x", pady=2)
-    if default:
-        e.insert(0, default)
-    return e
-
-first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
-last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
-prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
-postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
-domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
-email_entry = labeled_entry(form_frame, "Email")
-username_entry = labeled_entry(form_frame, "Username")
-password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
-
-game_exe_var = tk.StringVar(value=get_game_executable())
-exe_header = tk.Frame(form_frame)
-exe_header.pack(fill="x", pady=(8, 0))
-
-tk.Label(
-    exe_header,
-    text="Game Launcher"
-).pack(side="left")
-
-tk.Button(
-    exe_header,
-    text="Browse",
-    command=on_browse_executable,
-    width=10
-).pack(side="right")
-
-exe_entry = tk.Entry(
-    form_frame,
-    textvariable=game_exe_var,
-    state="readonly"
-)
-exe_entry.pack(fill="x", pady=(4, 0))
-
-tk.Button(
-    form_frame,
-    text="Generate Username & Email",
-    command=on_generate
-).pack(fill="x", pady=6)
-
-action_row = tk.Frame(form_frame)
-action_row.pack(fill="x", pady=6)
-
-tk.Button(
-    action_row,
-    text="Sign Up",
-    command=on_submit,
-    width=12
-).pack(side="left", expand=True, padx=2)
-
-tk.Button(
-    action_row,
-    text="Login",
-    command=on_login_only,
-    width=12
-).pack(side="left", expand=True, padx=2)
-
-tk.Button(
-    form_frame,
-    text="Sign up and run once",
-    command=on_signup_and_run_once
-).pack(fill="x", pady=4)
-
-status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
-status_frame.pack(fill="x", side="bottom", pady=10)
 
 def on_auto_start_checkbox_changed():    
     value = auto_start_endless_var.get()
@@ -885,10 +860,137 @@ def execute_auto_start_endless():
 
     if auto_start_endless_var.get():
         logger.info("[INFO] Auto-starting Endless Mode now")
+        root.after(0, set_endless_mode_ui_running)
         on_start_endless_mode()
     else:
         logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
 
+
+def labeled_entry(parent, label, default=""):
+    tk.Label(parent, text=label, anchor="w").pack(fill="x")
+    e = tk.Entry(parent)
+    e.pack(fill="x", pady=2)
+    if default:
+        e.insert(0, default)
+    return e
+
+def set_endless_mode_ui_running():
+    start_endless_btn.config(
+        text="Hit F11 to stop",
+        fg="red",
+        state="disabled"
+    )
+
+def set_endless_mode_ui_idle():
+    start_endless_btn.config(
+        text="Start Endless Mode",
+        fg="black",
+        state="normal"
+    )
+
+def on_auto_email_verification_changed():
+    set_auto_email_verification(
+        auto_email_verification_var.get()
+    )
+
+def on_auto_mobile_verification_changed():
+    set_auto_mobile_verification(
+        auto_mobile_verification_var.get()
+    )
+
+
+
+WINDOW_WIDTH = 750
+WINDOW_HEIGHT = 800
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+x = screen_width - 10 - WINDOW_WIDTH
+y = screen_height - 90 - WINDOW_HEIGHT
+
+root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
+
+main_frame = tk.Frame(root)
+main_frame.pack(fill="both", expand=True)
+
+left_frame = tk.Frame(main_frame)
+left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+left_frame.rowconfigure(0, weight=1)
+
+form_frame = tk.Frame(left_frame)
+form_frame.pack(fill="x", anchor="n")
+
+spacer = tk.Frame(left_frame)
+spacer.pack(fill="both", expand=True)
+
+main_frame.columnconfigure(0, weight=0)
+main_frame.columnconfigure(1, weight=1)
+main_frame.rowconfigure(0, weight=1)
+
+first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
+last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
+domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
+email_entry = labeled_entry(form_frame, "Email")
+username_entry = labeled_entry(form_frame, "Username")
+password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
+
+game_exe_var = tk.StringVar(value=get_game_executable())
+exe_header = tk.Frame(form_frame)
+exe_header.pack(fill="x", pady=(8, 0))
+
+tk.Label(
+    exe_header,
+    text="Game Launcher"
+).pack(side="left")
+
+tk.Button(
+    exe_header,
+    text="Browse",
+    command=on_browse_executable,
+    width=10
+).pack(side="right")
+
+exe_entry = tk.Entry(
+    form_frame,
+    textvariable=game_exe_var,
+    state="readonly"
+)
+exe_entry.pack(fill="x", pady=(4, 0))
+
+tk.Button(
+    form_frame,
+    text="Generate Username & Email",
+    command=on_generate
+).pack(fill="x", pady=6)
+
+action_row = tk.Frame(form_frame)
+action_row.pack(fill="x", pady=6)
+
+tk.Button(
+    action_row,
+    text="Sign Up",
+    command=on_submit,
+    width=12
+).pack(side="left", expand=True, padx=2)
+
+tk.Button(
+    action_row,
+    text="Login",
+    command=on_login_only,
+    width=12
+).pack(side="left", expand=True, padx=2)
+
+tk.Button(
+    form_frame,
+    text="Sign up and run once",
+    command=on_signup_and_run_once
+).pack(fill="x", pady=4)
+
+status_frame = tk.LabelFrame(left_frame, text="Endless Mode Status")
+status_frame.pack(fill="x", side="bottom", pady=10)
 
 tk.Checkbutton(
     status_frame,
@@ -910,24 +1012,75 @@ duration_label.pack(anchor="w")
 iteration_label = tk.Label(status_frame, textvariable=iteration_var)
 iteration_label.pack(anchor="w")
 
-tk.Button(
+start_endless_btn = tk.Button(
     status_frame,
     text="Start Endless Mode",
     command=on_start_endless_mode,
-    fg="red"
-).pack(fill="x", pady=6)
+    fg="black"
+)
+start_endless_btn.pack(fill="x", pady=6)
+
+
+right_frame = tk.Frame(main_frame)
+right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+
+notebook = ttk.Notebook(right_frame)
+notebook.pack(fill="both", expand=True)
+
+extra_settings_tab = tk.Frame(notebook)
+logs_tab = tk.Frame(notebook)
+
+notebook.add(extra_settings_tab, text="Extra Settings")
+account_verification_frame = tk.LabelFrame(
+    extra_settings_tab,
+    text="Account Verification",
+    padx=10,
+    pady=8
+)
+account_verification_frame.pack(
+    fill="x",
+    padx=10,
+    pady=10,
+    anchor="n"
+)
+
+verification_row = tk.Frame(account_verification_frame)
+verification_row.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    verification_row,
+    text="Auto Email Verification",
+    variable=auto_email_verification_var,
+    command=on_auto_email_verification_changed
+).grid(row=0, column=0, sticky="w", padx=(0, 20))
+
+tk.Checkbutton(
+    verification_row,
+    text="Auto Mobile Verification",
+    variable=auto_mobile_verification_var,
+    command=on_auto_mobile_verification_changed
+).grid(row=0, column=1, sticky="w")
+
+
+notebook.add(logs_tab, text="Logs")
 
 log_text = tk.Text(
-    right_frame,
+    logs_tab,
     bg="black",
     fg="lime",
     font=("Consolas", 9),
     state="disabled"
 )
 log_text.pack(fill="both", expand=True)
+
 log_text.tag_configure("INFO", foreground="lime")
 log_text.tag_configure("WARN", foreground="orange")
 log_text.tag_configure("ERROR", foreground="red")
+
+notebook.select(logs_tab)
+
+style = ttk.Style()
+style.theme_use("default")
 
 poll_log_queue()
 exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
@@ -938,7 +1091,6 @@ exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 
 if auto_start_endless_var.get():
     try_auto_start_from_config()
-
 
 if __name__ == "__main__":
     root.mainloop()

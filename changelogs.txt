@@ -1,9 +1,21 @@
 # =========================================================================== #
+# v1.4.0 - Feature Enhancement (11 January 2026)
+# =========================================================================== #
+- [x] Added account verification feature.
+- [x] Added "Extra Settings" tab panel on UI.
+
+# =========================================================================== #
+# v1.3.8 - Bug Fixes (11 January 2026)
+# =========================================================================== #
+- [x] Fixed emergency hotkey doesn't stop the program on endless mode.
+- [x] Fixed program stucked when 'not the roaster of the match' pop up showed issue.
+- [x] Changed emergency terminate hotkey to F11.
+
+# =========================================================================== #
 # v1.3.7 - Feature Enhancement (10 January 2026)
 # =========================================================================== #
 - [x] Added fake ip address generator.
 - [x] Added game executable selection to replace the existing launcher logic.
-
 
 # =========================================================================== #
 # v1.3.6 - Feature Enhancement (7 January 2026)
