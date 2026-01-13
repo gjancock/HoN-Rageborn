@@ -7,8 +7,8 @@ I am not responsible for any IP bans, hardware bans, account bans, or any other 
 
 How to Use
 -------------------------------------
-1. Download latest release from https://github.com/gjancock/HoN-Rageborn.
-2. Execute the Rageborn.exe files you just downloaded and MAKE SURE RagebornApp.exe is existed.
+1. Download latest release .zip from https://github.com/gjancock/HoN-Rageborn.
+2. Extra and execute the Rageborn.exe files you just downloaded and MAKE SURE RagebornApp.exe is existed in the same folder.
 3. Enjoy.
 
 Do take note on settings below:
