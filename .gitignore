@@ -45,3 +45,4 @@ logs/*.log
 *.ini
 /venv
 python
+startLauncher.bat

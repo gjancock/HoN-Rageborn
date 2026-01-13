@@ -2,6 +2,7 @@
 # v1.4.2 - Feature Enhancement (13 January 2026)
 # =========================================================================== #
 - [x] Add game config utilities and patch startup.cfg on launch.
+- [x] Fixed launcher not working correctly issue.
 
 # =========================================================================== #
 # v1.4.1 - Feature Enhancement (11 January 2026)
