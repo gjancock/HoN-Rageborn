@@ -3,6 +3,8 @@
 # =========================================================================== #
 - [x] Add game config utilities and patch startup.cfg on launch.
 - [x] Fixed launcher not working correctly issue.
+- [x] Fixed auto-update default value set to True.
+- [x] Added SHA256 integrity check.
 
 # =========================================================================== #
 # v1.4.1 - Feature Enhancement (11 January 2026)

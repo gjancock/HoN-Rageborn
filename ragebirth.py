@@ -105,6 +105,17 @@ VERSION = read_version()
 
 CONFIG_FILE = os.path.join(get_runtime_dir(), "rageborn.ini")
 
+def read_auto_update():
+    path = os.path.join(exe_dir(), "config.ini")
+    config = configparser.ConfigParser()
+
+    try:
+        config.read(path, encoding="utf-8")
+        return config.getboolean("settings", "auto_update", fallback=True)
+    except Exception:
+        return True  # safe default
+
+
 def load_config():
     config = configparser.ConfigParser()
     if os.path.exists(CONFIG_FILE):
@@ -169,12 +180,28 @@ def get_auto_mobile_verification():
     )
 
 
-def set_auto_update(value: bool):
-    config = load_config()
-    if "settings" not in config:
-        config["settings"] = {}
-    config["settings"]["auto_update"] = "true" if value else "false"
-    save_config(config)
+def set_auto_update(enabled: bool):
+    path = os.path.join(exe_dir(), "config.ini")
+    config = configparser.ConfigParser()
+
+    # Read existing config if present
+    if os.path.exists(path):
+        config.read(path, encoding="utf-8")
+
+    # Ensure section exists
+    if not config.has_section("settings"):
+        config.add_section("settings")
+
+    # Write value
+    config.set("settings", "auto_update", "true" if enabled else "false")
+
+    # Save
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            config.write(f)
+    except Exception as e:
+        logger.error(f"[ERROR] Failed to write config.ini: {e}")
+
 
 
 def get_auto_update():
@@ -502,9 +529,7 @@ auto_email_verification_var = tk.BooleanVar(
 auto_mobile_verification_var = tk.BooleanVar(
     value=get_auto_mobile_verification()
 )
-auto_update_var = tk.BooleanVar(
-    value=get_auto_update()
-)
+auto_update_var = tk.BooleanVar(value=read_auto_update())
 
 
 def one_full_cycle():

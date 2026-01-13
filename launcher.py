@@ -7,6 +7,7 @@ import configparser
 import tkinter as tk
 from tkinter import ttk
 import ctypes
+import hashlib
 
 # --------------------------------------------------
 # Identity (taskbar / icon grouping)
@@ -68,20 +69,73 @@ def get_latest_release():
     data = r.json()
 
     remote_version = data["tag_name"].lstrip("v")
-    download_url = None
+    exe_url = None
+    sha_url = None
 
     for asset in data["assets"]:
         if asset["name"] == "Rageborn.exe":
-            download_url = asset["browser_download_url"]
+            exe_url = asset["browser_download_url"]
+        elif asset["name"] == "Rageborn.exe.sha256":
+            sha_url = asset["browser_download_url"]
 
-    if not download_url:
+    if not exe_url:
         raise RuntimeError(
             "Rageborn.exe not found in release assets.\n"
             "This usually means the release was published incorrectly.\n"
             "Please report this issue to gjancock."
         )
 
-    return remote_version, download_url
+    if not sha_url:
+        raise RuntimeError(
+            "Rageborn.exe.sha256 not found in release assets.\n"
+            "Checksum verification is required.\n"
+            "Please report this issue to gjancock."
+        )
+
+    return remote_version, exe_url, sha_url
+
+
+def sha256_of_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+
+def ensure_config_exists():
+    if os.path.exists(CONFIG_FILE):
+        return
+
+    config = configparser.ConfigParser()
+    config[CONFIG_SECTION] = {
+        CONFIG_KEY: "true"
+    }
+
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            config.write(f)
+    except Exception:
+        pass  # launcher must not crash because of config
+
+
+def get_remote_hash(sha_url):
+    r = requests.get(sha_url, timeout=10)
+    r.raise_for_status()
+    return r.text.split()[0]
+
+
+def needs_download(app_path, remote_hash):
+    if not os.path.exists(app_path):
+        return True
+
+    try:
+        local_hash = sha256_of_file(app_path)
+        return local_hash != remote_hash
+    except Exception:
+        return True
+
 
 # --------------------------------------------------
 # UI
@@ -169,6 +223,8 @@ def download(url, dest, ui):
 # Main
 # --------------------------------------------------
 def main():
+    ensure_config_exists() 
+
     ui = UpdateUI()
     local_version = read_local_version()
 
@@ -176,8 +232,11 @@ def main():
         # FIRST RUN (bootstrap)
         if not app_exists():
             ui.set_text("Installing Rageborn...")
-            remote, url = get_latest_release()
-            download(url, TEMP_EXE, ui)
+            remote, exe_url, sha_url = get_latest_release()
+            remote_hash = get_remote_hash(sha_url)
+
+            ui.set_text("Installing Rageborn...")
+            download(exe_url, TEMP_EXE, ui)
             os.replace(TEMP_EXE, APP_EXE)
 
             with open(VERSION_FILE, "w", encoding="utf-8") as f:
@@ -186,17 +245,18 @@ def main():
         # NORMAL UPDATE FLOW
         elif auto_update_enabled():
             ui.set_text("Checking for updates...")
-            remote, url = get_latest_release()
+            remote, exe_url, sha_url = get_latest_release()
+            remote_hash = get_remote_hash(sha_url)
 
-            if version.parse(remote) > version.parse(local_version):
+            if needs_download(APP_EXE, remote_hash):
                 ui.set_text(f"Updating to v{remote}...")
-                download(url, TEMP_EXE, ui)
+                download(exe_url, TEMP_EXE, ui)
                 os.replace(TEMP_EXE, APP_EXE)
 
                 with open(VERSION_FILE, "w", encoding="utf-8") as f:
                     f.write(remote)
             else:
-                ui.set_text("No updates found.")
+                ui.set_text("Rageborn is up to date.")
 
         else:
             ui.set_text("Auto-update disabled.")
