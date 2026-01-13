@@ -26,6 +26,11 @@ from tkinter import filedialog
 from tkinter import ttk
 from utilities.accountVerification import AccountVerifier
 from utilities.gameConfigUtilities import prepare_game_config
+import time
+import subprocess
+import sys
+import socket
+import requests
 
 
 # Logger
@@ -179,6 +184,22 @@ def get_auto_mobile_verification():
         fallback=False
     )
 
+def set_auto_restart_dns(value: bool):
+    config = load_config()
+    if "network" not in config:
+        config["network"] = {}
+    config["network"]["auto_restart_dns"] = "true" if value else "false"
+    save_config(config)
+
+
+def get_auto_restart_dns():
+    config = load_config()
+    return config.getboolean(
+        "network",
+        "auto_restart_dns",
+        fallback=False
+    )
+
 
 def set_auto_update(enabled: bool):
     path = os.path.join(exe_dir(), "config.ini")
@@ -233,14 +254,76 @@ def is_signup_success(r):
     return True, "Signup success"
 
 
-def safe_get(session, url, retries=3, delay=3):
+def is_dns_error(exc: Exception) -> bool:
+    """
+    Detect DNS-related failures safely.
+    """
+    msg = str(exc).lower()
+
+    return (
+        isinstance(exc, requests.exceptions.ConnectionError)
+        and (
+            "getaddrinfo failed" in msg
+            or "name or service not known" in msg
+            or "failed to resolve" in msg
+        )
+    ) or isinstance(exc, socket.gaierror)
+
+
+def restart_windows(reason: str = ""):
+    """
+    Restart Windows immediately.
+    """
+    logger.critical("[SYSTEM] Restarting Windows due to DNS failure")
+    if reason:
+        logger.critical(f"[SYSTEM] Reason: {reason}")
+
+    # Force immediate restart
+    subprocess.run(
+        ["shutdown", "/r", "/t", "0"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    # Hard exit if shutdown is blocked
+    sys.exit(1)
+
+
+def safe_get(
+    session,
+    url,
+    retries=3,
+    delay=3,
+    restart_on_dns=False  # 🔥 toggle flag
+):
+    last_exception = None
+
     for i in range(retries):
         try:
             return session.get(url, timeout=15)
+
         except Exception as e:
-            logger.warning(f"[RETRY] GET failed ({i+1}/{retries}): {e}")
+            last_exception = e
+            logger.warning(
+                f"[RETRY] GET failed ({i+1}/{retries}): {e}"
+            )
+
+            # Immediate escalation if DNS issue
+            if is_dns_error(e):
+                logger.error("[NETWORK] DNS resolution failure detected")
+
+                if restart_on_dns:
+                    restart_windows(reason=str(e))
+
+                break  # do not keep retrying DNS failures
+
             time.sleep(delay)
-    raise RuntimeError("DNS resolution failed after retries")
+
+    raise RuntimeError(
+        "DNS resolution failed after retries"
+        if is_dns_error(last_exception)
+        else "HTTP GET failed after retries"
+    )
 
 def start_account_verification_async(username: str):
     def worker():
@@ -272,7 +355,7 @@ def signup_user(first_name, last_name, email, username, password):
 
     try:
         # 1️⃣ GET signup page
-        resp = safe_get(session, SIGNUP_URL)
+        resp = safe_get(session, SIGNUP_URL, restart_on_dns=get_auto_restart_dns())
         resp.raise_for_status()
 
         match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
@@ -530,6 +613,7 @@ auto_mobile_verification_var = tk.BooleanVar(
     value=get_auto_mobile_verification()
 )
 auto_update_var = tk.BooleanVar(value=read_auto_update())
+auto_restart_dns_var = tk.BooleanVar(value=get_auto_restart_dns())
 
 
 def one_full_cycle():
@@ -1145,6 +1229,12 @@ tk.Checkbutton(
     command=on_auto_update_changed
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
 
+tk.Checkbutton(
+    app_settings_row,
+    text="Auto Restart PC on DNS Failure",
+    variable=auto_restart_dns_var,
+    command=lambda: set_auto_restart_dns(auto_restart_dns_var.get())
+).grid(row=0, column=1, sticky="w")
 
 notebook.add(logs_tab, text="Logs")
 
