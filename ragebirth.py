@@ -25,6 +25,7 @@ from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
 from tkinter import ttk
 from utilities.accountVerification import AccountVerifier
+from utilities.gameConfigUtilities import prepare_game_config
 
 
 # Logger
@@ -745,6 +746,14 @@ def launch_game_process():
             "Please re-select the correct file."
         )
         return False
+    
+    # Prepare startup.cfg
+    prepare_game_config(
+        logger=logger,
+        window_mode=2,
+        width=1024,
+        height=768
+    )
 
     subprocess.Popen(
         [exe],
