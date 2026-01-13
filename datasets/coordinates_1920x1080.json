@@ -2,9 +2,7 @@
   "meta": {
     "resolution": "1920x1080",
     "game_resolution": "1024x768",
-    "description": "In-game coordinate dataset by map, side, lane, and tower",
-    "app_icon": "1920x1080-app-icon.png",
-    "app_icon_default": "1920x1080-app-icon-default.png"
+    "description": "In-game coordinate dataset by map, side, lane, and tower"
   },
   "matchmaking_panel": {
     "matchmaking_tuner": {
