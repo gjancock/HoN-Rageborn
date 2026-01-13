@@ -319,19 +319,3 @@ def get_foc_role_information(role):
         raise ValueError(
             f"Missing item: picking_phase.role_information.{role}"
         ) from e
-
-def get_app_icon():
-    try:
-        return _coords["meta"]["app_icon"]
-    except KeyError as e:
-        raise ValueError(
-            f"Missing item: meta.app_icon"
-        ) from e
-    
-def get_app_icon_default():
-    try:
-        return _coords["meta"]["app_icon_default"]
-    except KeyError as e:
-        raise ValueError(
-            f"Missing item: meta.app_icon_default"
-        ) from e
