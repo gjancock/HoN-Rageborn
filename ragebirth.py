@@ -61,6 +61,11 @@ AUTO_START_DELAY_SECONDS = 5
 auto_start_remaining = 0
 
 
+def exe_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
 # ============================================================
 # APPLICATION SETTINGS
 # ============================================================
@@ -83,7 +88,7 @@ def get_runtime_dir():
 
 def read_version():
     try:
-        path = resource_path("VERSION")
+        path = os.path.join(exe_dir(), "VERSION")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
