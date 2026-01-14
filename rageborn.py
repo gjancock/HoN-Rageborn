@@ -18,6 +18,8 @@ import utilities.coordinateAccess as assetsLibrary
 import keyboard
 import random
 import os
+import subprocess
+from utilities.common import resource_path
 
 # Initialize Logger
 logger = setup_logger()
@@ -70,7 +72,8 @@ def start(username, password):
     finally:
         logger.info("[MAIN] shutting down")
         state.STOP_EVENT.set()
-        
+        stop_powershell()
+
         for t in threads:
             t.join()
 
@@ -154,6 +157,84 @@ def force_foreground_and_topmost(hwnd):
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
 
 
+def run_powershell():
+    global ps_priority_proc
+    subprocess.run([
+        "powershell",
+        "-NoProfile",
+        "-Command",
+        "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force"
+    ])
+    interruptible_wait(0.5)
+    script_path = resource_path("scripts/set_game_priority.ps1")
+    ps_priority_proc = subprocess.Popen([
+        "powershell",
+        "-NoProfile",
+        "-File", script_path
+    ],
+    creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+def stop_powershell():
+    global ps_priority_proc
+
+    if ps_priority_proc and ps_priority_proc.poll() is None:
+        ps_priority_proc.terminate()
+        ps_priority_proc = None
+
+
+def debug_set_game_priority():
+    found = False
+
+    for p in psutil.process_iter(["pid", "name", "nice"]):
+        if p.info["name"] and p.info["name"].lower() == "juvio.exe":
+            found = True
+            try:
+                before = p.nice()
+                p.nice(psutil.HIGH_PRIORITY_CLASS)
+                after = p.nice()
+
+                print(
+                    f"[DEBUG] PID={p.pid} "
+                    f"before={before} after={after}"
+                )
+            except psutil.AccessDenied as e:
+                print(f"[DEBUG] AccessDenied PID={p.pid}: {e}")
+            except Exception as e:
+                print(f"[DEBUG] Error PID={p.pid}: {e}")
+
+    if not found:
+        print("[DEBUG] No juvio.exe process found")
+
+
+def set_game_high_priority(
+    exe_name="juvio.exe",
+    duration=10,
+    interval=0.5
+):
+    """
+    Force HIGH priority on the game process for a short window
+    to survive launcher resets.
+    """
+
+    logger.info(f"[PRIORITY] Enforcing HIGH priority for {exe_name}")
+
+    end_time = time.time() + duration
+
+    while time.time() < end_time:
+        for proc in psutil.process_iter(["pid", "name"]):
+            try:
+                if proc.info["name"] and proc.info["name"].lower() == exe_name.lower():
+                    if proc.nice() != psutil.HIGH_PRIORITY_CLASS:
+                        proc.nice(psutil.HIGH_PRIORITY_CLASS)
+                        logger.info(
+                            f"[PRIORITY] {exe_name} PID={proc.pid} set to HIGH"
+                        )
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+        time.sleep(interval)
+
 def pin_jokevio():
 
     # 1 Launch .exe from ragebirth
@@ -195,6 +276,8 @@ def pin_jokevio():
             "startup/username-field.png"
         ], region=constant.SCREEN_REGION):
             logger.info("[INFO] Startup UI detected")
+            run_powershell()
+            debug_set_game_priority()
             break
 
         if time.time() - start > 90:
