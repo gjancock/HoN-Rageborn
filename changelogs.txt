@@ -1,4 +1,11 @@
 # =========================================================================== #
+# v1.5.0 - Feature Enhancement (14 January 2026)
+# =========================================================================== #
+- [x] Added slow mode feature: Slower on response including team recognition, vote response, lesser chance on repicking hero.
+- [x] Fixed duplicated config files issue.
+- [x] Bots will now buy 500g boots instead of 5x Jade Spire Recipe and 2x Golden Apple.
+
+# =========================================================================== #
 # v1.4.5 - Minor Bug Fixes (14 January 2026)
 # =========================================================================== #
 - [x] Terminate script after each iteration completed.

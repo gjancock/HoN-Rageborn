@@ -13,6 +13,8 @@ import sys
 import os
 from queue import Queue
 from utilities.loggerSetup import setup_logger
+from utilities.config import load_config
+load_config()
 import core.state as state
 from utilities.usernameGenerator import generate_word_username, generate_random_string
 from requests.exceptions import ConnectionError, Timeout
@@ -122,7 +124,7 @@ VERSION = read_version()
 # CONFIG (INI)
 # ============================================================
 
-CONFIG_FILE = os.path.join(get_runtime_dir(), "rageborn.ini")
+CONFIG_FILE = os.path.join(get_runtime_dir(), "config.ini")
 
 def read_auto_update():
     path = os.path.join(exe_dir(), "config.ini")
@@ -135,117 +137,144 @@ def read_auto_update():
         return True  # safe default
 
 
-def load_config():
-    config = configparser.ConfigParser()
-    if os.path.exists(CONFIG_FILE):
-        config.read(CONFIG_FILE)
-    return config
-
 def save_config(config):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         config.write(f)
 
 def get_auto_start_endless():
-    config = load_config()
-    return config.getboolean("endless", "auto_start", fallback=False)
-
-def set_auto_start_endless(value: bool):
-    config = load_config()
-    if "endless" not in config:
-        config["endless"] = {}
-    config["endless"]["auto_start"] = "true" if value else "false"
-    save_config(config)
+    return state.AUTO_START_ENDLESS
 
 def get_game_executable():
-    config = load_config()
-    return config.get("paths", "game_executable", fallback="")
+    return state.GAME_EXECUTABLE
 
-def set_game_executable(path: str):
-    config = load_config()
+def get_auto_email_verification():
+    return state.AUTO_EMAIL_VERIFICATION
+
+def get_auto_mobile_verification():
+    return state.AUTO_MOBILE_VERIFICATION
+
+def get_auto_restart_dns():
+    return state.AUTO_RESTART_DNS
+
+def get_auto_update():
+    return state.AUTO_UPDATE
+
+def get_settings_for_slower_pc():
+    return state.SLOWER_PC_MODE
+
+def set_auto_start_endless(value: bool):
+    state.AUTO_START_ENDLESS = value
+
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
+    if "endless" not in config:
+        config["endless"] = {}
+
+    config["endless"]["auto_start"] = "true" if value else "false"
+
+    with open(path, "w") as f:
+        config.write(f)
+
+
+def set_game_executable(executable_path: str):
+    # 1️⃣ Update runtime state
+    state.GAME_EXECUTABLE = executable_path
+
+    # 2️⃣ Prepare config
+    config = configparser.ConfigParser()
+    config_path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(config_path):
+        config.read(config_path)
+
     if "paths" not in config:
         config["paths"] = {}
-    config["paths"]["game_executable"] = path
-    save_config(config)
+
+    # 3️⃣ Write correct value
+    config["paths"]["game_executable"] = executable_path
+
+    # 4️⃣ Save
+    with open(config_path, "w", encoding="utf-8") as f:
+        config.write(f)
+
 
 def set_auto_email_verification(value: bool):
-    config = load_config()
+    state.AUTO_EMAIL_VERIFICATION = value
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
     if "verification" not in config:
         config["verification"] = {}
     config["verification"]["auto_email"] = "true" if value else "false"
-    save_config(config)
+    with open(path, "w") as f:
+        config.write(f)
+
 
 def set_auto_mobile_verification(value: bool):
-    config = load_config()
+    state.AUTO_MOBILE_VERIFICATION = value
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
     if "verification" not in config:
         config["verification"] = {}
     config["verification"]["auto_mobile"] = "true" if value else "false"
-    save_config(config)
+    with open(path, "w") as f:
+        config.write(f)
 
-
-def get_auto_email_verification():
-    config = load_config()
-    return config.getboolean(
-        "verification",
-        "auto_email",
-        fallback=False
-    )
-
-def get_auto_mobile_verification():
-    config = load_config()
-    return config.getboolean(
-        "verification",
-        "auto_mobile",
-        fallback=False
-    )
 
 def set_auto_restart_dns(value: bool):
-    config = load_config()
+    state.AUTO_RESTART_DNS = value
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
     if "network" not in config:
         config["network"] = {}
     config["network"]["auto_restart_dns"] = "true" if value else "false"
-    save_config(config)
-
-
-def get_auto_restart_dns():
-    config = load_config()
-    return config.getboolean(
-        "network",
-        "auto_restart_dns",
-        fallback=False
-    )
+    with open(path, "w") as f:
+        config.write(f)
 
 
 def set_auto_update(enabled: bool):
-    path = os.path.join(exe_dir(), "config.ini")
+    state.AUTO_UPDATE = enabled
     config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
 
-    # Read existing config if present
     if os.path.exists(path):
-        config.read(path, encoding="utf-8")
+        config.read(path)
 
-    # Ensure section exists
-    if not config.has_section("settings"):
-        config.add_section("settings")
-
-    # Write value
-    config.set("settings", "auto_update", "true" if enabled else "false")
-
-    # Save
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            config.write(f)
-    except Exception as e:
-        logger.error(f"[ERROR] Failed to write config.ini: {e}")
+    if "settings" not in config:
+        config["settings"] = {}
+    config["settings"]["auto_updates"] = "true" if enabled else "false"
+    with open(path, "w") as f:
+        config.write(f)
 
 
+def set_settings_for_slower_pc(value: bool):
+    state.SLOWER_PC_MODE = value
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
 
-def get_auto_update():
-    config = load_config()
-    return config.getboolean(
-        "settings",
-        "auto_update",
-        fallback=False
-    )
+    if os.path.exists(path):
+        config.read(path)
+
+    if "performance" not in config:
+        config["performance"] = {}
+    config["performance"]["slower_pc_mode"] = "true" if value else "false"
+    with open(path, "w") as f:
+        config.write(f)
 
 
 # ============================================================
@@ -539,6 +568,9 @@ def run_rageborn_flow(username, password):
         if not launch_game_process():
             logger.error("[ERROR] Game launch aborted")
             return
+        
+        if state.SLOWER_PC_MODE:
+            logger.info("[INFO] RAGEBORN slow mode activated.")
 
         import rageborn
 
@@ -628,7 +660,7 @@ auto_mobile_verification_var = tk.BooleanVar(
 )
 auto_update_var = tk.BooleanVar(value=read_auto_update())
 auto_restart_dns_var = tk.BooleanVar(value=get_auto_restart_dns())
-
+settings_for_slower_pc_var = tk.BooleanVar(value=get_settings_for_slower_pc())
 
 def one_full_cycle():
     try:
@@ -1249,6 +1281,16 @@ tk.Checkbutton(
     variable=auto_restart_dns_var,
     command=lambda: set_auto_restart_dns(auto_restart_dns_var.get())
 ).grid(row=0, column=1, sticky="w")
+
+app_settings_row2 = tk.Frame(app_settings_frame)
+app_settings_row2.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    app_settings_row2,
+    text="Settings for Slower PC",
+    variable=settings_for_slower_pc_var,
+    command=lambda: set_settings_for_slower_pc(settings_for_slower_pc_var.get())
+).grid(row=0, column=0, sticky="w", padx=(0, 20))
 
 notebook.add(logs_tab, text="Logs")
 

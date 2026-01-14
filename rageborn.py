@@ -240,7 +240,7 @@ def pin_jokevio():
     # 1 Launch .exe from ragebirth
 
     # Give launcher a moment to bootstrap
-    interruptible_wait(2.0)
+    interruptible_wait(2.0 if not state.SLOWER_PC_MODE else 4.0)
 
     # 2️⃣ Wait for REAL UI window (Juvio Platform)
     hwnd = wait_for_juvio_platform()
@@ -283,12 +283,12 @@ def pin_jokevio():
         if time.time() - start > 90:
             raise RuntimeError("Startup UI not detected within timeout")
 
-        interruptible_wait(0.5)
+        interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
 
     # 5️⃣ Dismiss disclaimer if present
     if find_and_click("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION):
         logger.info("[INFO] Dismissing startup disclaimer")        
-        interruptible_wait(0.5)
+        interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
 
     logger.info("[INFO] Juvio Platform ready for login")
 
@@ -321,7 +321,7 @@ def account_Login(username, password):
     pyautogui.press("tab")
     type_text(password, enter=True)
     start_time = time.time()
-    timeout = 10
+    timeout = 10 if not state.SLOWER_PC_MODE else 15
 
     while not state.STOP_EVENT.is_set():
         # ⛔ Timeout protection
@@ -371,7 +371,7 @@ def startQueue():
     x, y = assetsLibrary.get_matchmaking_tuner_coord()
     pyautogui.moveTo(x, y, duration=0.3)    
     pyautogui.click()
-    interruptible_wait(0.3)
+    interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
 
     while True:
         if not image_exists("matchmaking-disabled.png", region=constant.MATCHMAKING_PANEL_REGION):
@@ -379,12 +379,12 @@ def startQueue():
         else:
             logger.info("[INFO] Matchmaking Disabled, waiting connection...")
             interruptible_wait(1)
-        interruptible_wait(0.5)
+        interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
 
     # Click queue button
     x, y = assetsLibrary.get_queue_button_coord()
     pyautogui.moveTo(x, y, duration=0.3)
-    interruptible_wait(0.3)
+    interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
@@ -395,15 +395,15 @@ def startQueue():
             if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
                 logger.info("[INFO] Message dismissed!")
                 pyautogui.moveTo(x, y, duration=0.3)
-                interruptible_wait(0.3)
+                interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
                 pyautogui.click()
             else:
                 logger.info("[ERROR] Unable to locate OK button.")        
 
-        interruptible_wait(0.1)
+        interruptible_wait(0.1 if not state.SLOWER_PC_MODE else 0.5)
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            interruptible_wait(2)
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
             logger.info("[INFO] 'Waiting taken too long' message showed!")
             if find_and_click("message-ok.png"):
                 logger.info("[INFO] Message dismissed!")
@@ -417,21 +417,21 @@ def startQueue():
         ]):
             logger.info("[INFO] Match found! Mode: Forest of Cunt!")
             state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)
-            interruptible_wait(0.5)
+            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
             break
 
-        interruptible_wait(2)
+        interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
 
 
 def getTeam():
-    interruptible_wait(0.5)
+    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 2)
     team = constant.TEAM_LEGION # Default
 
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
             # click minimap
             pyautogui.click(511,792)
-            interruptible_wait(2) # 0.5 default need to have extra options for slow pc
+            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
             if any_image_exists([
                 "foc-mid-tower-legion.png"
                 ]):
@@ -441,9 +441,9 @@ def getTeam():
     
     state.INGAME_STATE.setCurrentTeam(team)
     logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(1)
+    interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
     pyautogui.press("c")
-    interruptible_wait(0.5)
+    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
     return team
 
 def enterChat(text):
@@ -452,7 +452,7 @@ def enterChat(text):
     type_text(text=text, enter=True)
 
 def pickingPhaseChat():
-    chatChance = 0.5
+    chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
     if random.random() < chatChance:
         randomString = [
             "ezwin",
@@ -470,7 +470,7 @@ def pickingPhaseChat():
 
 
 def continuePickingPhaseChat():
-    chatChance = 0.375
+    chatChance = 0.375 if not state.SLOWER_PC_MODE else 0.2
     if random.random() < chatChance:
         randomString = [
             "?",
@@ -482,7 +482,7 @@ def continuePickingPhaseChat():
         enterChat(text)
         interruptible_wait(round(random.uniform(5, 11), 2))
 
-        chatChance = 0.35
+        chatChance = 0.35 if not state.SLOWER_PC_MODE else 0.2
         if random.random() < chatChance:
             role = state.INGAME_STATE.getFocRole()
             randomString = [
@@ -495,7 +495,7 @@ def continuePickingPhaseChat():
             enterChat(text)
             interruptible_wait(round(random.uniform(5, 11), 2))
 
-            chatChance = 0.3
+            chatChance = 0.3 if not state.SLOWER_PC_MODE else 0.15
             if random.random() < chatChance:
                 randomString = [
                     "are you out of your mind?",
@@ -520,6 +520,7 @@ def pickingPhase():
             offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
             midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
 
+            timeout = 5 if not state.SLOWER_PC_MODE else 10
             role = constant.FOC_ROLE_HARD_SUPPORT # default role
             roleCheckStart = time.time()
             while True:
@@ -544,7 +545,7 @@ def pickingPhase():
                     logger.info("[INFO] Assignated Role: Mid")
                     role = constant.FOC_ROLE_MID
                     break
-                elif now - roleCheckStart > 5: # 5 seconds timeout
+                elif now - roleCheckStart > timeout:
                     logger.info(f"[WARN] Unable to detect role.. use {role}")
                     break
 
@@ -554,7 +555,7 @@ def pickingPhase():
             if random.random() < randomWaitingChance:
                 interruptible_wait(round(random.uniform(5, 10), 2))
 
-            notafkChance = 0.87
+            notafkChance = 0.93
             if random.random() < notafkChance: 
                 x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
                 pyautogui.moveTo(x, y, duration=0.3)
@@ -568,7 +569,7 @@ def pickingPhase():
                 pyautogui.moveTo(hx1, hy1, duration=0.3)
                 interruptible_wait(round(random.uniform(0.4, 1), 2))
 
-                shuffleSelectionChance = 0.3
+                shuffleSelectionChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
                 if random.random() < shuffleSelectionChance:
                     number = random.randint(3, 6)
                     for i in range(number):
@@ -589,13 +590,13 @@ def pickingPhase():
                     if random.random() < randomWaitChance:
                         interruptible_wait(round(random.uniform(5, 8), 2))
 
-                    reselectChance = 0.3
+                    reselectChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
                     if random.random() < reselectChance:
                         hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
                         logger.info(f"[INFO] Re-selecting {hero}")
                         pyautogui.moveTo(hx2, hy2, duration=0.3)
 
-                        chance = 0.5
+                        chance = 0.5 if not state.SLOWER_PC_MODE else 0.3
                         if random.random() < chance:
                             pyautogui.click()
                         else:
@@ -608,7 +609,7 @@ def pickingPhase():
                     pyautogui.doubleClick()
                     logger.info(f"[INFO] {hero} selected")
                     pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
-                    interruptible_wait(0.5)
+                    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
 
                 # team chat
                 pickingPhaseChat()
@@ -618,7 +619,7 @@ def pickingPhase():
                 logger.info("[INFO] Bot decided to AFK")
                 state.INGAME_STATE.setIsAfk(True)
                 interruptible_wait(round(random.uniform(35, 45), 2))
-                comebackChance = 0.2
+                comebackChance = 0.2 if not state.SLOWER_PC_MODE else 0.15
                 if random.random() < comebackChance:
                     state.INGAME_STATE.setIsAfk(False)
                     logger.info("[INFO] Bot is back from AFK")
@@ -655,7 +656,7 @@ def pickingPhase():
             logger.info("[INFO] Match aborted!")
             return False
         
-        interruptible_wait(2)
+        interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
 
 # pause vote
 def do_pause_vote():
@@ -759,7 +760,7 @@ def do_foc_stuff():
     matchTimedout = round(random.uniform(600, 660), 2)
 
     # vote pause    
-    pauseChance = 0.2
+    pauseChance = 0.2 if not state.SLOWER_PC_MODE else 0.1
     if random.random() < pauseChance:
         state.INGAME_STATE.setIsAfk(True)
         randomString = [
@@ -778,7 +779,7 @@ def do_foc_stuff():
         pyperclip.copy(text)
 
         pyautogui.keyUp("c")
-        acChance = 0.4
+        acChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
         if random.random() < acChance:
             pyautogui.hotkey("shift", "enter")
         else:
@@ -800,6 +801,7 @@ def do_foc_stuff():
 
     #
     isPathSet = False
+    pauseTimeout = 60 if not state.SLOWER_PC_MODE else 9000
 
     while not state.STOP_EVENT.is_set():
         isAfk = state.INGAME_STATE.getIsAfk()
@@ -807,7 +809,7 @@ def do_foc_stuff():
         elapsed = time.monotonic() - start_time
 
         if not state.STOP_EVENT.is_set():           
-            if now - last_pause_time >= 60: # every 60s click
+            if now - last_pause_time >= pauseTimeout: # every 60s click
                 do_pause_vote()
                 last_pause_time = now
 
@@ -821,10 +823,10 @@ def do_foc_stuff():
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
-                reactChance = 0.4
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
                 if not isAfk and random.random() < reactChance:
                     pyperclip.copy("why kick? Relax its beta...")
-                    interruptible_wait(round(random.uniform(0.3, 0.5), 2))
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
                     pyautogui.keyUp("c")
                     pyautogui.hotkey("shift", "enter")
                     pyautogui.hotkey("ctrl", "v")
@@ -833,10 +835,10 @@ def do_foc_stuff():
 
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
-                reactChance = 0.4
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
                 if not isAfk and random.random() < reactChance:
                     pyperclip.copy("why remake? Relax its beta...")
-                    interruptible_wait(round(random.uniform(0.3, 0.5), 2))
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
                     pyautogui.keyUp("c")
                     pyautogui.hotkey("shift", "enter")
                     pyautogui.hotkey("ctrl", "v")
@@ -847,27 +849,13 @@ def do_foc_stuff():
             # open ingame shop
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
-            interruptible_wait(round(random.uniform(0.3, 0.5), 2))
-            
-            # locate to enchantment icon
-            logger.info("[INFO] Finding Jade Spire from enchantment tab")
-            x1, y1 = assetsLibrary.get_in_game_shop_enchantment_category_coord()
-            pyautogui.click(x1, y1)
-            pyautogui.click(688, 417)
-            for _ in range(5):
-                pyautogui.rightClick(750, 302)
-                logger.info("[INFO] Bought a Jade Spire recipe cost 100g!")
-                interruptible_wait(round(random.uniform(0.2, 0.5), 2))    
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
 
-            # buy golden apple
-            x2, y2 = assetsLibrary.get_in_game_shop_consumables_category_coord()    
-            pyautogui.click(x2, y2)
-            for _ in range(1):
-                pyautogui.rightClick(654, 334)
-                logger.info("[INFO] Bought a Golden Apple cost 75g!")
-                interruptible_wait(round(random.uniform(0.2, 0.5), 2))
+            # buy 500g mancher's boots
+            pyautogui.rightClick(528, 628)
+            logger.info("[INFO] Bought a Mancher cost 500g!")
 
-            interruptible_wait(0.3)
+            interruptible_wait(0.3) if not state.SLOWER_PC_MODE else 1
             # close ingame shop
             pyautogui.press("esc")
             logger.info("[INFO] Ingame shop closed")
@@ -888,7 +876,7 @@ def do_foc_stuff():
             # TODO: death recap or respawn time show then stop spam
 
         if not state.STOP_EVENT.is_set() and isPathSet:
-            allChatSpamChance = 0.8
+            allChatSpamChance = 0.8 if state.SLOWER_PC_MODE else 0.05
             if not isAfk and random.random() < allChatSpamChance:
                 delayChance = 0.45
                 if random.random() < delayChance:
@@ -910,7 +898,7 @@ def do_foc_stuff():
             state.STOP_EVENT.set()
             break
 
-        interruptible_wait(0.03)
+        interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
 
 # TODO: Incomplete code
 # Midwar
