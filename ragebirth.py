@@ -31,6 +31,7 @@ import subprocess
 import sys
 import socket
 import requests
+import psutil
 
 
 # Logger
@@ -74,6 +75,19 @@ def exe_dir():
 # ============================================================
 # APPLICATION SETTINGS
 # ============================================================
+def set_self_high_priority():
+    try:
+        p = psutil.Process(os.getpid())
+        p.nice(psutil.HIGH_PRIORITY_CLASS)
+        logger.info("[PRIORITY] Python process set to HIGH")
+
+    except psutil.AccessDenied:
+        logger.warning("[PRIORITY] Access denied – priority unchanged")
+
+    except Exception as e:
+        logger.warning(f"[PRIORITY] Failed to set priority: {e}")
+
+
 def global_thread_exception_handler(args):
     logger.exception(
         "[THREAD-CRASH] Unhandled exception",
@@ -1267,4 +1281,5 @@ if auto_start_endless_var.get():
     try_auto_start_from_config()
 
 if __name__ == "__main__":
+    set_self_high_priority()
     root.mainloop()

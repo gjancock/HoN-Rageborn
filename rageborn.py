@@ -154,7 +154,6 @@ def force_foreground_and_topmost(hwnd):
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
 
 
-
 def pin_jokevio():
 
     # 1 Launch .exe from ragebirth
@@ -248,12 +247,12 @@ def account_Login(username, password):
             return False
 
         # ❌ Login failed
-        if any_image_exists([
-            "startup/startup-account-not-found.png",
-            "startup/startup-invalid-password.png"
-        ]):
-            logger.warning("[LOGIN] Invalid account or password detected")
-            return False
+        #if any_image_exists([
+        #    "startup/startup-account-not-found.png",
+        #    "startup/startup-invalid-password.png"
+        #]):
+        #    logger.warning("[LOGIN] Invalid account or password detected")
+        #    return False
 
         # ✅ Login success (pick a reliable UI signal)
         if any_image_exists([
@@ -349,7 +348,7 @@ def getTeam():
         case constant.MAP_FOC:
             # click minimap
             pyautogui.click(511,792)
-            interruptible_wait(0.5)
+            interruptible_wait(2) # 0.5 default need to have extra options for slow pc
             if any_image_exists([
                 "foc-mid-tower-legion.png"
                 ]):
