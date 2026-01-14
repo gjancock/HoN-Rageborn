@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
 call venv\Scripts\activate
-python ragebirth.py
+start "" /HIGH python ragebirth.py
