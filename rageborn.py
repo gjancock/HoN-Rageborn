@@ -154,7 +154,6 @@ def force_foreground_and_topmost(hwnd):
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
 
 
-
 def pin_jokevio():
 
     # 1 Launch .exe from ragebirth
