@@ -46,6 +46,7 @@ def build_exe():
         "--add-data", "VERSION;.",
         "--add-data", "images;images",
         "--add-data", "datasets;datasets",
+        "--add-data", "scripts;scripts",
 
         "ragebirth.py"
     ]

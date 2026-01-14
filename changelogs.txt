@@ -1,4 +1,9 @@
 # =========================================================================== #
+# v1.4.5 - Minor Bug Fixes (14 January 2026)
+# =========================================================================== #
+- [x] Terminate script after each iteration completed.
+
+# =========================================================================== #
 # v1.4.4 - Feature Enhancement (14 January 2026)
 # =========================================================================== #
 - [x] Program will now change the priority itself to HIGH instead of BELOW_NORMAL upon launch.
