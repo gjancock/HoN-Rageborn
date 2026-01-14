@@ -73,6 +73,17 @@ STOP_EVENT = threading.Event()
 SCAN_VOTE_EVENT = threading.Event()
 SCAN_LOBBY_MESSAGE_EVENT = threading.Event()
 
+# =========================
+# CONFIG-DRIVEN STATES
+# =========================
+AUTO_START_ENDLESS = False
+AUTO_EMAIL_VERIFICATION = False
+AUTO_MOBILE_VERIFICATION = False
+AUTO_RESTART_DNS = False
+AUTO_UPDATE = True
+SLOWER_PC_MODE = False
+GAME_EXECUTABLE = ""
+
 #
 INGAME_STATE = InGameState() 
 
