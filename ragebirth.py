@@ -13,9 +13,10 @@ import sys
 import os
 from queue import Queue
 from utilities.loggerSetup import setup_logger
-from utilities.config import load_config
-load_config()
 import core.state as state
+from utilities.config import load_config
+# Load Config at startup
+load_config()
 from utilities.usernameGenerator import generate_word_username, generate_random_string
 from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
@@ -34,7 +35,6 @@ import sys
 import socket
 import requests
 import psutil
-
 
 # Logger
 log_queue = Queue()
@@ -71,8 +71,11 @@ auto_start_remaining = 0
 
 def exe_dir():
     if getattr(sys, "frozen", False):
+        # Running as PyInstaller exe
         return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
+    else:
+        # Running as normal Python script
+        return os.path.dirname(os.path.abspath(__file__))
 
 # ============================================================
 # APPLICATION SETTINGS
@@ -136,10 +139,6 @@ def read_auto_update():
     except Exception:
         return True  # safe default
 
-
-def save_config(config):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        config.write(f)
 
 def get_auto_start_endless():
     return state.AUTO_START_ENDLESS

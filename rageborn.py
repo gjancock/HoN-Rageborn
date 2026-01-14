@@ -49,6 +49,15 @@ def validate_coords(coords):
     for key in required:
         if key not in coords:
             raise RuntimeError(f"Invalid dataset: missing {key}")
+        
+# Queue Helper
+def is_target_green(rgb, tolerance=30):
+    r, g, b = rgb
+    return (
+        g > 150 and
+        g > r + tolerance and
+        g > b + tolerance
+    )
 
 #
 def start(username, password):
@@ -388,7 +397,14 @@ def startQueue():
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
+    # Color pixel targeted a pixel at 754, 735
+    pixel = pyautogui.pixel(754, 735)
+
     while True:
+
+        if is_target_green(pixel):
+            pyautogui.click(754, 735)  # click to confirm still here
+            logger.info("[INFO] Requeue clicked confirmed.")
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
@@ -409,6 +425,14 @@ def startQueue():
                 logger.info("[INFO] Message dismissed!")
             else:
                 logger.info("[ERROR] Unable to locate OK button.")
+
+        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png", region=constant.LOBBY_MESSAGE_REGION):
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
+            logger.info("[INFO] 'Not a host' message showed!")
+            if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+                logger.info("[INFO] Message dismissed!")
+            else:
+                logger.info("[ERROR] Unable to locate OK button.")
         
         # successfully joined a match: FOC
         if any_image_exists([
@@ -420,7 +444,7 @@ def startQueue():
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
             break
 
-        interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
+        interruptible_wait(1 if not state.SLOWER_PC_MODE else 3)
 
 
 def getTeam():
@@ -823,7 +847,7 @@ def do_foc_stuff():
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
-                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
                 if not isAfk and random.random() < reactChance:
                     pyperclip.copy("why kick? Relax its beta...")
                     interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
@@ -835,7 +859,7 @@ def do_foc_stuff():
 
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
-                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
                 if not isAfk and random.random() < reactChance:
                     pyperclip.copy("why remake? Relax its beta...")
                     interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
@@ -849,13 +873,13 @@ def do_foc_stuff():
             # open ingame shop
             pyautogui.press("b")
             logger.info("[INFO] Opening ingame shop")
-            interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 2
 
             # buy 500g mancher's boots
             pyautogui.rightClick(528, 628)
             logger.info("[INFO] Bought a Mancher cost 500g!")
 
-            interruptible_wait(0.3) if not state.SLOWER_PC_MODE else 1
+            interruptible_wait(0.3) if not state.SLOWER_PC_MODE else 2
             # close ingame shop
             pyautogui.press("esc")
             logger.info("[INFO] Ingame shop closed")
@@ -876,7 +900,7 @@ def do_foc_stuff():
             # TODO: death recap or respawn time show then stop spam
 
         if not state.STOP_EVENT.is_set() and isPathSet:
-            allChatSpamChance = 0.8 if state.SLOWER_PC_MODE else 0.05
+            allChatSpamChance = 0.8 if state.SLOWER_PC_MODE else 0
             if not isAfk and random.random() < allChatSpamChance:
                 delayChance = 0.45
                 if random.random() < delayChance:
