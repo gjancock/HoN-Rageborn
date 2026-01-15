@@ -561,6 +561,7 @@ def execute_auto_start_endless():
 
 def resetState():
     state.STOP_EVENT.clear()
+    state.CRASH_EVENT.clear()
 
 def run_rageborn_flow(username, password):
     try:
@@ -576,11 +577,16 @@ def run_rageborn_flow(username, password):
         resetState()
         rageborn.start(username, password)
 
+        if state.CRASH_EVENT.is_set():
+            raise RuntimeError("Game crashed during runtime")
+
     except Exception:
         logger.exception("[FATAL] Rageborn crashed")
+        raise
     except pyautogui.FailSafeException:
         logger.info("[SAFETY] FAILSAFE Triggered! Emergency stop.")
         state.STOP_EVENT.set()
+        raise
 
     finally:
         kill_jokevio()
@@ -599,11 +605,6 @@ def get_effective_password():
     pwd = password_entry.get().strip()
     return pwd if pwd else DEFAULT_PASSWORD
 
-def on_signup_success():
-    username = username_entry.get()
-    password = get_effective_password()
-
-    start_rageborn_async(username, password)
 
 def log_username(username, filename="signup_users.txt"):
     with open(filename, "a", encoding="utf-8") as f:
@@ -695,7 +696,8 @@ def one_full_cycle():
             logger.info("[INFO] Regenerating new account")
             time.sleep(random.uniform(8, 15))
 
-        logger.info(f"[INFO] Signup success! Username {username} ..launching Rageborn.exe")
+        logger.info(f"[INFO] Signup success! ")
+        logger.info(f"Username {username} launching Rageborn.exe")
 
         # 4️⃣ Run rageborn (blocking inside worker thread)
         run_rageborn_flow(username, password)
@@ -704,6 +706,7 @@ def one_full_cycle():
     except Exception:
         logger.exception("[WARN] Cycle error, recovering")
         time.sleep(10)
+        raise
 
 def auto_loop_worker():
     logger.info(f"[INFO] --Endless mode started--v{VERSION}")

@@ -5,6 +5,7 @@ import time
 
 def reset_state():
     state.STOP_EVENT.clear()
+    state.CRASH_EVENT.clear()
     state.SCAN_VOTE_EVENT.clear()
     state.SCAN_LOBBY_MESSAGE_EVENT.clear()
     state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)

@@ -72,9 +72,9 @@ def start(username, password):
         #
         main(username, password)
     finally:
-        logger.info("[MAIN] shutting down")
-        state.STOP_EVENT.set()
+        logger.info("[MAIN] shutting down")        
         stop_powershell()
+        state.STOP_EVENT.set()
 
         for t in threads:
             t.join()
@@ -157,6 +157,14 @@ def force_foreground_and_topmost(hwnd):
         )
     except Exception as e:
         logger.warning(f"[WARN] Failed to foreground hwnd={hwnd}: {e}")
+
+
+def run_powershell_async():
+    threading.Thread(
+        target=run_powershell,
+        name="PowerShellPriorityThread",
+        daemon=True
+    ).start()
 
 
 def run_powershell():
@@ -267,10 +275,11 @@ def pin_jokevio():
         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
 
     # Ensure powershell priority script is running
-    run_powershell()
-    start_hwnd_watchdog(
+    run_powershell_async()
+    start_hwnd_watchdog(        # start watchdog thread
         hwnd=hwnd,
-        stop_event=state.STOP_EVENT
+        stop_event=state.STOP_EVENT,
+        crash_event=state.CRASH_EVENT
     )
 
     # 5️⃣ Dismiss disclaimer if present
@@ -394,12 +403,10 @@ def startQueue():
                 interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
                 pyautogui.click()
             else:
-                logger.info("[ERROR] Unable to locate OK button.")        
-
-        interruptible_wait(0.1 if not state.SLOWER_PC_MODE else 0.5)
+                logger.info("[ERROR] Unable to locate OK button.")
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
             logger.info("[INFO] 'Waiting taken too long' message showed!")
             if find_and_click("message-ok.png"):
                 logger.info("[INFO] Message dismissed!")
@@ -407,7 +414,7 @@ def startQueue():
                 logger.info("[ERROR] Unable to locate OK button.")
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            interruptible_wait(2 if not state.SLOWER_PC_MODE else 4)
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
             logger.info("[INFO] 'Not a host' message showed!")
             if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
                 logger.info("[INFO] Message dismissed!")
@@ -427,11 +434,12 @@ def startQueue():
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
             return True
 
-        interruptible_wait(1 if not state.SLOWER_PC_MODE else 3)
+        interruptible_wait(1 if not state.SLOWER_PC_MODE else 1.5)
+
 
 
 def getTeam():
-    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 2)
+    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
     team = constant.TEAM_LEGION # Default
 
     match state.INGAME_STATE.getCurrentMap():
@@ -656,7 +664,7 @@ def pickingPhase():
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
             logger.info("[INFO] Rageborn begin!")
-            interruptible_wait(1.5)
+            interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
             return True
         
         elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
@@ -936,6 +944,8 @@ def check_lobby_message():
         f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/rst-stream-error-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/match-already-in-progress-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/host-started-the-game-while-not-in-team-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/unable-to-enter-matchmaking-queue-message.png"
     ], region=constant.LOBBY_MESSAGE_REGION)        
 
 def ingame(): 
