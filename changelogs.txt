@@ -2,6 +2,8 @@
 # v1.6.1 - Feature Enhancement (15 January 2026)
 # =========================================================================== #
 - [x] Added hwnd watch dog to track if game crashed / closed during runtime.
+- [x] Improved script running execution task during login phase.
+- [x] Improved match joined detection on slow mode.
 
 # =========================================================================== #
 # v1.6.0 - Feature Enhancement (15 January 2026)

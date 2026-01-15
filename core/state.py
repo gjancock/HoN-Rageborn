@@ -69,6 +69,7 @@ class InGameState:
             return self._isAfk
 
 #
+CRASH_EVENT = threading.Event()
 STOP_EVENT = threading.Event()
 SCAN_VOTE_EVENT = threading.Event()
 SCAN_LOBBY_MESSAGE_EVENT = threading.Event()

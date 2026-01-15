@@ -561,6 +561,7 @@ def execute_auto_start_endless():
 
 def resetState():
     state.STOP_EVENT.clear()
+    state.CRASH_EVENT.clear()
 
 def run_rageborn_flow(username, password):
     try:
@@ -575,6 +576,9 @@ def run_rageborn_flow(username, password):
 
         resetState()
         rageborn.start(username, password)
+
+        if state.CRASH_EVENT.is_set():
+            raise RuntimeError("Game crashed during runtime")
 
     except Exception:
         logger.exception("[FATAL] Rageborn crashed")

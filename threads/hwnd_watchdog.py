@@ -27,6 +27,7 @@ def hwnd_exists(hwnd: int) -> bool:
 def start_hwnd_watchdog(
     hwnd: int,
     stop_event: threading.Event,
+    crash_event: threading.Event,
     interval: float = 0.5,
 ):
     """
@@ -37,8 +38,9 @@ def start_hwnd_watchdog(
     def _watch():
         while not stop_event.is_set():
             if not hwnd_exists(hwnd):
+                crash_event.set()
                 stop_event.set()
-                raise Exception("Game crashed or window closed")
+                return
 
             time.sleep(interval)
 
