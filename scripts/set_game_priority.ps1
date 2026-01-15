@@ -19,7 +19,7 @@ while ($true)
             if ($p.PriorityClass -ne "High")
             {
                 $p.PriorityClass = "High"
-                Write-Host "[OK] Set hon.exe PID $($p.Id) to HIGH"
+                Write-Host "[OK] Set juvio.exe PID $($p.Id) to HIGH"
                 break
             }
         }
