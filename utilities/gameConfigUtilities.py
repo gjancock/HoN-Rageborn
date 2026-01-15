@@ -131,5 +131,4 @@ def prepare_game_config(
         logger.warning("[CFG] startup.cfg not found")
         return False
 
-    logger.info(f"[CFG] Found startup.cfg at: {cfg}")
     return patch_startup_cfg(cfg, window_mode, width, height, logger)

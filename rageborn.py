@@ -437,6 +437,7 @@ def startQueue():
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 1.5)
 
 
+
 def getTeam():
     interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
     team = constant.TEAM_LEGION # Default
