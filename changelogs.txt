@@ -2,6 +2,7 @@
 # v1.6.0 - Feature Enhancement (15 January 2026)
 # =========================================================================== #
 - [x] Added queue cooldown handler.
+- [x] Fixed chat spamming still enabling on slow mode.
 
 # =========================================================================== #
 # v1.5.1 - Major Bug Fixes (14 January 2026)
