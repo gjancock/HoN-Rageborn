@@ -49,15 +49,7 @@ def validate_coords(coords):
     for key in required:
         if key not in coords:
             raise RuntimeError(f"Invalid dataset: missing {key}")
-        
-# Queue Helper
-def is_target_green(rgb, tolerance=30):
-    r, g, b = rgb
-    return (
-        g > 150 and
-        g > r + tolerance and
-        g > b + tolerance
-    )
+
 
 #
 def start(username, password):
@@ -173,7 +165,10 @@ def run_powershell():
         "-NoProfile",
         "-Command",
         "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force"
-    ])
+    ],
+    creationflags=subprocess.CREATE_NO_WINDOW,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL)
     interruptible_wait(0.5)
     script_path = resource_path("scripts/set_game_priority.ps1")
     ps_priority_proc = subprocess.Popen([
@@ -181,7 +176,9 @@ def run_powershell():
         "-NoProfile",
         "-File", script_path
     ],
-    creationflags=subprocess.CREATE_NO_WINDOW)
+    creationflags=subprocess.CREATE_NO_WINDOW,
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL)
 
 
 def stop_powershell():
@@ -397,14 +394,14 @@ def startQueue():
     pyautogui.click()
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
-    # Color pixel targeted a pixel at 754, 735
-    pixel = pyautogui.pixel(754, 735)
-
     while True:
 
-        if is_target_green(pixel):
-            pyautogui.click(754, 735)  # click to confirm still here
-            logger.info("[INFO] Requeue clicked confirmed.")
+        # Requeue
+        if image_exists("play-button.png", region=constant.SCREEN_REGION):
+            logger.info("[INFO] Supposingly it should be on queueing state, but I see PLAY button.. Re-queueing..")
+            pyautogui.moveTo(x, y, duration=0.3)
+            interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+            pyautogui.click()
 
         if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
             logger.info("[INFO] 'Failed to fetch mmr' message showed!")
@@ -598,7 +595,7 @@ def pickingPhase():
                     number = random.randint(3, 6)
                     for i in range(number):
                         hero, hx, hy = assetsLibrary.get_role_heroes_coord(role)
-                        logger.info(f"[INFO] Showcasing shuffle hero")
+                        #logger.info(f"[INFO] Showcasing shuffle hero")
                         pyautogui.moveTo(hx, hy, duration=0.3)
                         pyautogui.click()
                         interruptible_wait(round(random.uniform(0.7, 1.5), 2))
@@ -617,7 +614,7 @@ def pickingPhase():
                     reselectChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
                     if random.random() < reselectChance:
                         hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
-                        logger.info(f"[INFO] Re-selecting {hero}")
+                        #logger.info(f"[INFO] Re-selecting {hero}")
                         pyautogui.moveTo(hx2, hy2, duration=0.3)
 
                         chance = 0.5 if not state.SLOWER_PC_MODE else 0.3
@@ -950,7 +947,10 @@ def check_lobby_message():
         f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
-        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png"
+        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/rst-stream-error-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/match-already-in-progress-message.png",
     ], region=constant.LOBBY_MESSAGE_REGION)        
 
 def ingame(): 
@@ -989,20 +989,30 @@ def main(username, password):
 
                 if not result:
 
+                    messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
+                    while True:
+                        if not check_lobby_message():
+                            break
+                        find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+                        interruptible_wait(0.5)
+                        messageClearTime -= 0.5
+                        if messageClearTime <= 0:
+                            break
+
                     # Just in case message pops
-                    if any_image_exists([
-                        f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png",
-                        f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
-                    ], region=constant.LOBBY_MESSAGE_REGION):
-                        location = image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-                        if location == True:
-                            pyautogui.click(location)
-                            logger.info("[INFO] Message box closed!")
+                    # if any_image_exists([
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png",
+                    #     f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
+                    # ], region=constant.LOBBY_MESSAGE_REGION):
+                    #     location = image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+                    #     if location == True:
+                    #         pyautogui.click(location)
+                    #         logger.info("[INFO] Message box closed!")
 
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue
