@@ -944,6 +944,7 @@ def check_lobby_message():
         f"{constant.DIALOG_MESSAGE_DIR}/rst-stream-error-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/match-already-in-progress-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/host-started-the-game-while-not-in-team-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/unable-to-enter-matchmaking-queue-message.png"
     ], region=constant.LOBBY_MESSAGE_REGION)        
 
 def ingame(): 
