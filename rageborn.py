@@ -5,6 +5,7 @@ import win32gui
 import win32con
 import win32process
 import psutil
+from threads.hwnd_watchdog import start_hwnd_watchdog
 from utilities.loggerSetup import setup_logger
 import threading
 import utilities.constants as constant
@@ -258,13 +259,19 @@ def pin_jokevio():
             "startup/username-field.png"
         ], region=constant.SCREEN_REGION):
             logger.info("[INFO] Startup UI detected")
-            run_powershell()
             break
 
         if time.time() - start > 90:
             raise RuntimeError("Startup UI not detected within timeout")
 
         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
+
+    # Ensure powershell priority script is running
+    run_powershell()
+    start_hwnd_watchdog(
+        hwnd=hwnd,
+        stop_event=state.STOP_EVENT
+    )
 
     # 5️⃣ Dismiss disclaimer if present
     if find_and_click("startup/startup-disclamer-logo.png", region=constant.SCREEN_REGION):
@@ -408,7 +415,6 @@ def startQueue():
                 logger.info("[ERROR] Unable to locate OK button.")
 
         if image_exists("queue-cooldown.png", region=constant.SCREEN_REGION):
-            logger.info("[ERROR] Queue Cooldown detected, aborting.")
             return False
         
         # successfully joined a match: FOC
@@ -824,7 +830,6 @@ def do_foc_stuff():
             state.SCAN_VOTE_EVENT.clear()
 
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
-                logger.info("[INFO] Kick Vote detected — declining")
                 reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
                 if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
                     pyperclip.copy("why kick? Relax its beta...")
@@ -836,7 +841,6 @@ def do_foc_stuff():
                     pyautogui.keyDown("c")
 
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
-                logger.info("[INFO] Remake Vote detected — declining")
                 reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
                 if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
                     pyperclip.copy("why remake? Relax its beta...")
@@ -980,21 +984,6 @@ def main(username, password):
                         messageClearTime -= 0.5
                         if messageClearTime <= 0:
                             break
-
-                    # Just in case message pops
-                    # if any_image_exists([
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/cancelled-match-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/game-has-ended-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/lobby-misc-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/kicked-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/no-response-from-server-message.png",
-                    #     f"{constant.DIALOG_MESSAGE_DIR}/not-the-roaster-message.png",
-                    # ], region=constant.LOBBY_MESSAGE_REGION):
-                    #     location = image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-                    #     if location == True:
-                    #         pyautogui.click(location)
-                    #         logger.info("[INFO] Message box closed!")
 
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue
