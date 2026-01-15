@@ -189,30 +189,6 @@ def stop_powershell():
         ps_priority_proc = None
 
 
-def debug_set_game_priority():
-    found = False
-
-    for p in psutil.process_iter(["pid", "name", "nice"]):
-        if p.info["name"] and p.info["name"].lower() == "juvio.exe":
-            found = True
-            try:
-                before = p.nice()
-                p.nice(psutil.HIGH_PRIORITY_CLASS)
-                after = p.nice()
-
-                print(
-                    f"[DEBUG] PID={p.pid} "
-                    f"before={before} after={after}"
-                )
-            except psutil.AccessDenied as e:
-                print(f"[DEBUG] AccessDenied PID={p.pid}: {e}")
-            except Exception as e:
-                print(f"[DEBUG] Error PID={p.pid}: {e}")
-
-    if not found:
-        print("[DEBUG] No juvio.exe process found")
-
-
 def set_game_high_priority(
     exe_name="juvio.exe",
     duration=10,
@@ -283,7 +259,6 @@ def pin_jokevio():
         ], region=constant.SCREEN_REGION):
             logger.info("[INFO] Startup UI detected")
             run_powershell()
-            debug_set_game_priority()
             break
 
         if time.time() - start > 90:
@@ -391,14 +366,15 @@ def startQueue():
     x, y = assetsLibrary.get_queue_button_coord()
     pyautogui.moveTo(x, y, duration=0.3)
     interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
-    pyautogui.click()
+    pyautogui.click()    
+    interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 3)
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
     while True:
 
         # Requeue
-        if image_exists("play-button.png", region=constant.SCREEN_REGION):
-            logger.info("[INFO] Supposingly it should be on queueing state, but I see PLAY button.. Re-queueing..")
+        if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            logger.info("[INFO] Still seeing PLAY button.. Re-queueing..")
             pyautogui.moveTo(x, y, duration=0.3)
             interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
             pyautogui.click()
@@ -430,6 +406,10 @@ def startQueue():
                 logger.info("[INFO] Message dismissed!")
             else:
                 logger.info("[ERROR] Unable to locate OK button.")
+
+        if image_exists("queue-cooldown.png", region=constant.SCREEN_REGION):
+            logger.info("[ERROR] Queue Cooldown detected, aborting.")
+            return False
         
         # successfully joined a match: FOC
         if any_image_exists([
@@ -439,7 +419,7 @@ def startQueue():
             logger.info("[INFO] Match found! Mode: Forest of Cunt!")
             state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
-            break
+            return True
 
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 3)
 
@@ -633,9 +613,10 @@ def pickingPhase():
                     interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
 
                 # team chat
-                pickingPhaseChat()
-                interruptible_wait(round(random.uniform(7, 11), 2))
-                continuePickingPhaseChat()            
+                if not state.SLOWER_PC_MODE:
+                    pickingPhaseChat()
+                    interruptible_wait(round(random.uniform(7, 11), 2))
+                    continuePickingPhaseChat()            
             else:
                 logger.info("[INFO] Bot decided to AFK")
                 state.INGAME_STATE.setIsAfk(True)
@@ -781,8 +762,8 @@ def do_foc_stuff():
     matchTimedout = round(random.uniform(600, 660), 2)
 
     # vote pause    
-    pauseChance = 0.2 if not state.SLOWER_PC_MODE else 0.1
-    if random.random() < pauseChance:
+    pauseChance = 0.2 
+    if not state.SLOWER_PC_MODE and random.random() < pauseChance:
         state.INGAME_STATE.setIsAfk(True)
         randomString = [
             "sorry i need a pause.. 1 minute",
@@ -815,7 +796,7 @@ def do_foc_stuff():
         state.INGAME_STATE.setIsAfk(False)
         last_pause_time = time.time()
         afkChance = 0.15
-        if random.random() < afkChance:
+        if not state.SLOWER_PC_MODE and random.random() < afkChance:
             state.INGAME_STATE.setIsAfk(True)
             logger.info("[INFO] Bot decided to go AFK ingame")
             time.sleep(round(random.uniform(30, 50), 2))
@@ -845,7 +826,7 @@ def do_foc_stuff():
             if find_and_click("vote-no.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Kick Vote detected — declining")
                 reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
-                if not isAfk and random.random() < reactChance:
+                if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
                     pyperclip.copy("why kick? Relax its beta...")
                     interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
                     pyautogui.keyUp("c")
@@ -857,7 +838,7 @@ def do_foc_stuff():
             if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
                 logger.info("[INFO] Remake Vote detected — declining")
                 reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
-                if not isAfk and random.random() < reactChance:
+                if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
                     pyperclip.copy("why remake? Relax its beta...")
                     interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
                     pyautogui.keyUp("c")
@@ -886,7 +867,7 @@ def do_foc_stuff():
         
         if not state.STOP_EVENT.is_set():
             # remain silence until try vote pause to delay the kick
-            if isAfk:
+            if not state.SLOWER_PC_MODE and isAfk:
                 state.INGAME_STATE.setIsAfk(False)
                 do_pause_vote()
                 last_pause_time = now
@@ -896,8 +877,8 @@ def do_foc_stuff():
             # TODO: spam taunt (need to calculate or know already ready tower)    
             # TODO: death recap or respawn time show then stop spam
 
-        if not state.STOP_EVENT.is_set() and isPathSet:
-            allChatSpamChance = 0.8 if state.SLOWER_PC_MODE else 0
+        if not state.SLOWER_PC_MODE and not state.STOP_EVENT.is_set() and isPathSet:
+            allChatSpamChance = 0.8 
             if not isAfk and random.random() < allChatSpamChance:
                 delayChance = 0.45
                 if random.random() < delayChance:
@@ -979,13 +960,14 @@ def main(username, password):
                 prequeue()
 
                 #
-                startQueue()
-
-                #logger.info("[DEBUG] startQueue finished, entering pickingPhase")
+                isEnterPickingPhase = startQueue()
+                if not isEnterPickingPhase:
+                    logger.warning("[INFO] Queue cooldown! Aborting..")
+                    state.STOP_EVENT.set()
+                    break
                 
                 #
-                result = pickingPhase()
-                #logger.info(f"[DEBUG] pickingPhase returned: {result}")                
+                result = pickingPhase()          
 
                 if not result:
 
