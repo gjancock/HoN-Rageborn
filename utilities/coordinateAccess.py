@@ -221,15 +221,27 @@ def get_in_game_shop_enchantment_category_coord():
             f"Missing item: in_game.shop.enchantment"
         ) from e
     
-def get_heroes_coord(hero):
+def get_heroes_coord(hero=None, random_pick=False):
     try:
+        heroes = _coords["picking_phase"]["heroes"]
+
+        # 🎲 Random hero selection
+        if random_pick:
+            hero = random.choice(list(heroes.keys()))
+            node = heroes[hero]
+            return hero, node["x"], node["y"]
+
+        # 🔒 Normal fixed hero selection
+        if not hero:
+            return False
+
         hero = hero.lower()
 
-        if hero in _coords["picking_phase"]["heroes"]:
-            node = _coords["picking_phase"]["heroes"][hero]
-            return node["x"], node["y"]
-        else:
-            return False
+        if hero in heroes:
+            node = heroes[hero]
+            return hero, node["x"], node["y"]
+
+        return False
 
     except KeyError as e:
         raise ValueError(

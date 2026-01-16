@@ -441,9 +441,16 @@ def startQueue():
             state.INGAME_STATE.setCurrentMap(constant.MAP_FOC)
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
             return True
+        
+        if any_image_exists([
+            "mw-ban-a-hero-button.png"
+        ]):
+            logger.info("[INFO] Match found! Mode: Midwar!")
+            state.INGAME_STATE.setCurrentMap(constant.MAP_MIDWAR)
+            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
+            return True            
 
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 1.5)
-
 
 
 def getTeam():
@@ -454,6 +461,16 @@ def getTeam():
         case constant.MAP_FOC:
             # click minimap
             pyautogui.click(511,792)
+            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
+            if any_image_exists([
+                "foc-mid-tower-legion.png"
+                ]):
+                team = constant.TEAM_LEGION
+            else:
+                team = constant.TEAM_HELLBOURNE
+
+        case constant.MAP_MIDWAR:
+            pyautogui.click(507, 796)
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
             if any_image_exists([
                 "foc-mid-tower-legion.png"
@@ -667,6 +684,28 @@ def pickingPhase():
             #     logger.info(f"[INFO] {TARGETING_HERO} banned!")
             #     logger.info("[INFO] Waiting to get random hero.")
 
+        case constant.MAP_MIDWAR:
+            interruptible_wait(round(random.uniform(5, 10), 2))
+            logger.info("[INFO] Waiting banning phase.")
+            hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
+            pyautogui.moveTo(bx, by, duration=0.3)
+            pyautogui.doubleClick()
+            logger.info(f"[INFO] Hero {hero} is now banned!")
+            logger.info("[INFO] Waiting picking phase.")
+            interruptible_wait(round(random.uniform(1, 5), 2))
+
+            while not state.STOP_EVENT.is_set():
+                if image_exists("choose-a-hero-button.png"):
+                    break
+
+                interruptible_wait(round(random.uniform(1, 2), 2))
+
+            logger.info("[INFO] Picking phase.")
+            interruptible_wait(round(random.uniform(4, 10), 2))
+            hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
+            pyautogui.moveTo(bx, by, duration=0.3)
+            pyautogui.doubleClick()
+            logger.info(f"[INFO] Hero {hero} is now bannselected!")
 
     while not state.STOP_EVENT.is_set():
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
@@ -706,6 +745,25 @@ def do_lane_push_step(team):
     lane = LANE_BY_NUMBER[2] # constant mid lane only
 
     x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, lane, 3)
+    x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
+
+    # mouse cursor to team mid tower
+    # alt+t and click to team mid tower
+    # mouse cursor to enemy mid tower
+    # right click to enemy mid tower
+
+    pyautogui.moveTo(x1, y1, duration=0.15)
+    pyautogui.hotkey("alt", "t")
+    pyautogui.click()
+    pyautogui.moveTo(x2, y2, duration=0.15)
+    pyautogui.rightClick()
+
+    return True
+
+# Mw
+def do_mw_lane_push_step(team):
+    map = state.INGAME_STATE.getCurrentMap()
+    x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, constant.LANE_MID, 3)
     x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
 
     # mouse cursor to team mid tower
@@ -925,21 +983,107 @@ def do_foc_stuff():
 # TODO: Incomplete code
 # Midwar
 def do_midwar_stuff():
-    # check team team 
-    pyautogui.keyDown("x")
-    if any_image_exists([
-        "foc-fountain-legion.png",
-        "scoreboard-legion.png"
-        ]):
-        team = constant.TEAM_LEGION
-    else:
-        team = constant.TEAM_HELLBOURNE
+    import pyperclip
+    #
+    start_time = time.monotonic()
+    team = getTeam()
+    bought = False
+    pyautogui.keyDown("c")
     
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(2)
-    pyautogui.keyUp("x")
-    interruptible_wait(0.5)
+    # after 600 seconds will timeout and leave the game 
+    matchTimedout = round(random.uniform(600, 660), 2)
+    pauseTimeout = 60
+
+    while not state.STOP_EVENT.is_set():
+        isAfk = state.INGAME_STATE.getIsAfk()
+        now = time.time() # for pause
+        elapsed = time.monotonic() - start_time
+
+        if not state.STOP_EVENT.is_set():           
+            if now - last_pause_time >= pauseTimeout: # every 60s click
+                do_pause_vote()
+                last_pause_time = now            
+
+        if not state.STOP_EVENT.is_set() and state.SCAN_VOTE_EVENT.is_set():
+            state.SCAN_VOTE_EVENT.clear()
+
+            if find_and_click("vote-no.png", region=constant.VOTE_REGION):
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
+                if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
+                    pyperclip.copy("why kick? Relax its beta...")
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
+                    pyautogui.keyUp("c")
+                    pyautogui.hotkey("shift", "enter")
+                    pyautogui.hotkey("ctrl", "v")
+                    pyautogui.press("enter")
+                    pyautogui.keyDown("c")
+
+            if find_and_click("vote-no-black.png", region=constant.VOTE_REGION):
+                reactChance = 0.4 if not state.SLOWER_PC_MODE else 0
+                if not state.SLOWER_PC_MODE and not isAfk and random.random() < reactChance:
+                    pyperclip.copy("why remake? Relax its beta...")
+                    interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 1
+                    pyautogui.keyUp("c")
+                    pyautogui.hotkey("shift", "enter")
+                    pyautogui.hotkey("ctrl", "v")
+                    pyautogui.press("enter")
+                    pyautogui.keyDown("c")
+        
+        if not state.STOP_EVENT.is_set() and not bought:
+            # open ingame shop
+            pyautogui.press("b")
+            logger.info("[INFO] Opening ingame shop")
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2)) if not state.SLOWER_PC_MODE else 2
+
+            # buy 500g mancher's boots
+            pyautogui.rightClick(528, 628)
+            logger.info("[INFO] Bought a Mancher cost 500g!")
+
+            interruptible_wait(0.3) if not state.SLOWER_PC_MODE else 2
+            # close ingame shop
+            pyautogui.press("esc")
+            logger.info("[INFO] Ingame shop closed")
+            bought = True
+            logger.info("[INFO] Waiting to get kick by the team...")
+            interruptible_wait(round(random.uniform(0.3, 0.5), 2))
+        
+        if not state.STOP_EVENT.is_set():
+            # remain silence until try vote pause to delay the kick
+            if not state.SLOWER_PC_MODE and isAfk:
+                state.INGAME_STATE.setIsAfk(False)
+                do_pause_vote()
+                last_pause_time = now
+
+            isPathSet = do_mw_lane_push_step(team)
+
+            # TODO: spam taunt (need to calculate or know already ready tower)    
+            # TODO: death recap or respawn time show then stop spam
+
+        if not state.SLOWER_PC_MODE and not state.STOP_EVENT.is_set() and isPathSet:
+            allChatSpamChance = 0.8 
+            if not isAfk and random.random() < allChatSpamChance:
+                delayChance = 0.45
+                if random.random() < delayChance:
+                    interruptible_wait(round(random.uniform(1, 1.5), 2))
+                allChat()
+                isPathSet = False
+
+        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
+            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
+
+            if check_lobby_message():    
+                pyautogui.keyUp("c") # stop spamming
+                state.STOP_EVENT.set()
+                break
+        
+        if elapsed >= matchTimedout:    
+            pyautogui.keyUp("c") # stop spamming
+            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
+            state.STOP_EVENT.set()
+            break
+
+        interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
+
 
 def check_lobby_message():
     return any_image_exists([
@@ -953,7 +1097,8 @@ def check_lobby_message():
         f"{constant.DIALOG_MESSAGE_DIR}/rst-stream-error-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/match-already-in-progress-message.png",
         f"{constant.DIALOG_MESSAGE_DIR}/host-started-the-game-while-not-in-team-message.png",
-        f"{constant.DIALOG_MESSAGE_DIR}/unable-to-enter-matchmaking-queue-message.png"
+        f"{constant.DIALOG_MESSAGE_DIR}/unable-to-enter-matchmaking-queue-message.png",
+        f"{constant.DIALOG_MESSAGE_DIR}/group-on-cooldown-message.png"
     ], region=constant.LOBBY_MESSAGE_REGION)        
 
 def ingame(): 
