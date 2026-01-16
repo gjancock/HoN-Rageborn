@@ -1,6 +1,7 @@
 import pyautogui
 import numpy as np
 import time
+import win32api
 import win32gui
 import win32con
 import win32process
@@ -226,6 +227,7 @@ def set_game_high_priority(
 
         time.sleep(interval)
 
+
 def pin_jokevio():
 
     # 1 Launch .exe from ragebirth
@@ -254,7 +256,7 @@ def pin_jokevio():
     logger.info("[INFO] Waiting for game client to surface...")
 
     start = time.time()
-    while True:
+    while not state.STOP_EVENT.is_set():
         # 🔁 Re-detect platform/game window (launcher may have exited)
         hwnds = find_juvio_platform_hwnd()
         if hwnds:
@@ -273,6 +275,11 @@ def pin_jokevio():
             raise RuntimeError("Startup UI not detected within timeout")
 
         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
+
+    # todo: fullscreen detection; unknown stupid game issue
+    # if is_window_fullscreen(hwnd):
+    #     logger.info("[INFO] Juvio Platform is in fullscreen mode")
+    #     state.STOP_EVENT.set()
 
     # Ensure powershell priority script is running
     run_powershell_async()
@@ -306,7 +313,7 @@ def type_text(text, enter=False):
 def account_Login(username, password):
     interruptible_wait(3)
 
-    while True:
+    while not state.STOP_EVENT.is_set():
         # do nothing until found username-field.png
         if find_and_click("startup/username-field.png"):
             # Click username field
@@ -349,7 +356,7 @@ def account_Login(username, password):
 
 def prequeue():
     # Queue options
-    while True:
+    while not state.STOP_EVENT.is_set():
         logger.info("[INFO] Looking for PLAY button...")
         if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
             logger.info("[INFO] PLAY button clicked!")            
@@ -370,7 +377,7 @@ def startQueue():
     pyautogui.click()
     interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
 
-    while True:
+    while not state.STOP_EVENT.is_set():
         if not image_exists("matchmaking-disabled.png", region=constant.MATCHMAKING_PANEL_REGION):
             break
         else:
@@ -386,7 +393,7 @@ def startQueue():
     interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 3)
     logger.info("[INFO] Queue started. Waiting to get a match..")
 
-    while True:
+    while not state.STOP_EVENT.is_set():
 
         # Requeue
         if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
@@ -538,7 +545,7 @@ def pickingPhase():
             timeout = 5 if not state.SLOWER_PC_MODE else 10
             role = constant.FOC_ROLE_HARD_SUPPORT # default role
             roleCheckStart = time.time()
-            while True:
+            while not state.STOP_EVENT.is_set():
                 now = time.time()
                 if image_exists(carryRole):
                     logger.info("[INFO] Assignated Role: Carry")
@@ -660,7 +667,7 @@ def pickingPhase():
             #     logger.info("[INFO] Waiting to get random hero.")
 
 
-    while True:
+    while not state.STOP_EVENT.is_set():
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
             logger.info("[INFO] Rageborn begin!")
@@ -986,14 +993,14 @@ def main(username, password):
                 if not result:
 
                     messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
-                    while True:
+                    while not state.STOP_EVENT.is_set():
                         if not check_lobby_message():
                             break
                         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
                         interruptible_wait(0.5)
                         messageClearTime -= 0.5
                         if messageClearTime <= 0:
-                            break
+                            break                        
 
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue

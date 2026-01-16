@@ -3,8 +3,11 @@ import threading
 import win32gui
 import win32process
 import psutil
+from utilities.loggerSetup import setup_logger
 
-
+# Initialize Logger
+logger = setup_logger()
+    
 class GameCrashedError(RuntimeError):
     """Raised when the game window disappears or crashes."""
     pass
@@ -38,11 +41,13 @@ def start_hwnd_watchdog(
     def _watch():
         while not stop_event.is_set():
             if not hwnd_exists(hwnd):
+                logger.error("[WATCHDOG] HWND disappeared!")
                 crash_event.set()
                 stop_event.set()
                 return
 
             time.sleep(interval)
+        logger.info("[WATCHDOG] Stopped due to STOP_EVENT")
 
     t = threading.Thread(
         target=_watch,
