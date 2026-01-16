@@ -397,7 +397,7 @@ def startQueue():
     while not state.STOP_EVENT.is_set():
 
         # Requeue
-        if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+        if image_exists("enter-queue.png", region=constant.SCREEN_REGION):
             logger.info("[INFO] Still seeing PLAY button.. Re-queueing..")
             pyautogui.moveTo(x, y, duration=0.3)
             interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
@@ -992,6 +992,7 @@ def do_midwar_stuff():
     
     # after 600 seconds will timeout and leave the game 
     matchTimedout = round(random.uniform(600, 660), 2)
+    last_pause_time = time.time()
     pauseTimeout = 60
 
     while not state.STOP_EVENT.is_set():
