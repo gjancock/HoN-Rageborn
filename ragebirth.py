@@ -578,8 +578,11 @@ def run_rageborn_flow(username, password):
         rageborn.start(username, password)
 
         if state.CRASH_EVENT.is_set():
-            raise RuntimeError("Game crashed during runtime")
+            logger.exception("[FATAL] Rageborn crashed during runtime")
+            raise
 
+    except RuntimeError:
+        raise
     except Exception:
         logger.exception("[FATAL] Rageborn crashed")
         raise
@@ -592,9 +595,19 @@ def run_rageborn_flow(username, password):
         kill_jokevio()
         logger.info("[MAIN] Rageborn thread exited")
 
+
+def run_rageborn_flow_thread(username, password):
+    try:
+        run_rageborn_flow(username, password)
+    except RuntimeError as e:
+        logger.error(f"[THREAD-CRASH] {e}")
+    except Exception:
+        logger.exception("[THREAD-CRASH] Unexpected error")
+
+
 def start_rageborn_async(username, password):    
     t = threading.Thread(
-        target=run_rageborn_flow,
+        target=run_rageborn_flow_thread,
         args=(username, password),
         daemon=True
     )
