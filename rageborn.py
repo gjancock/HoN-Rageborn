@@ -7,6 +7,7 @@ import win32con
 import win32process
 import psutil
 from threads.hwnd_watchdog import start_hwnd_watchdog
+from utilities.appUtilities import is_fullscreen
 from utilities.loggerSetup import setup_logger
 import threading
 import utilities.constants as constant
@@ -276,10 +277,10 @@ def pin_jokevio():
 
         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
 
-    # todo: fullscreen detection; unknown stupid game issue
-    # if is_window_fullscreen(hwnd):
-    #     logger.info("[INFO] Juvio Platform is in fullscreen mode")
-    #     state.STOP_EVENT.set()
+    # todo: fullscreen detection; unknown stupid game issue; investigation required
+    #if is_fullscreen(hwnd):
+    #    logger.info("[INFO] Juvio Platform is in fullscreen mode")
+    #    state.STOP_EVENT.set()
 
     # Ensure powershell priority script is running
     run_powershell_async()
@@ -568,7 +569,7 @@ def pickingPhase():
                     role = constant.FOC_ROLE_MID
                     break
                 elif now - roleCheckStart > timeout:
-                    logger.info(f"[WARN] Unable to detect role.. use {role}")
+                    logger.info(f"[INFO] Unable to detect role.. use {role}")
                     break
 
             state.INGAME_STATE.setFocRole(role=role)

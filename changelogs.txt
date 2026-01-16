@@ -1,5 +1,11 @@
 # =========================================================================== #
-# v1.6.3 - Minor Bug Fixes (15 January 2026)
+# v1.7.0 - Feature Enhancement (16 January 2026)
+# =========================================================================== #
+- [x] Added additional settings for username generator.
+- [x] Added account information value will now saved into .ini file.
+
+# =========================================================================== #
+# v1.6.3 - Minor Bug Fixes (16 January 2026)
 # =========================================================================== #
 - [x] Fixed game crashed handling issue.
 

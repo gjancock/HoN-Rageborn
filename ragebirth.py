@@ -16,8 +16,8 @@ from utilities.loggerSetup import setup_logger
 import core.state as state
 from utilities.config import load_config
 # Load Config at startup
-load_config()
-from utilities.usernameGenerator import generate_word_username, generate_random_string
+config = load_config()
+from utilities.usernameGenerator import generate_counter_username, generate_word_username, generate_random_string, reset_prefix_counters, reset_postfix_counters, set_prefix_counters, set_postfix_counters
 from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
 import configparser
@@ -57,9 +57,7 @@ MIN_USERNAME_LENGTH = 2
 MAX_USERNAME_LENGTH = 16
 
 #
-DEFAULT_FIRST_NAME = "Maliken"
-DEFAULT_LAST_NAME = "DeForest"
-DEFAULT_PASSWORD = "@Abc12345"
+DEBOUNCE_MS = 600
 
 #
 auto_start_timer_id = None
@@ -127,7 +125,12 @@ VERSION = read_version()
 # CONFIG (INI)
 # ============================================================
 
-CONFIG_FILE = os.path.join(get_runtime_dir(), "config.ini")
+def exe_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
 
 def read_auto_update():
     path = os.path.join(exe_dir(), "config.ini")
@@ -139,6 +142,31 @@ def read_auto_update():
     except Exception:
         return True  # safe default
 
+def write_config_bool(section: str, key: str, value: bool):
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
+    if section not in config:
+        config[section] = {}
+    config[section][key] = "true" if value else "false"
+    with open(path, "w") as f:
+        config.write(f)
+
+def write_config_str(section: str, key: str, value: str):
+    config = configparser.ConfigParser()
+    path = os.path.join(exe_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
+    if section not in config:
+        config[section] = {}
+    config[section][key] = value
+    with open(path, "w") as f:
+        config.write(f)
 
 def get_auto_start_endless():
     return state.AUTO_START_ENDLESS
@@ -161,120 +189,103 @@ def get_auto_update():
 def get_settings_for_slower_pc():
     return state.SLOWER_PC_MODE
 
+def get_username_prefix():
+    return state.USERNAME_PREFIX
+
+def get_username_postfix():
+    return state.USERNAME_POSTFIX
+
+def get_account_firstname():
+    return state.ACCOUNT_FIRSTNAME
+
+def get_account_lastname():
+    return state.ACCOUNT_LASTNAME
+
+def get_account_email_domain():
+    return state.ACCOUNT_EMAIL_DOMAIN
+
+def get_account_password():
+    return state.ACCOUNT_PASSWORD
+
+def get_username_prefix_count_enabled():
+    return state.USERNAME_PREFIX_COUNT_ENABLED
+
+def get_username_postfix_count_enabled():
+    return state.USERNAME_POSTFIX_COUNT_ENABLED
+
+def get_username_prefix_count_start_at():
+    return state.USERNAME_PREFIX_COUNT_START_AT
+
+def get_username_postfix_count_start_at():
+    return state.USERNAME_POSTFIX_COUNT_START_AT
+
 def set_auto_start_endless(value: bool):
     state.AUTO_START_ENDLESS = value
-
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if "endless" not in config:
-        config["endless"] = {}
-
-    config["endless"]["auto_start"] = "true" if value else "false"
-
-    with open(path, "w") as f:
-        config.write(f)
-
+    write_config_bool("endless", "auto_start", value)
 
 def set_game_executable(executable_path: str):
-    # 1️⃣ Update runtime state
     state.GAME_EXECUTABLE = executable_path
-
-    # 2️⃣ Prepare config
-    config = configparser.ConfigParser()
-    config_path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(config_path):
-        config.read(config_path)
-
-    if "paths" not in config:
-        config["paths"] = {}
-
-    # 3️⃣ Write correct value
-    config["paths"]["game_executable"] = executable_path
-
-    # 4️⃣ Save
-    with open(config_path, "w", encoding="utf-8") as f:
-        config.write(f)
-
+    write_config_str("paths", "game_executable", executable_path)
 
 def set_auto_email_verification(value: bool):
     state.AUTO_EMAIL_VERIFICATION = value
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if "verification" not in config:
-        config["verification"] = {}
-    config["verification"]["auto_email"] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
+    write_config_bool("verification", "auto_email", value)
 
 def set_auto_mobile_verification(value: bool):
     state.AUTO_MOBILE_VERIFICATION = value
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if "verification" not in config:
-        config["verification"] = {}
-    config["verification"]["auto_mobile"] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
+    write_config_bool("verification", "auto_mobile", value)
 
 def set_auto_restart_dns(value: bool):
     state.AUTO_RESTART_DNS = value
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
+    write_config_bool("network", "auto_restart_dns", value)
 
-    if os.path.exists(path):
-        config.read(path)
-
-    if "network" not in config:
-        config["network"] = {}
-    config["network"]["auto_restart_dns"] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
-
-def set_auto_update(enabled: bool):
-    state.AUTO_UPDATE = enabled
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if "settings" not in config:
-        config["settings"] = {}
-    config["settings"]["auto_updates"] = "true" if enabled else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
+def set_auto_update(value: bool):
+    state.AUTO_UPDATE = value
+    write_config_bool("settings", "auto_updates", value)
 
 def set_settings_for_slower_pc(value: bool):
     state.SLOWER_PC_MODE = value
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
+    write_config_bool("performance", "slower_pc_mode", value)
 
-    if os.path.exists(path):
-        config.read(path)
+def set_username_prefix(prefix: str):
+    state.USERNAME_PREFIX = prefix
+    write_config_str("username_generator", "prefix", prefix)
 
-    if "performance" not in config:
-        config["performance"] = {}
-    config["performance"]["slower_pc_mode"] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
+def set_username_postfix(postfix: str):
+    state.USERNAME_POSTFIX = postfix
+    write_config_str("username_generator", "postfix", postfix)
 
+def set_account_firstname(firstname: str):
+    state.ACCOUNT_FIRSTNAME = firstname
+    write_config_str("account", "firstname", firstname)
+
+def set_account_lastname(lastname: str):
+    state.ACCOUNT_LASTNAME = lastname
+    write_config_str("account", "lastname", lastname)
+
+def set_account_email_domain(email_domain: str):
+    state.ACCOUNT_EMAIL_DOMAIN = email_domain
+    write_config_str("account", "email_domain", email_domain)
+
+def set_account_password(password: str):
+    state.ACCOUNT_PASSWORD = password
+    write_config_str("account", "password", password)
+
+def set_username_prefix_count_enabled(value: bool):
+    state.USERNAME_PREFIX_COUNT_ENABLED = value
+    write_config_bool("username_generator", "add_prefix_count", value)
+
+def set_username_postfix_count_enabled(value: bool):
+    state.USERNAME_POSTFIX_COUNT_ENABLED = value
+    write_config_bool("username_generator", "add_postfix_count", value)
+
+def set_username_prefix_count_start_at(value: int):
+    state.USERNAME_PREFIX_COUNT_START_AT = value
+    write_config_str("username_generator", "prefix_count_start", str(value))
+
+def set_username_postfix_count_start_at(value: int):
+    state.USERNAME_POSTFIX_COUNT_START_AT = value
+    write_config_str("username_generator", "postfix_count_start", str(value))
 
 # ============================================================
 # SIGNUP LOGIC (NO UI CODE HERE)
@@ -616,8 +627,7 @@ def start_rageborn_async(username, password):
 # ----------------- UI callbacks -----------------
 def get_effective_password():
     pwd = password_entry.get().strip()
-    return pwd if pwd else DEFAULT_PASSWORD
-
+    return pwd if pwd else get_account_password
 
 def log_username(username, filename="signup_users.txt"):
     with open(filename, "a", encoding="utf-8") as f:
@@ -628,10 +638,29 @@ def on_generate():
     postfix = postfix_entry.get().strip()
     domain = domain_entry.get().strip() or "mail.com"
 
-    username = generate_word_username(
-        prefix=prefix,
-        postfix=postfix
-    )
+    use_prefix_count = add_prefix_count_var.get()
+    use_postfix_count = add_postfix_count_var.get()
+
+    # 🔴 Counter-based generation
+    if use_prefix_count or use_postfix_count:
+        username, prefix_counter, postfix_counter = generate_counter_username(
+            prefix=prefix,
+            postfix=postfix,
+            use_prefix_count=use_prefix_count,
+            use_postfix_count=use_postfix_count,
+            prefix_start=prefix_count_start_var.get(),
+            postfix_start=postfix_count_start_var.get(),
+        )
+
+        if use_prefix_count:
+            set_username_prefix_count_start_at(prefix_counter - 1)
+
+        if use_postfix_count:
+            set_username_postfix_count_start_at(postfix_counter - 1)
+
+    else:
+        # 🟢 Normal word-pool generator (existing behavior)
+        username = generate_word_username(prefix, postfix)
 
     email = generate_email(prefix, postfix, domain)
 
@@ -674,6 +703,37 @@ auto_mobile_verification_var = tk.BooleanVar(
 auto_update_var = tk.BooleanVar(value=read_auto_update())
 auto_restart_dns_var = tk.BooleanVar(value=get_auto_restart_dns())
 settings_for_slower_pc_var = tk.BooleanVar(value=get_settings_for_slower_pc())
+
+_last_prefix_enabled = get_username_prefix_count_enabled()
+_last_postfix_enabled = get_username_postfix_count_enabled()
+
+add_prefix_count_var = tk.BooleanVar(
+    value=get_username_prefix_count_enabled()
+)
+
+add_postfix_count_var = tk.BooleanVar(
+    value=get_username_postfix_count_enabled()
+)
+
+prefix_count_start_var = tk.IntVar(
+    value=get_username_prefix_count_start_at()
+)
+
+postfix_count_start_var = tk.IntVar(
+    value=get_username_postfix_count_start_at()
+)
+
+def make_debouncer(root, delay, func):
+    job = None
+
+    def wrapper(*args):
+        nonlocal job
+        if job:
+            root.after_cancel(job)
+        job = root.after(delay, lambda: func(*args))
+
+    return wrapper
+
 
 def one_full_cycle():
     try:
@@ -768,6 +828,13 @@ def increment_iteration():
     if auto_start_time:
         elapsed = int((datetime.now() - auto_start_time).total_seconds())
         duration_var.set(f"Duration: {format_duration(elapsed)}")
+
+
+def validate_int_only(new_value: str) -> bool:
+    if new_value == "":
+        return True 
+    return new_value.isdigit()
+
 
 def poll_log_queue():
     while not log_queue.empty():
@@ -896,7 +963,6 @@ def on_browse_executable():
     exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
 
 
-
 def launch_game_process():
     exe = game_exe_var.get()
 
@@ -1007,7 +1073,6 @@ def try_auto_start_from_config():
     schedule_auto_start_endless()
 
 
-
 def update_auto_start_countdown():
     global auto_start_remaining, auto_start_countdown_id
 
@@ -1105,6 +1170,87 @@ def on_auto_update_changed():
         auto_update_var.get()
     )
 
+def on_username_prefix_add_count_changed():
+    set_username_prefix_count_enabled(add_prefix_count_var.get())
+
+def on_username_postfix_add_count_changed():
+    set_username_postfix_count_enabled(add_postfix_count_var.get())
+
+def on_prefix_checkbox_toggle():
+    global _last_prefix_enabled
+
+    enabled = add_prefix_count_var.get()
+
+    if enabled and not _last_prefix_enabled:
+        prefix_count_start_var.set(1)
+        set_username_prefix_count_start_at(1)
+        reset_prefix_counters()
+
+    prefix_count_entry.config(
+        state="normal" if enabled else "disabled"
+    )
+
+    set_username_prefix_count_enabled(enabled)
+    _last_prefix_enabled = enabled
+
+
+def on_postfix_checkbox_toggle():
+    global _last_postfix_enabled
+
+    enabled = add_postfix_count_var.get()
+
+    if enabled and not _last_postfix_enabled:
+        postfix_count_start_var.set(1)
+        set_username_postfix_count_start_at(1)
+        reset_postfix_counters()
+
+    postfix_count_entry.config(
+        state="normal" if enabled else "disabled"
+    )
+
+    set_username_postfix_count_enabled(enabled)
+    _last_postfix_enabled = enabled
+
+def on_prefix_count_changed(*_):
+    if not add_prefix_count_var.get():
+        return
+
+    try:
+        value = prefix_count_start_var.get()
+    except tk.TclError:
+        return  # user is still typing / entry temporarily empty
+
+    set_username_prefix_count_start_at(value)
+    set_prefix_counters(value)
+
+
+def on_postfix_count_changed(*_):
+    if not add_postfix_count_var.get():
+        return
+
+    try:
+        value = postfix_count_start_var.get()
+    except tk.TclError:
+        return
+
+    set_username_postfix_count_start_at(value)
+    set_postfix_counters(value)
+
+
+prefix_count_start_var.trace_add("write", on_prefix_count_changed)
+postfix_count_start_var.trace_add("write", on_postfix_count_changed)
+
+
+# ============================================================
+# Text field handler
+debounced_firstname_save = make_debouncer(root, DEBOUNCE_MS, set_account_firstname)
+debounced_lastname_save = make_debouncer(root, DEBOUNCE_MS, set_account_lastname)
+debounced_email_domain_save = make_debouncer(root, DEBOUNCE_MS, set_account_email_domain)
+debounced_password_save = make_debouncer(root, DEBOUNCE_MS, set_account_password)
+debounced_prefix_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix)
+debounced_prefix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix_count_start_at)
+debounced_postfix_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix)
+debounced_postfix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix_count_start_at)
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -1134,14 +1280,16 @@ main_frame.columnconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 main_frame.rowconfigure(0, weight=1)
 
-first_name_entry = labeled_entry(form_frame, "First Name", DEFAULT_FIRST_NAME)
-last_name_entry = labeled_entry(form_frame, "Last Name", DEFAULT_LAST_NAME)
-prefix_entry = labeled_entry(form_frame, "Prefix (optional)")
-postfix_entry = labeled_entry(form_frame, "Postfix (optional)")
-domain_entry = labeled_entry(form_frame, "Email Domain", "mail.com")
+first_name_entry = labeled_entry(form_frame, "First Name", get_account_firstname())
+last_name_entry = labeled_entry(form_frame, "Last Name", get_account_lastname())
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)", get_username_prefix())
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)", get_username_postfix())
+domain_entry = labeled_entry(form_frame, "Email Domain", get_account_email_domain())
 email_entry = labeled_entry(form_frame, "Email")
 username_entry = labeled_entry(form_frame, "Username")
-password_entry = labeled_entry(form_frame, "Password", DEFAULT_PASSWORD)
+password_entry = labeled_entry(form_frame, "Password", get_account_password())
+
+vcmd_int = root.register(validate_int_only)
 
 game_exe_var = tk.StringVar(value=get_game_executable())
 exe_header = tk.Frame(form_frame)
@@ -1236,7 +1384,12 @@ notebook.pack(fill="both", expand=True)
 extra_settings_tab = tk.Frame(notebook)
 logs_tab = tk.Frame(notebook)
 
+# ============================================================
+# EXTRA SETTINGS TAB
+# ============================================================
 notebook.add(extra_settings_tab, text="Extra Settings")
+
+# ============================================================
 account_verification_frame = tk.LabelFrame(
     extra_settings_tab,
     text="Account Verification Settings",
@@ -1267,6 +1420,7 @@ tk.Checkbutton(
     command=on_auto_mobile_verification_changed
 ).grid(row=0, column=1, sticky="w")
 
+# ============================================================
 app_settings_frame = tk.LabelFrame(
     extra_settings_tab,
     text="Application Settings",
@@ -1307,6 +1461,76 @@ tk.Checkbutton(
     command=lambda: set_settings_for_slower_pc(settings_for_slower_pc_var.get())
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
 
+# ============================================================
+username_settings_frame = tk.LabelFrame(
+    extra_settings_tab,
+    text="Username Generation Settings",
+    padx=10,
+    pady=8
+)
+
+username_settings_frame.pack(
+    fill="x",
+    padx=10,
+    pady=10,
+    anchor="n"
+)
+
+# ---- Row 1: Checkboxes ----
+username_settings_row = tk.Frame(username_settings_frame)
+username_settings_row.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    username_settings_row,
+    text="Add count on Prefix",
+    variable=add_prefix_count_var,
+    command=lambda: on_prefix_checkbox_toggle()
+).grid(row=0, column=0, sticky="w", padx=5)
+
+tk.Checkbutton(
+    username_settings_row,
+    text="Add count on Postfix",
+    variable=add_postfix_count_var,
+    command=lambda: on_postfix_checkbox_toggle()
+).grid(row=0, column=1, sticky="w", padx=5)
+
+# ---- Row 2: Start count inputs ----
+username_prefix_postfix_count_row = tk.Frame(username_settings_frame)
+username_prefix_postfix_count_row.pack(anchor="w", pady=4)
+
+tk.Label(
+    username_prefix_postfix_count_row,
+    text="Prefix count start at"
+).grid(row=0, column=0, sticky="w", padx=5)
+
+prefix_count_entry = tk.Entry(
+    username_prefix_postfix_count_row,
+    textvariable=prefix_count_start_var,
+    width=6,
+    state="disabled",
+    validate="key",
+    validatecommand=(vcmd_int, "%P")
+)
+prefix_count_entry.grid(row=0, column=1, padx=5)
+
+tk.Label(
+    username_prefix_postfix_count_row,
+    text="Postfix count start at"
+).grid(row=0, column=2, sticky="w", padx=10)
+
+postfix_count_entry = tk.Entry(
+    username_prefix_postfix_count_row,
+    textvariable=postfix_count_start_var,
+    width=6,
+    state="disabled",
+    validate="key",
+    validatecommand=(vcmd_int, "%P")
+)
+postfix_count_entry.grid(row=0, column=3, padx=5)
+
+# ============================================================
+# LOGS TAB
+# ============================================================
 notebook.add(logs_tab, text="Logs")
 
 log_text = tk.Text(
@@ -1327,8 +1551,68 @@ notebook.select(logs_tab)
 style = ttk.Style()
 style.theme_use("default")
 
+# ============================================================
 poll_log_queue()
 exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
+on_prefix_checkbox_toggle()
+on_postfix_checkbox_toggle()
+
+# ============================================================
+first_name_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_firstname_save(
+        first_name_entry.get().strip()
+    )
+)
+
+last_name_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_lastname_save(
+        last_name_entry.get().strip()
+    )
+)
+
+prefix_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_prefix_save(
+        prefix_entry.get().strip()
+    )
+)
+
+postfix_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_postfix_save(
+        postfix_entry.get().strip()
+    )
+)
+
+domain_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_email_domain_save(
+        domain_entry.get().strip()
+    )
+)
+
+password_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_password_save(
+        password_entry.get().strip()
+    )
+)
+
+prefix_count_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_prefix_count_save(
+        prefix_count_entry.get().strip()
+    )
+)
+
+postfix_count_entry.bind(
+    "<KeyRelease>",
+    lambda e: debounced_postfix_count_save(
+        postfix_count_entry.get().strip()
+    )
+)
 
 # ============================================================
 # AUTO START ENDLESS MODE (DELAYED & CANCELLABLE)
