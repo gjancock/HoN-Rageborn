@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 import ctypes
 import hashlib
+from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
 
 # --------------------------------------------------
 # Identity (taskbar / icon grouping)
@@ -34,8 +35,13 @@ CONFIG_FILE = os.path.join(BASE_DIR, "config.ini")
 # --------------------------------------------------
 # Config
 # --------------------------------------------------
-CONFIG_SECTION = "settings"
-CONFIG_KEY = "auto_update"
+CONFIG_SETTINGS_SECTION = "settings"
+CONFIG_ACCOUNT_SECTION = "account"
+CONFIG_AUTO_UPDATE_KEY = "auto_update"
+CONFIG_FIRSTNAME_KEY = "firstname"
+CONFIG_LASTNAME_KEY = "lastname"
+CONFIG_EMAIL_DOMAIN_KEY = "email_domain"
+CONFIG_PASSWORD_KEY = "password"
 
 REPO = "gjancock/HoN-Rageborn"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -50,8 +56,8 @@ def auto_update_enabled():
     config = configparser.ConfigParser()
     try:
         config.read(CONFIG_FILE, encoding="utf-8")
-        if config.has_section(CONFIG_SECTION) and config.has_option(CONFIG_SECTION, CONFIG_KEY):
-            return config.getboolean(CONFIG_SECTION, CONFIG_KEY)
+        if config.has_section(CONFIG_SETTINGS_SECTION) and config.has_option(CONFIG_SETTINGS_SECTION, CONFIG_AUTO_UPDATE_KEY):
+            return config.getboolean(CONFIG_SETTINGS_SECTION, CONFIG_AUTO_UPDATE_KEY)
     except Exception:
         pass
     return True  # default ON
@@ -109,8 +115,14 @@ def ensure_config_exists():
         return
 
     config = configparser.ConfigParser()
-    config[CONFIG_SECTION] = {
-        CONFIG_KEY: "true"
+    config[CONFIG_SETTINGS_SECTION] = {
+        CONFIG_AUTO_UPDATE_KEY: "true"
+    }
+    config[CONFIG_ACCOUNT_SECTION] = {
+        CONFIG_FIRSTNAME_KEY: DEFAULT_ACCOUNT_FIRSTNAME,
+        CONFIG_LASTNAME_KEY: DEFAULT_ACCOUNT_LASTNAME,
+        CONFIG_PASSWORD_KEY: DEFAULT_ACCOUNT_PASSWORD,
+        CONFIG_EMAIL_DOMAIN_KEY: DEFAULT_ACCOUNT_EMAIL_DOMAIN
     }
 
     try:
