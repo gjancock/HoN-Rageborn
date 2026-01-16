@@ -1,4 +1,11 @@
 # =========================================================================== #
+# v1.7.1 - Minor Bug Fixes (16 January 2026)
+# =========================================================================== #
+- [x] Improvement on regenerating account process.
+- [x] Fixed account couldn't be create due to additional aliases included in mail.
+- [x] Added new error message dialog.
+
+# =========================================================================== #
 # v1.7.0 - Feature Enhancement (16 January 2026)
 # =========================================================================== #
 - [x] Added additional settings for username generator.

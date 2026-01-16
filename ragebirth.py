@@ -767,7 +767,7 @@ def one_full_cycle():
             
             logger.info(f"[INFO] Failed to signup account {username}: {msg}")
             logger.info("[INFO] Regenerating new account")
-            time.sleep(random.uniform(8, 15))
+            time.sleep(random.uniform(1, 3))
 
         logger.info(f"[INFO] Signup success! ")
         logger.info(f"Username {username} launching Rageborn.exe")
