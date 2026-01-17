@@ -157,6 +157,25 @@ def get_enemy_base_coord(map, team):
             f"Missing coord: in_game.{map}.{team}.enemy_base"
         ) from e
     
+def get_enemy_fountain_coord(map, team):
+    map_allowed = {constant.MAP_FOC, constant.MAP_MIDWAR}
+
+    if map not in map_allowed:
+        raise ValueError(f"Invalid map type: {map}")
+    
+    team_allowed = {constant.TEAM_LEGION, constant.TEAM_HELLBOURNE}
+
+    if team not in team_allowed:
+        raise ValueError(f"Invalid team type: {team}")
+    
+    try:
+        node = _coords["in_game"][map][team]["enemy_fountain"]
+        return node["x"], node["y"]
+    except KeyError as e:
+        raise ValueError(
+            f"Missing coord: in_game.{map}.{team}.enemy_fountain"
+        ) from e
+    
 #
 def get_in_game_shop_initiation_category_coord():
     try:

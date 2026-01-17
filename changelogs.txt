@@ -1,8 +1,9 @@
 # =========================================================================== #
 # v1.8.1 - Minor Bug Fixes (17 January 2026)
 # =========================================================================== #
-- [x] Fixed game crashed on midwar map when trying to teleport to tower.
+- [x] Fixed game crashed on Midwar map when trying to teleport to tower.
 - [x] Fixed requeue detection.
+- [x] Optimized teleport and walking path on Midwar.
 
 # =========================================================================== #
 # v1.8.0 - Feature Enhancement (16 January 2026)

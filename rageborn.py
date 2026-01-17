@@ -397,7 +397,7 @@ def startQueue():
     while not state.STOP_EVENT.is_set():
 
         # Requeue
-        if image_exists("enter-queue.png", region=constant.SCREEN_REGION):
+        if not image_exists("waiting-for-players.png", region=constant.SCREEN_REGION) and image_exists("enter-queue.png", region=constant.SCREEN_REGION):
             logger.info("[INFO] Still seeing PLAY button.. Re-queueing..")
             pyautogui.moveTo(x, y, duration=0.3)
             interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
@@ -470,10 +470,10 @@ def getTeam():
                 team = constant.TEAM_HELLBOURNE
 
         case constant.MAP_MIDWAR:
-            pyautogui.click(507, 796)
+            pyautogui.click(505, 798)
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
             if any_image_exists([
-                "foc-mid-tower-legion.png"
+                "mw-legion-mid-tower-sight.png"
                 ]):
                 team = constant.TEAM_LEGION
             else:
@@ -685,6 +685,7 @@ def pickingPhase():
             #     logger.info("[INFO] Waiting to get random hero.")
 
         case constant.MAP_MIDWAR:
+            x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
             interruptible_wait(round(random.uniform(5, 10), 2))
             logger.info("[INFO] Waiting banning phase.")
             hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
@@ -693,6 +694,7 @@ def pickingPhase():
             logger.info(f"[INFO] Hero {hero} is now banned!")
             logger.info("[INFO] Waiting picking phase.")
             interruptible_wait(round(random.uniform(1, 5), 2))
+            pyautogui.moveTo(x, y, duration=0.3)
 
             while not state.STOP_EVENT.is_set():
                 if image_exists("choose-a-hero-button.png"):
@@ -705,7 +707,8 @@ def pickingPhase():
             hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
             pyautogui.moveTo(bx, by, duration=0.3)
             pyautogui.doubleClick()
-            logger.info(f"[INFO] Hero {hero} is now bannselected!")
+            logger.info(f"[INFO] Hero {hero} is now selected!")
+            pyautogui.moveTo(x, y, duration=0.3)
 
     while not state.STOP_EVENT.is_set():
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
@@ -763,8 +766,7 @@ def do_lane_push_step(team):
 # Mw
 def do_mw_lane_push_step(team):
     map = state.INGAME_STATE.getCurrentMap()
-    x1, y1 = assetsLibrary.get_friendly_tower_coord(map, team, constant.LANE_MID, 3)
-    x2, y2 = assetsLibrary.get_enemy_base_coord(map, team)
+    x1, y1 = assetsLibrary.get_enemy_fountain_coord(map, team)
 
     # mouse cursor to team mid tower
     # alt+t and click to team mid tower
@@ -774,7 +776,7 @@ def do_mw_lane_push_step(team):
     pyautogui.moveTo(x1, y1, duration=0.15)
     pyautogui.hotkey("alt", "t")
     pyautogui.click()
-    pyautogui.moveTo(x2, y2, duration=0.15)
+    pyautogui.moveTo(x1, y1, duration=0.15)
     pyautogui.rightClick()
 
     return True
@@ -816,8 +818,9 @@ def allChat():
         "^:Thank you once again for your time, we will see you in Newerth. ^y^:^_^",
         "im here to reward Atticah for getting a new monitor to play this retarded game!!!!",
         "^:unknownuser asked to push mid!! HERE I COME",
-        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised",        
-        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised"
+        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised",
+        "^:MELLAYA from AUS asked me to feed mid no matter what",
+        "Is the ^r'strong start to the year' in the room with us?"
     ]
     text = random.choice(randomString)
     pyperclip.copy(text)
