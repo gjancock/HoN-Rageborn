@@ -101,21 +101,6 @@ INFO_NAME = "Rageborn"
 VERSION = read_version()
 
 # ============================================================
-# CONFIG (INI)
-# ============================================================
-CONFIG_FILE = os.path.join(runtime_dir(), "config.ini")
-
-def read_auto_update():
-    path = os.path.join(runtime_dir(), "config.ini")
-    config = configparser.ConfigParser()
-
-    try:
-        config.read(path, encoding="utf-8")
-        return config.getboolean("settings", "auto_update", fallback=True)
-    except Exception:
-        return True  # safe default
-
-# ============================================================
 # UI CALLBACKS
 # ============================================================
 
@@ -280,7 +265,7 @@ auto_email_verification_var = tk.BooleanVar(
 auto_mobile_verification_var = tk.BooleanVar(
     value=state.get_auto_mobile_verification()
 )
-auto_update_var = tk.BooleanVar(value=read_auto_update())
+auto_update_var = tk.BooleanVar(value=state.get_auto_update())
 auto_restart_dns_var = tk.BooleanVar(value=state.get_auto_restart_dns())
 settings_for_slower_pc_var = tk.BooleanVar(value=state.get_settings_for_slower_pc())
 

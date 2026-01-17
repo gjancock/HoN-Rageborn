@@ -1122,6 +1122,7 @@ def testState():
     print(f"lastname: {state.ACCOUNT_LASTNAME}")
     print(f"prefix: {state.USERNAME_PREFIX}")
     print(f"postfix: {state.USERNAME_POSTFIX}")
+    print(f"autoupdate: {state.get_auto_update()}")
 
 #
 def main(username, password):

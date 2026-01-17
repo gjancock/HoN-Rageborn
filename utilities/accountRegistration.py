@@ -20,6 +20,7 @@ from utilities.accountVerification import AccountVerifier
 # Initialize Logger
 logger = setup_logger()
 
+# Main Function
 def signup_user(first_name, last_name, email, username, password):
     session = requests.Session()
     session.headers.update({
