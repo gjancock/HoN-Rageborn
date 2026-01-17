@@ -2,6 +2,8 @@ import requests
 import subprocess
 import sys
 import os
+import time
+from requests.exceptions import ConnectionError, Timeout, RequestException
 from packaging import version
 import configparser
 import tkinter as tk
@@ -9,6 +11,7 @@ from tkinter import ttk
 import ctypes
 import hashlib
 from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+
 
 # --------------------------------------------------
 # Identity (taskbar / icon grouping)
@@ -147,6 +150,28 @@ def needs_download(app_path, remote_hash):
         return local_hash != remote_hash
     except Exception:
         return True
+    
+
+def is_network_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return (
+        isinstance(exc, (ConnectionError, Timeout, RequestException))
+        or "connection broken" in msg
+        or "connection aborted" in msg
+        or "remote disconnected" in msg
+        or "failed to establish a new connection" in msg
+        or "name resolution" in msg
+    )
+
+
+def retry_countdown(ui, seconds):
+    for i in range(seconds, 0, -1):
+        ui.set_text(
+            "Update failed due to connection issue.\n\n"
+            f"Retrying in {i} seconds..."
+        )
+        time.sleep(1)
+
 
 
 # --------------------------------------------------
@@ -235,51 +260,74 @@ def download(url, dest, ui):
 # Main
 # --------------------------------------------------
 def main():
-    ensure_config_exists() 
+    ensure_config_exists()
 
     ui = UpdateUI()
-    local_version = read_local_version()
 
-    try:
-        # FIRST RUN (bootstrap)
-        if not app_exists():
-            ui.set_text("Installing Rageborn...")
-            remote, exe_url, sha_url = get_latest_release()
-            remote_hash = get_remote_hash(sha_url)
+    MAX_RETRIES = 5
+    RETRY_DELAY = 10  # seconds
 
-            ui.set_text("Installing Rageborn...")
-            download(exe_url, TEMP_EXE, ui)
-            os.replace(TEMP_EXE, APP_EXE)
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            # -------------------------------
+            # FIRST RUN (BOOTSTRAP)
+            # -------------------------------
+            if not app_exists():
+                ui.set_text("Installing Rageborn...")
+                remote, exe_url, sha_url = get_latest_release()
+                remote_hash = get_remote_hash(sha_url)
 
-            with open(VERSION_FILE, "w", encoding="utf-8") as f:
-                f.write(remote)
-
-        # NORMAL UPDATE FLOW
-        elif auto_update_enabled():
-            ui.set_text("Checking for updates...")
-            remote, exe_url, sha_url = get_latest_release()
-            remote_hash = get_remote_hash(sha_url)
-
-            if needs_download(APP_EXE, remote_hash):
-                ui.set_text(f"Updating to v{remote}...")
                 download(exe_url, TEMP_EXE, ui)
                 os.replace(TEMP_EXE, APP_EXE)
 
                 with open(VERSION_FILE, "w", encoding="utf-8") as f:
                     f.write(remote)
+
+            # -------------------------------
+            # NORMAL UPDATE FLOW
+            # -------------------------------
+            elif auto_update_enabled():
+                ui.set_text("Checking for updates...")
+                remote, exe_url, sha_url = get_latest_release()
+                remote_hash = get_remote_hash(sha_url)
+
+                if needs_download(APP_EXE, remote_hash):
+                    ui.set_text(f"Updating to v{remote}...")
+                    download(exe_url, TEMP_EXE, ui)
+                    os.replace(TEMP_EXE, APP_EXE)
+
+                    with open(VERSION_FILE, "w", encoding="utf-8") as f:
+                        f.write(remote)
+                else:
+                    ui.set_text("Rageborn is up to date.")
+
+            # -------------------------------
+            # AUTO UPDATE DISABLED
+            # -------------------------------
             else:
-                ui.set_text("Rageborn is up to date.")
+                ui.set_text("Auto-update disabled.")
 
-        else:
-            ui.set_text("Auto-update disabled.")
+            # ✅ SUCCESS — exit retry loop
+            break
 
-    except Exception as e:
-        # 🔴 HARD STOP WITH MESSAGE
-        ui.set_text(f"Update failed:\n{e}")
-        ui.root.mainloop()
-        return
+        except Exception as e:
+            # 🔁 Network-related retry
+            if is_network_error(e) and attempt < MAX_RETRIES:
+                retry_countdown(ui, RETRY_DELAY)
+                continue
 
+            # 🔴 Permanent failure
+            ui.set_text(
+                "Update failed permanently:\n\n"
+                f"{e}\n\n"
+                "Please check your internet connection."
+            )
+            ui.root.mainloop()
+            return
+
+    # -------------------------------
     # SUCCESS PATH
+    # -------------------------------
     ui.set_text("Starting Rageborn...")
     ui.root.after(600, ui.close)
 
@@ -291,6 +339,7 @@ def main():
         return
 
     sys.exit(0)
+
 
 # --------------------------------------------------
 if __name__ == "__main__":
