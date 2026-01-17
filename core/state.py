@@ -183,7 +183,7 @@ def set_auto_restart_dns(value: bool):
 def set_auto_update(value: bool):
     global AUTO_UPDATE
     AUTO_UPDATE = value
-    write_config_bool("settings", "auto_updates", value)
+    write_config_bool("settings", "auto_update", value)
 
 def set_settings_for_slower_pc(value: bool):
     global SLOWER_PC_MODE
