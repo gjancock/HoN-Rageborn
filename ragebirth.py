@@ -17,7 +17,15 @@ import core.state as state
 from utilities.config import load_config
 # Load Config at startup
 config = load_config()
-from utilities.usernameGenerator import generate_counter_username, generate_word_username, generate_random_string, reset_prefix_counters, reset_postfix_counters, set_prefix_counters, set_postfix_counters
+from utilities.usernameGenerator import (
+    generate_counter_username, 
+    generate_word_username, 
+    generate_random_string, 
+    reset_prefix_counters, 
+    reset_postfix_counters, 
+    set_prefix_counters, 
+    set_postfix_counters
+)
 from requests.exceptions import ConnectionError, Timeout
 from http.client import RemoteDisconnected
 import configparser
@@ -41,6 +49,7 @@ from utilities.chatUtilities import (
     validate_chat_lines,
     save_chat_file
 )
+from utilities.runtime import runtime_dir
 
 # Logger
 log_queue = Queue()
@@ -75,15 +84,6 @@ auto_start_remaining = 0
 # CHAT DATA
 MAX_CHAT_LEN = 150
 
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        # Running as PyInstaller exe
-        return os.path.dirname(sys.executable)
-    else:
-        # Running as normal Python script
-        return os.path.dirname(os.path.abspath(__file__))
-
 # ============================================================
 # APPLICATION SETTINGS
 # ============================================================
@@ -108,18 +108,9 @@ def global_thread_exception_handler(args):
 
 threading.excepthook = global_thread_exception_handler
 
-def get_runtime_dir():
-    if getattr(sys, "frozen", False):
-        # PyInstaller EXE location
-        return os.path.dirname(sys.executable)
-    else:
-        # Python script location
-        return os.path.dirname(os.path.abspath(__file__))
-
-
 def read_version():
     try:
-        path = os.path.join(exe_dir(), "VERSION")
+        path = os.path.join(runtime_dir(), "VERSION")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
@@ -133,16 +124,10 @@ VERSION = read_version()
 # ============================================================
 # CONFIG (INI)
 # ============================================================
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
+CONFIG_FILE = os.path.join(runtime_dir(), "config.ini")
 
 def read_auto_update():
-    path = os.path.join(exe_dir(), "config.ini")
+    path = os.path.join(runtime_dir(), "config.ini")
     config = configparser.ConfigParser()
 
     try:
@@ -153,7 +138,7 @@ def read_auto_update():
 
 def write_config_bool(section: str, key: str, value: bool):
     config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
+    path = os.path.join(runtime_dir(), "config.ini")
 
     if os.path.exists(path):
         config.read(path)
@@ -166,7 +151,7 @@ def write_config_bool(section: str, key: str, value: bool):
 
 def write_config_str(section: str, key: str, value: str):
     config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
+    path = os.path.join(runtime_dir(), "config.ini")
 
     if os.path.exists(path):
         config.read(path)

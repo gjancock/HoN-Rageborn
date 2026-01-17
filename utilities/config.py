@@ -3,13 +3,9 @@ import os
 import sys
 import core.state as state
 from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+from utilities.runtime import runtime_dir
 
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
+CONFIG_FILE = os.path.join(runtime_dir(), "config.ini")
 
 def load_config():
     config = configparser.ConfigParser()
