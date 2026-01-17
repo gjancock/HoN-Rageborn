@@ -1,16 +1,20 @@
 import logging
 import tkinter as tk
-from tkinter import messagebox
-import requests
-import re
-from urllib.parse import urlencode
 import random
 import subprocess
 import threading
 import time
-from datetime import datetime
-import sys
+import utilities.constants as constant
 import os
+import core.state as state
+import configparser
+import pyautogui
+import time
+import subprocess
+import psutil
+
+from datetime import datetime
+from tkinter import messagebox
 from queue import Queue
 from utilities.loggerSetup import setup_logger
 # Logger
@@ -20,7 +24,6 @@ ui_formatter = logging.Formatter(
     "%(asctime)s | %(message)s",
     "%H:%M:%S"
 )
-import core.state as state
 from utilities.config import load_config
 # Load Config at startup
 config = load_config()
@@ -32,23 +35,10 @@ from utilities.usernameGenerator import (
     set_prefix_counters, 
     set_postfix_counters
 )
-from requests.exceptions import ConnectionError, Timeout
-from http.client import RemoteDisconnected
-import configparser
-import pyautogui
-from utilities.common import resource_path
-from requests.exceptions import RequestException
 from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
 from tkinter import ttk
-from utilities.accountVerification import AccountVerifier
 from utilities.gameConfigUtilities import prepare_game_config
-import time
-import subprocess
-import sys
-import socket
-import requests
-import psutil
 from utilities.chatUtilities import (
     get_chat_path,
     read_chat_file,
@@ -62,17 +52,6 @@ from utilities.accountRegistration import signup_user
 #
 auto_start_time = None
 iteration_count = 0
-
-#
-BASE_URL = "https://app.juvio.com"
-SIGNUP_URL = BASE_URL + "/signup"
-
-#
-MIN_USERNAME_LENGTH = 2
-MAX_USERNAME_LENGTH = 16
-
-#
-DEBOUNCE_MS = 600
 
 #
 auto_start_timer_id = None
@@ -963,18 +942,16 @@ def build_chat_placeholder_guide(parent):
     )
     label.pack(fill="x")
 
-
-
 # ============================================================
 # Text field handler
-debounced_firstname_save = make_debouncer(root, DEBOUNCE_MS, state.set_account_firstname)
-debounced_lastname_save = make_debouncer(root, DEBOUNCE_MS, state.set_account_lastname)
-debounced_email_domain_save = make_debouncer(root, DEBOUNCE_MS, state.set_account_email_domain)
-debounced_password_save = make_debouncer(root, DEBOUNCE_MS, state.set_account_password)
-debounced_prefix_save = make_debouncer(root, DEBOUNCE_MS, state.set_username_prefix)
-debounced_prefix_count_save = make_debouncer(root, DEBOUNCE_MS, state.set_username_prefix_count_start_at)
-debounced_postfix_save = make_debouncer(root, DEBOUNCE_MS, state.set_username_postfix)
-debounced_postfix_count_save = make_debouncer(root, DEBOUNCE_MS, state.set_username_postfix_count_start_at)
+debounced_firstname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_firstname)
+debounced_lastname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_lastname)
+debounced_email_domain_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_email_domain)
+debounced_password_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_password)
+debounced_prefix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix)
+debounced_prefix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix_count_start_at)
+debounced_postfix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix)
+debounced_postfix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix_count_start_at)
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800

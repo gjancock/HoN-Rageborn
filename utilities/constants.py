@@ -23,6 +23,7 @@ DIALOG_MESSAGE_DIR = "dialog-message"
 CONFIDENCE = 0.75  # Adjust if detection fails
 BASE_URL = "https://app.juvio.com"
 SIGNUP_URL = BASE_URL + "/signup"
+DEBOUNCE_MS = 600
 
 # Map
 MAP_FOC = "foc"
