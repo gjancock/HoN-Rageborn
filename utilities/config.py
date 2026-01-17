@@ -48,3 +48,29 @@ def load_config():
 
     return config
 
+def write_config_bool(section: str, key: str, value: bool):
+    config = configparser.ConfigParser()
+    path = os.path.join(runtime_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
+    if section not in config:
+        config[section] = {}
+    config[section][key] = "true" if value else "false"
+    with open(path, "w") as f:
+        config.write(f)
+
+def write_config_str(section: str, key: str, value: str):
+    config = configparser.ConfigParser()
+    path = os.path.join(runtime_dir(), "config.ini")
+
+    if os.path.exists(path):
+        config.read(path)
+
+    if section not in config:
+        config[section] = {}
+    config[section][key] = value
+    with open(path, "w") as f:
+        config.write(f)
+
