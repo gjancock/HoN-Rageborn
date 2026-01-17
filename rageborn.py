@@ -23,7 +23,7 @@ import random
 import os
 import subprocess
 from utilities.common import resource_path
-
+from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
 # Initialize Logger
 logger = setup_logger()
 
@@ -36,6 +36,8 @@ pyautogui.PAUSE = 0.3
 # Load Dataset
 COORDS = load_dataset("coordinates_1920x1080")
 assetsLibrary.init(COORDS)
+
+# Chat data
 
 # ================= EMERGENCY STOP =================
 def emergency_stop():
@@ -396,6 +398,22 @@ def startQueue():
 
     while not state.STOP_EVENT.is_set():
 
+        if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+            interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+            pass
+
+        if not image_exists("matchmaking-panel-header.png", region=constant.SCREEN_REGION) and any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            if find_and_click("play-button.png", region=constant.SCREEN_REGION):
+                interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+            
+            if find_and_click("play-button-christmas.png", region=constant.SCREEN_REGION):
+                interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+
+            if image_exists("enter-queue.png", region=constant.SCREEN_REGION):
+                pyautogui.moveTo(x, y, duration=0.3)
+                interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+                pyautogui.click()
+
         # Requeue
         if not image_exists("waiting-for-players.png", region=constant.SCREEN_REGION) and image_exists("enter-queue.png", region=constant.SCREEN_REGION):
             logger.info("[INFO] Still seeing PLAY button.. Re-queueing..")
@@ -403,35 +421,32 @@ def startQueue():
             interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
             pyautogui.click()
 
-        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            logger.info("[INFO] 'Failed to fetch mmr' message showed!")
-            if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
-                logger.info("[INFO] Message dismissed!")
-                pyautogui.moveTo(x, y, duration=0.3)
-                interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
-                pyautogui.click()
-            else:
-                logger.info("[ERROR] Unable to locate OK button.")
+        # if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/failed-to-fetch-mmr-message.png", region=constant.LOBBY_MESSAGE_REGION):
+        #     logger.info("[INFO] 'Failed to fetch mmr' message showed!")
+        #     if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+        #         logger.info("[INFO] Message dismissed!")
+        #         pyautogui.moveTo(x, y, duration=0.3)
+        #         interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+        #         pyautogui.click()
+        #     else:
+        #         logger.info("[ERROR] Unable to locate OK button.")
 
-        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
-            logger.info("[INFO] 'Waiting taken too long' message showed!")
-            if find_and_click("message-ok.png"):
-                logger.info("[INFO] Message dismissed!")
-            else:
-                logger.info("[ERROR] Unable to locate OK button.")
+        # if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/taken-too-long-message.png", region=constant.LOBBY_MESSAGE_REGION):
+        #     interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+        #     logger.info("[INFO] 'Waiting taken too long' message showed!")
+        #     if find_and_click("message-ok.png"):
+        #         logger.info("[INFO] Message dismissed!")
+        #     else:
+        #         logger.info("[ERROR] Unable to locate OK button.")
 
-        if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png", region=constant.LOBBY_MESSAGE_REGION):
-            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
-            logger.info("[INFO] 'Not a host' message showed!")
-            if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
-                logger.info("[INFO] Message dismissed!")
-            else:
-                logger.info("[ERROR] Unable to locate OK button.")
-
-        if image_exists("queue-cooldown.png", region=constant.SCREEN_REGION):
-            return False
-        
+        # if image_exists(f"{constant.DIALOG_MESSAGE_DIR}/not-a-host-message.png", region=constant.LOBBY_MESSAGE_REGION):
+        #     interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+        #     logger.info("[INFO] 'Not a host' message showed!")
+        #     if find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+        #         logger.info("[INFO] Message dismissed!")
+        #     else:
+        #         logger.info("[ERROR] Unable to locate OK button.")
+                
         # successfully joined a match: FOC
         if any_image_exists([
             "foc-role-info.png",
@@ -448,7 +463,10 @@ def startQueue():
             logger.info("[INFO] Match found! Mode: Midwar!")
             state.INGAME_STATE.setCurrentMap(constant.MAP_MIDWAR)
             interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
-            return True            
+            return True        
+        
+        if image_exists("queue-cooldown.png", region=constant.SCREEN_REGION):
+            return False
 
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 1.5)
 
@@ -494,18 +512,13 @@ def enterChat(text):
 def pickingPhaseChat():
     chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
     if random.random() < chatChance:
-        randomString = [
-            "ezwin",
-            "got me got win game",
-            "glhf!!",
-            "hi guys",
-            "hello team",
-            "yo",
-            "show pick",
-            "show pick please",
-            "go pick"
-        ]
+        # TODO: in sequence or random
+        randomString = get_ingame_chats()
+        if not randomString:
+            return
+
         text = random.choice(randomString)
+        text = apply_chat_placeholders(text)        
         enterChat(text)
 
 
@@ -548,6 +561,12 @@ def continuePickingPhaseChat():
 
 
 def pickingPhase():
+
+    # Just in case
+    if image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+        find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+        interruptible_wait(0.5)
+
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
 
@@ -703,7 +722,7 @@ def pickingPhase():
                 interruptible_wait(round(random.uniform(1, 2), 2))
 
             logger.info("[INFO] Picking phase.")
-            interruptible_wait(round(random.uniform(4, 10), 2))
+            interruptible_wait(round(random.uniform(10, 30), 2))
             hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
             pyautogui.moveTo(bx, by, duration=0.3)
             pyautogui.doubleClick()
@@ -791,38 +810,13 @@ def do_auto_following(x, y):
 
 def allChat():
     import pyperclip
-    team = state.INGAME_STATE.getCurrentTeam()
-    opponent = constant.TEAM_HELLBOURNE if team == constant.TEAM_LEGION else constant.TEAM_LEGION
-    randomString = [
-        "yugen0x from discord community summon me!",
-        "^:Having not a Steam release also is like wanting to fack and having no butt or other hole to put your cok !",
-        "^:^rFAIL PC GAME - NO DEATH ANIMATIONS !",
-        "^:Haven't had a maliken bot in a week now feels ^ggood",
-        "I'm trolling because anyone genuinely believing there are bots in matchmaking is way ^rbelow intelligence average",
-        "I have ^rragebbs in 10% of my games. Matchmaking is a complete ^:^yjoke.",
-        "^:^988m a^977 l i^966 k e^955 n i^944 s a^933 n o^922 o b",
-        "...",
-        "WAHUEHAHHAHAHAUHAHAHAHEHAHAHAH!!",
-        "^:I blame zaniir for his bot comment!",
-        "demoasselborn Alan (777) proud to team up with me like you guys do ^r<3",
-        "Stop being toxic and you won't get kicked Bub",
-        "are they actually legit BOTS, or just someone pretending to be a BOT?",
-        "^:Why is there a ^rkick vote ^999for toxic communication if free speech is the first thing in the code of conduct and there is a mute button?",
-        "^:WELCOME TO HON REBORN GAMER!",
-        "^:tollski love to have me in his game, you guys know that? secretly take a photo of me.. admire everywhere",
-        "^:GOD, HOW AWFUL IS PLINKO 100% TICKET 0% CHEST!",
-        f"^:Hey {opponent.upper()}! Enjoy your free MMR, come to mid lane get free kills",
-        f"^:GET REKT NOOB LOSER BRAINDEAD ^r{team.upper()} TEAM.. ^999ENJOY YOUR BEST SHITTY GAME",
-        "I doubt I was toxic in any of the games =)",
-        "Now can you work on the bots on the AUS servers? ^:^ySure! More bots!",
-        "^:Thank you once again for your time, we will see you in Newerth. ^y^:^_^",
-        "im here to reward Atticah for getting a new monitor to play this retarded game!!!!",
-        "^:unknownuser asked to push mid!! HERE I COME",
-        "^:^966 ATTENTION ^999 Some content in this game may offend you Player discretion is advised",
-        "^:MELLAYA from AUS asked me to feed mid no matter what",
-        "Is the ^r'strong start to the year' in the room with us?"
-    ]
+    # TODO: in sequence or random
+    randomString = get_ingame_chats()
+    if not randomString:
+        return
+
     text = random.choice(randomString)
+    text = apply_chat_placeholders(text)
     pyperclip.copy(text)
     interruptible_wait(round(random.uniform(0.3, 0.5), 2))
 
