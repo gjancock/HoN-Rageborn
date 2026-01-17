@@ -48,29 +48,45 @@ def load_config():
 
     return config
 
+def _atomic_write(config, path):
+    tmp = path + ".tmp"
+
+    with open(tmp, "w", encoding="utf-8") as f:
+        config.write(f)
+        f.flush()
+        os.fsync(f.fileno())
+
+    os.replace(tmp, path)  # atomic on Windows
+
 def write_config_bool(section: str, key: str, value: bool):
     config = configparser.ConfigParser()
     path = os.path.join(runtime_dir(), "config.ini")
 
     if os.path.exists(path):
-        config.read(path)
+        try:
+            config.read(path, encoding="utf-8")
+        except Exception:
+            pass
 
     if section not in config:
         config[section] = {}
+
     config[section][key] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
+    _atomic_write(config, path)
 
 def write_config_str(section: str, key: str, value: str):
     config = configparser.ConfigParser()
     path = os.path.join(runtime_dir(), "config.ini")
 
     if os.path.exists(path):
-        config.read(path)
+        try:
+            config.read(path, encoding="utf-8")
+        except Exception:
+            pass
 
     if section not in config:
         config[section] = {}
+
     config[section][key] = value
-    with open(path, "w") as f:
-        config.write(f)
+    _atomic_write(config, path)
 
