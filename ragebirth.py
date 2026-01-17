@@ -20,7 +20,6 @@ config = load_config()
 from utilities.usernameGenerator import (
     generate_counter_username, 
     generate_word_username, 
-    generate_random_string, 
     reset_prefix_counters, 
     reset_postfix_counters, 
     set_prefix_counters, 
@@ -50,6 +49,7 @@ from utilities.chatUtilities import (
     save_chat_file
 )
 from utilities.runtime import runtime_dir
+from utilities.emailGenerator import generate_email
 
 # Logger
 log_queue = Queue()
@@ -480,50 +480,6 @@ def signup_user(first_name, last_name, email, username, password):
     except Exception as e:
         logger.exception("[FATAL] Unexpected signup error")
         return False, str(e)
-
-# ============================================================
-# TKINTER UI
-# ============================================================
-
-def generate_username(prefix="", postfix=""):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    has_prefix = bool(prefix)
-    has_postfix = bool(postfix)
-
-    underscore_count = (1 if has_prefix else 0) + (1 if has_postfix else 0)
-    fixed_length = len(prefix) + len(postfix) + underscore_count
-
-    target_length = random.randint(
-        max(MIN_USERNAME_LENGTH, fixed_length + 1),
-        MAX_USERNAME_LENGTH
-    )
-
-    remaining = max(1, target_length - fixed_length)
-
-    random_part = generate_random_string(remaining, remaining)
-
-    if has_prefix and has_postfix:
-        return f"{prefix}{random_part}{postfix}"
-    elif has_prefix:
-        return f"{prefix}{random_part}"
-    elif has_postfix:
-        return f"{random_part}{postfix}"
-    else:
-        return random_part
-
-
-def generate_email(prefix="", postfix="", domain="mail.com", length=12):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    rand = generate_random_string(length, length)
-    local = "".join(p for p in [prefix, rand, postfix] if p)
-
-    return f"{local}@{domain}"
-
-
 
 # ============================================================
 # UI CALLBACKS

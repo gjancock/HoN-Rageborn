@@ -1110,6 +1110,19 @@ def ingame():
         case constant.MAP_MIDWAR:
             do_midwar_stuff()
 
+
+def testState():
+    from utilities.config import load_config
+    # Load Config at startup
+    config = load_config()
+    print(f"gamepath: {state.GAME_EXECUTABLE}")
+    print(f"email_domain: {state.ACCOUNT_EMAIL_DOMAIN}")
+    print(f"account password: {state.ACCOUNT_PASSWORD}")
+    print(f"firstname: {state.ACCOUNT_FIRSTNAME}")
+    print(f"lastname: {state.ACCOUNT_LASTNAME}")
+    print(f"prefix: {state.USERNAME_PREFIX}")
+    print(f"postfix: {state.USERNAME_POSTFIX}")
+
 #
 def main(username, password):
     logger.info("[INFO] Rageborn boot up...")

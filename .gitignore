@@ -46,3 +46,5 @@ logs/*.log
 /venv
 python
 startLauncher.bat
+chat_ingame.txt
+chat_picking.txt
