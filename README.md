@@ -8,7 +8,7 @@ I am not responsible for any IP bans, hardware bans, account bans, or any other 
 How to Use
 -------------------------------------
 1. Download launcher.exe (one-time)
-   - https://github.com/gjancock/HoN-Rageborn/releases/tag/launcher-v1.0.1
+   - https://github.com/gjancock/HoN-Rageborn/releases/tag/launcher-v1.1.0
 2. Run it.
 3. Enjoy.
 
