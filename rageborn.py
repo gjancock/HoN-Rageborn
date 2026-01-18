@@ -1,31 +1,34 @@
 import pyautogui
-import numpy as np
 import time
-import win32api
 import win32gui
 import win32con
 import win32process
 import psutil
-from threads.hwnd_watchdog import start_hwnd_watchdog
-from utilities.appUtilities import is_fullscreen
-from utilities.loggerSetup import setup_logger
 import threading
 import utilities.constants as constant
-from threads.ingame import vote_requester, lobby_message_check_requester
-from utilities.common import interruptible_wait, interruptible_wait
-from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, image_exists_in_any_region
-from core.parameters import TARGETING_HERO
 import core.state as state
-from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
 import keyboard
 import random
 import os
 import subprocess
+
+from threads.hwnd_watchdog import start_hwnd_watchdog
+from utilities.loggerSetup import setup_logger
+from threads.ingame import vote_requester, lobby_message_check_requester
+from utilities.common import interruptible_wait, interruptible_wait
+from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, image_exists_in_any_region
+from utilities.datasetLoader import load_dataset
 from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
+from utilities.accountGenerator import generate
+
 # Initialize Logger
 logger = setup_logger()
+
+from utilities.config import load_config
+# Load Config at startup
+load_config()
 
 # Safety: Move mouse to top-left to abort
 pyautogui.FAILSAFE = True
@@ -73,8 +76,11 @@ def start(username, password):
         # Validate Coordinate
         validate_coords(COORDS)
 
+        if state.RAGEQUIT_MODE:
+            logger.info("[INFO] RAGEQUIT MODE ENABLED")
+
         #
-        main(username, password)
+        main(username, password, isRageQuit=state.RAGEQUIT_MODE)
     finally:
         logger.info("[MAIN] shutting down")        
         stop_powershell()
@@ -308,7 +314,7 @@ def unpin_jokevio():
 #
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
-    time.sleep(0.7)
+    interruptible_wait(0.7)
     if enter:
         pyautogui.press("enter")
 
@@ -509,18 +515,43 @@ def enterChat(text):
     pyautogui.click()
     type_text(text=text, enter=True)
 
-def pickingPhaseChat():
-    chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
-    if random.random() < chatChance:
-        # TODO: in sequence or random
-        randomString = get_ingame_chats()
+def pickingPhaseChat(isRageQuit: bool = False):
+    if not isRageQuit:
+        chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
+        if random.random() < chatChance:
+            # TODO: in sequence or random
+            randomString = get_picking_chats()
+            if not randomString:
+                return
+
+            text = random.choice(randomString)
+            text = apply_chat_placeholders(text)        
+            enterChat(text)
+    else:
+        pyautogui.click(1068, 836) # toggle chat to all
+        randomString = get_picking_chats()
         if not randomString:
             return
-
         text = random.choice(randomString)
-        text = apply_chat_placeholders(text)        
+        text = apply_chat_placeholders(text)
+        text = "^r^:FAIL PC GAME!!!" # testing
         enterChat(text)
 
+        spamTimeout = round(random.uniform(3, 7), 2)
+        start = time.time()
+
+        while not state.STOP_EVENT.is_set():
+            if time.time() - start >= spamTimeout:
+                break
+
+            pyautogui.press("up")
+            pyautogui.press("enter")
+
+            # sleep BUT remain interruptible
+            if interruptible_wait(0.05):
+                break
+
+    return True
 
 def continuePickingPhaseChat():
     chatChance = 0.375 if not state.SLOWER_PC_MODE else 0.2
@@ -560,12 +591,25 @@ def continuePickingPhaseChat():
                 enterChat(text)
 
 
-def pickingPhase():
+def pickingPhase(isRageQuit: bool = False):
 
     # Just in case
     if image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
         interruptible_wait(0.5)
+
+    if isRageQuit:
+        username = None
+        password = None
+        status = False
+        while not state.STOP_EVENT.is_set():
+            status, username, password = generate()
+            if status:
+                break
+
+            interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
+
+        pickingPhaseChat(isRageQuit)
 
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
@@ -671,7 +715,7 @@ def pickingPhase():
                     interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
 
                 # team chat
-                if not state.SLOWER_PC_MODE:
+                if not state.SLOWER_PC_MODE or not isRageQuit:
                     pickingPhaseChat()
                     interruptible_wait(round(random.uniform(7, 11), 2))
                     continuePickingPhaseChat()            
@@ -690,7 +734,6 @@ def pickingPhase():
                     x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
                     pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
 
-            logger.info("[INFO] Waiting to rageborn")
             # TODO: Alternative hero selection
             # TODO: Separated grief mode
             # if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
@@ -705,7 +748,7 @@ def pickingPhase():
 
         case constant.MAP_MIDWAR:
             x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
-            interruptible_wait(round(random.uniform(5, 10), 2))
+            interruptible_wait(round(random.uniform(5, 10), 2)) if not isRageQuit else 2
             logger.info("[INFO] Waiting banning phase.")
             hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
             pyautogui.moveTo(bx, by, duration=0.3)
@@ -722,26 +765,35 @@ def pickingPhase():
                 interruptible_wait(round(random.uniform(1, 2), 2))
 
             logger.info("[INFO] Picking phase.")
-            interruptible_wait(round(random.uniform(10, 30), 2))
+            interruptible_wait(round(random.uniform(10, 30), 2)) if not isRageQuit else 2
             hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
             pyautogui.moveTo(bx, by, duration=0.3)
             pyautogui.doubleClick()
             logger.info(f"[INFO] Hero {hero} is now selected!")
             pyautogui.moveTo(x, y, duration=0.3)
 
-    while not state.STOP_EVENT.is_set():
-        if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
-            logger.info("[INFO] I see fountain, I see grief!")
-            logger.info("[INFO] Rageborn begin!")
-            interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
-            return True
+    if not isRageQuit:    
+        logger.info("[INFO] Waiting to rageborn")
+        while not state.STOP_EVENT.is_set():
+            if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
+                logger.info("[INFO] I see fountain, I see grief!")
+                logger.info("[INFO] Rageborn begin!")
+                interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
+                return True
+            
+            elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+                # Back to lobby
+                logger.info("[INFO] Match aborted!")
+                return False
+            
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+    else:
+        # Ragequit
+        logger.info("[INFO] Waiting to change account")
+        interruptible_wait(round(random.uniform(1, 3), 2))
         
-        elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
-            # Back to lobby
-            logger.info("[INFO] Match aborted!")
-            return False
-        
-        interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+        # random wait
+        return True, username, password
 
 # pause vote
 def do_pause_vote():
@@ -1110,22 +1162,27 @@ def ingame():
         case constant.MAP_MIDWAR:
             do_midwar_stuff()
 
+def logoutRelog(username, password):
+    logger.info("[INFO] Logout and Login")
+    pyautogui.click(1415, 235)
+    pyautogui.click(1000, 425)
+    interruptible_wait(2)
+    pyautogui.click(991, 341)
+    interruptible_wait(1)
 
-def testState():
-    from utilities.config import load_config
-    # Load Config at startup
-    config = load_config()
-    print(f"gamepath: {state.GAME_EXECUTABLE}")
-    print(f"email_domain: {state.ACCOUNT_EMAIL_DOMAIN}")
-    print(f"account password: {state.ACCOUNT_PASSWORD}")
-    print(f"firstname: {state.ACCOUNT_FIRSTNAME}")
-    print(f"lastname: {state.ACCOUNT_LASTNAME}")
-    print(f"prefix: {state.USERNAME_PREFIX}")
-    print(f"postfix: {state.USERNAME_POSTFIX}")
-    print(f"autoupdate: {state.get_auto_update()}")
+    # logout
+    pyautogui.click(1415, 235)
+    interruptible_wait(0.5)
+    pyautogui.doubleClick(1010, 568)
+
+    type_text(username)
+    pyautogui.press("tab")
+    pyautogui.press("enter")
+    # TODO: if fail to login, but low chance unless different password setup
+    return True
 
 #
-def main(username, password):
+def main(username, password, isRageQuit: bool = False):
     logger.info("[INFO] Rageborn boot up...")
 
     try:
@@ -1146,10 +1203,10 @@ def main(username, password):
                     break
                 
                 #
-                result = pickingPhase()          
+                result, username, password = pickingPhase(isRageQuit)          
 
-                if not result:
-
+                if not isRageQuit and not result:
+                    # Rageborn match aborted
                     messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
                     while not state.STOP_EVENT.is_set():
                         if not check_lobby_message():
@@ -1163,7 +1220,10 @@ def main(username, password):
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue
 
-                ingame()
+                if not isRageQuit:
+                    ingame()
+                else:
+                    logoutRelog(username, password)
 
         logger.info("[INFO] Rageborn shutting down...")
     

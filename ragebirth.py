@@ -268,6 +268,7 @@ auto_mobile_verification_var = tk.BooleanVar(
 auto_update_var = tk.BooleanVar(value=state.get_auto_update())
 auto_restart_dns_var = tk.BooleanVar(value=state.get_auto_restart_dns())
 settings_for_slower_pc_var = tk.BooleanVar(value=state.get_settings_for_slower_pc())
+is_ragequit_mode_enabled_var = tk.BooleanVar(value=state.get_is_ragequit_mode_enabled())
 
 _last_prefix_enabled = state.get_username_prefix_count_enabled()
 _last_postfix_enabled = state.get_username_postfix_count_enabled()
@@ -1147,6 +1148,14 @@ tk.Checkbutton(
     variable=settings_for_slower_pc_var,
     command=lambda: state.set_settings_for_slower_pc(settings_for_slower_pc_var.get())
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
+
+tk.Checkbutton(
+    app_settings_row2,
+    text="Use Ragequit Mode",
+    variable=is_ragequit_mode_enabled_var,
+    command=lambda: state.set_is_ragequit_mode_enabled(is_ragequit_mode_enabled_var.get()),
+    fg="red"
+).grid(row=0, column=1, sticky="w")
 
 # ============================================================
 username_settings_frame = tk.LabelFrame(

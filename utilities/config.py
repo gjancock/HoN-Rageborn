@@ -21,6 +21,7 @@ def load_config():
     state.AUTO_RESTART_DNS = config.getboolean("network", "auto_restart_dns", fallback=False)
     state.SLOWER_PC_MODE = config.getboolean("performance", "slower_pc_mode", fallback=False)
     state.AUTO_UPDATE = config.getboolean("settings", "auto_update", fallback=True)
+    state.RAGEQUIT_MODE = config.getboolean("settings", "ragequit", fallback=False)
 
     # ---- Strings ----
     state.GAME_EXECUTABLE = config.get("paths", "game_executable", fallback="")

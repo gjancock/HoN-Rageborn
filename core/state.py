@@ -85,6 +85,7 @@ AUTO_MOBILE_VERIFICATION = False
 AUTO_RESTART_DNS = False
 AUTO_UPDATE = True
 SLOWER_PC_MODE = False
+RAGEQUIT_MODE = False
 GAME_EXECUTABLE = ""
 USERNAME_PREFIX = ""
 USERNAME_POSTFIX = ""
@@ -124,6 +125,9 @@ def get_auto_update():
 
 def get_settings_for_slower_pc():
     return SLOWER_PC_MODE
+
+def get_is_ragequit_mode_enabled():
+    return RAGEQUIT_MODE
 
 def get_username_prefix():
     return USERNAME_PREFIX
@@ -189,6 +193,11 @@ def set_settings_for_slower_pc(value: bool):
     global SLOWER_PC_MODE
     SLOWER_PC_MODE = value
     write_config_bool("performance", "slower_pc_mode", value)
+
+def set_is_ragequit_mode_enabled(value: bool):
+    global RAGEQUIT_MODE
+    RAGEQUIT_MODE = value
+    write_config_bool("settings", "ragequit", value)
 
 def set_username_prefix(prefix: str):
     global USERNAME_PREFIX
