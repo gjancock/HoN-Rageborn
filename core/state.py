@@ -13,6 +13,7 @@ class InGameState:
         self._position = 0
         self._focRole = ""
         self._isAfk = False
+        self._isRageQuitInitiated = False
 
     def setCurrentMap(self, map):
         with self._lock:
@@ -42,6 +43,10 @@ class InGameState:
         with self._lock:
             self._isAfk = isAfk
 
+    def setIsRageQuitInitiated(self, isRageQuitInitiated):
+        with self._lock:
+            self._isRageQuitInitiated = isRageQuitInitiated
+
     def getCurrentMap(self):
         with self._lock:
             return self._current_map
@@ -69,6 +74,10 @@ class InGameState:
     def getIsAfk(self):
         with self._lock:
             return self._isAfk
+        
+    def getIsRageQuitInitiated(self):
+        with self._lock:
+            return self._isRageQuitInitiated
 
 #
 CRASH_EVENT = threading.Event()

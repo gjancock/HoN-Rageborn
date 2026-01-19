@@ -380,11 +380,15 @@ def prequeue():
 def startQueue():
     interruptible_wait(1.25)
 
+    #
+    isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
+
     # Tune matchmaking bar
-    x, y = assetsLibrary.get_matchmaking_tuner_coord()
-    pyautogui.moveTo(x, y, duration=0.3)    
-    pyautogui.click()
-    interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+    if not isRageQuitInitiated:
+        x, y = assetsLibrary.get_matchmaking_tuner_coord()
+        pyautogui.moveTo(x, y, duration=0.3)    
+        pyautogui.click()
+        interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
 
     while not state.STOP_EVENT.is_set():
         if not image_exists("matchmaking-disabled.png", region=constant.MATCHMAKING_PANEL_REGION):
@@ -528,14 +532,16 @@ def pickingPhaseChat(isRageQuit: bool = False):
             text = apply_chat_placeholders(text)        
             enterChat(text)
     else:
-        if image_exists("team-chat-button.png", region=constant.SCREEN_REGION):
-            pyautogui.click(1068, 836) # toggle chat to all
+        isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
+
         randomString = get_picking_chats()
         if not randomString:
             return
+        
+        if not isRageQuitInitiated:
+            pyautogui.click(1068, 836) # toggle chat to all
         text = random.choice(randomString)
         text = apply_chat_placeholders(text)
-        text = "^r^:FAIL PC GAME!!!" # testing
         enterChat(text)
 
         spamTimeout = round(random.uniform(3, 7), 2)
@@ -1224,6 +1230,7 @@ def main(username, password, isRageQuit: bool = False):
                 if not isRageQuit:
                     ingame()
                 else:
+                    state.INGAME_STATE.setIsRageQuitInitiated(True)
                     logoutRelog(username, password)
 
         logger.info("[INFO] Rageborn shutting down...")
