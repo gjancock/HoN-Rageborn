@@ -3,6 +3,7 @@
 # =========================================================================== #
 - [x] Added disconnect / reconnect feature for Ragequit mode.
 - [x] Reoptimize performance on Ragequit mode with connection.
+- [x] Added random chances on deciding timeout or disconnect directly.
 
 # =========================================================================== #
 # v1.10.2 - Feature Enhancement (19 January 2026)
