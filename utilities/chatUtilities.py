@@ -10,9 +10,6 @@ MAX_CHAT_LENGTH = 150
 
 _chat_iterators = {}
 
-# TODO Accept dynamic parameter
-
-
 # Wrapper function
 def get_picking_chats():
     return read_chat_file(get_chat_path("chat_picking.txt"))

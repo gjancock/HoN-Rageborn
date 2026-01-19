@@ -1,47 +1,22 @@
 import logging
 import tkinter as tk
-from tkinter import messagebox
-import requests
-import re
-from urllib.parse import urlencode
 import random
 import subprocess
 import threading
 import time
-from datetime import datetime
-import sys
+import utilities.constants as constant
 import os
-from queue import Queue
-from utilities.loggerSetup import setup_logger
 import core.state as state
-from utilities.config import load_config
-# Load Config at startup
-config = load_config()
-from utilities.usernameGenerator import generate_counter_username, generate_word_username, generate_random_string, reset_prefix_counters, reset_postfix_counters, set_prefix_counters, set_postfix_counters
-from requests.exceptions import ConnectionError, Timeout
-from http.client import RemoteDisconnected
 import configparser
 import pyautogui
-from utilities.common import resource_path
-from requests.exceptions import RequestException
-from utilities.ipAddressGenerator import random_public_ip
-from tkinter import filedialog
-from tkinter import ttk
-from utilities.accountVerification import AccountVerifier
-from utilities.gameConfigUtilities import prepare_game_config
 import time
 import subprocess
-import sys
-import socket
-import requests
 import psutil
-from utilities.chatUtilities import (
-    get_chat_path,
-    read_chat_file,
-    validate_chat_lines,
-    save_chat_file
-)
 
+from datetime import datetime
+from tkinter import messagebox
+from queue import Queue
+from utilities.loggerSetup import setup_logger
 # Logger
 log_queue = Queue()
 logger = setup_logger(ui_queue=log_queue)
@@ -49,21 +24,34 @@ ui_formatter = logging.Formatter(
     "%(asctime)s | %(message)s",
     "%H:%M:%S"
 )
+from utilities.config import load_config
+# Load Config at startup
+config = load_config()
+from utilities.usernameGenerator import (
+    generate_counter_username, 
+    generate_word_username, 
+    reset_prefix_counters, 
+    reset_postfix_counters, 
+    set_prefix_counters, 
+    set_postfix_counters
+)
+from utilities.ipAddressGenerator import random_public_ip
+from tkinter import filedialog
+from tkinter import ttk
+from utilities.gameConfigUtilities import prepare_game_config
+from utilities.chatUtilities import (
+    get_chat_path,
+    read_chat_file,
+    validate_chat_lines,
+    save_chat_file
+)
+from utilities.runtime import runtime_dir
+from utilities.emailGenerator import generate_email
+from utilities.accountRegistration import signup_user
 
 #
 auto_start_time = None
 iteration_count = 0
-
-#
-BASE_URL = "https://app.juvio.com"
-SIGNUP_URL = BASE_URL + "/signup"
-
-#
-MIN_USERNAME_LENGTH = 2
-MAX_USERNAME_LENGTH = 16
-
-#
-DEBOUNCE_MS = 600
 
 #
 auto_start_timer_id = None
@@ -74,15 +62,6 @@ auto_start_remaining = 0
 
 # CHAT DATA
 MAX_CHAT_LEN = 150
-
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        # Running as PyInstaller exe
-        return os.path.dirname(sys.executable)
-    else:
-        # Running as normal Python script
-        return os.path.dirname(os.path.abspath(__file__))
 
 # ============================================================
 # APPLICATION SETTINGS
@@ -108,18 +87,9 @@ def global_thread_exception_handler(args):
 
 threading.excepthook = global_thread_exception_handler
 
-def get_runtime_dir():
-    if getattr(sys, "frozen", False):
-        # PyInstaller EXE location
-        return os.path.dirname(sys.executable)
-    else:
-        # Python script location
-        return os.path.dirname(os.path.abspath(__file__))
-
-
 def read_version():
     try:
-        path = os.path.join(exe_dir(), "VERSION")
+        path = os.path.join(runtime_dir(), "VERSION")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
@@ -129,416 +99,6 @@ def read_version():
 #
 INFO_NAME = "Rageborn"
 VERSION = read_version()
-
-# ============================================================
-# CONFIG (INI)
-# ============================================================
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
-
-def read_auto_update():
-    path = os.path.join(exe_dir(), "config.ini")
-    config = configparser.ConfigParser()
-
-    try:
-        config.read(path, encoding="utf-8")
-        return config.getboolean("settings", "auto_update", fallback=True)
-    except Exception:
-        return True  # safe default
-
-def write_config_bool(section: str, key: str, value: bool):
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if section not in config:
-        config[section] = {}
-    config[section][key] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
-def write_config_str(section: str, key: str, value: str):
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if section not in config:
-        config[section] = {}
-    config[section][key] = value
-    with open(path, "w") as f:
-        config.write(f)
-
-def get_auto_start_endless():
-    return state.AUTO_START_ENDLESS
-
-def get_game_executable():
-    return state.GAME_EXECUTABLE
-
-def get_auto_email_verification():
-    return state.AUTO_EMAIL_VERIFICATION
-
-def get_auto_mobile_verification():
-    return state.AUTO_MOBILE_VERIFICATION
-
-def get_auto_restart_dns():
-    return state.AUTO_RESTART_DNS
-
-def get_auto_update():
-    return state.AUTO_UPDATE
-
-def get_settings_for_slower_pc():
-    return state.SLOWER_PC_MODE
-
-def get_username_prefix():
-    return state.USERNAME_PREFIX
-
-def get_username_postfix():
-    return state.USERNAME_POSTFIX
-
-def get_account_firstname():
-    return state.ACCOUNT_FIRSTNAME
-
-def get_account_lastname():
-    return state.ACCOUNT_LASTNAME
-
-def get_account_email_domain():
-    return state.ACCOUNT_EMAIL_DOMAIN
-
-def get_account_password():
-    return state.ACCOUNT_PASSWORD
-
-def get_username_prefix_count_enabled():
-    return state.USERNAME_PREFIX_COUNT_ENABLED
-
-def get_username_postfix_count_enabled():
-    return state.USERNAME_POSTFIX_COUNT_ENABLED
-
-def get_username_prefix_count_start_at():
-    return state.USERNAME_PREFIX_COUNT_START_AT
-
-def get_username_postfix_count_start_at():
-    return state.USERNAME_POSTFIX_COUNT_START_AT
-
-def set_auto_start_endless(value: bool):
-    state.AUTO_START_ENDLESS = value
-    write_config_bool("endless", "auto_start", value)
-
-def set_game_executable(executable_path: str):
-    state.GAME_EXECUTABLE = executable_path
-    write_config_str("paths", "game_executable", executable_path)
-
-def set_auto_email_verification(value: bool):
-    state.AUTO_EMAIL_VERIFICATION = value
-    write_config_bool("verification", "auto_email", value)
-
-def set_auto_mobile_verification(value: bool):
-    state.AUTO_MOBILE_VERIFICATION = value
-    write_config_bool("verification", "auto_mobile", value)
-
-def set_auto_restart_dns(value: bool):
-    state.AUTO_RESTART_DNS = value
-    write_config_bool("network", "auto_restart_dns", value)
-
-def set_auto_update(value: bool):
-    state.AUTO_UPDATE = value
-    write_config_bool("settings", "auto_updates", value)
-
-def set_settings_for_slower_pc(value: bool):
-    state.SLOWER_PC_MODE = value
-    write_config_bool("performance", "slower_pc_mode", value)
-
-def set_username_prefix(prefix: str):
-    state.USERNAME_PREFIX = prefix
-    write_config_str("username_generator", "prefix", prefix)
-
-def set_username_postfix(postfix: str):
-    state.USERNAME_POSTFIX = postfix
-    write_config_str("username_generator", "postfix", postfix)
-
-def set_account_firstname(firstname: str):
-    state.ACCOUNT_FIRSTNAME = firstname
-    write_config_str("account", "firstname", firstname)
-
-def set_account_lastname(lastname: str):
-    state.ACCOUNT_LASTNAME = lastname
-    write_config_str("account", "lastname", lastname)
-
-def set_account_email_domain(email_domain: str):
-    state.ACCOUNT_EMAIL_DOMAIN = email_domain
-    write_config_str("account", "email_domain", email_domain)
-
-def set_account_password(password: str):
-    state.ACCOUNT_PASSWORD = password
-    write_config_str("account", "password", password)
-
-def set_username_prefix_count_enabled(value: bool):
-    state.USERNAME_PREFIX_COUNT_ENABLED = value
-    write_config_bool("username_generator", "add_prefix_count", value)
-
-def set_username_postfix_count_enabled(value: bool):
-    state.USERNAME_POSTFIX_COUNT_ENABLED = value
-    write_config_bool("username_generator", "add_postfix_count", value)
-
-def set_username_prefix_count_start_at(value: int):
-    state.USERNAME_PREFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "prefix_count_start", str(value))
-
-def set_username_postfix_count_start_at(value: int):
-    state.USERNAME_POSTFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "postfix_count_start", str(value))
-
-# ============================================================
-# SIGNUP LOGIC (NO UI CODE HERE)
-# ============================================================
-
-def is_signup_success(r):
-    try:
-        data = r.json()
-    except ValueError:
-        return False, "Invalid JSON response"
-
-    if data.get("status") != "success":
-        return False, "Failed to signup: username existed or email used"
-
-    tokens = data.get("tokens", "")
-    if "csrf-token" not in tokens:
-        return False, "Missing CSRF token"
-
-    return True, "Signup success"
-
-
-def is_dns_error(exc: Exception) -> bool:
-    """
-    Detect DNS-related failures safely.
-    """
-    msg = str(exc).lower()
-
-    return (
-        isinstance(exc, requests.exceptions.ConnectionError)
-        and (
-            "getaddrinfo failed" in msg
-            or "name or service not known" in msg
-            or "failed to resolve" in msg
-        )
-    ) or isinstance(exc, socket.gaierror)
-
-
-def restart_windows(reason: str = ""):
-    """
-    Restart Windows immediately.
-    """
-    logger.critical("[SYSTEM] Restarting Windows due to DNS failure")
-    if reason:
-        logger.critical(f"[SYSTEM] Reason: {reason}")
-
-    # Force immediate restart
-    subprocess.run(
-        ["shutdown", "/r", "/t", "0"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
-    # Hard exit if shutdown is blocked
-    sys.exit(1)
-
-
-def safe_get(
-    session,
-    url,
-    retries=3,
-    delay=3,
-    restart_on_dns=False  # 🔥 toggle flag
-):
-    last_exception = None
-
-    for i in range(retries):
-        try:
-            return session.get(url, timeout=15)
-
-        except Exception as e:
-            last_exception = e
-            logger.warning(
-                f"[RETRY] GET failed ({i+1}/{retries}): {e}"
-            )
-
-            # Immediate escalation if DNS issue
-            if is_dns_error(e):
-                logger.error("[NETWORK] DNS resolution failure detected")
-
-                if restart_on_dns:
-                    restart_windows(reason=str(e))
-
-                break  # do not keep retrying DNS failures
-
-            time.sleep(delay)
-
-    raise RuntimeError(
-        "DNS resolution failed after retries"
-        if is_dns_error(last_exception)
-        else "HTTP GET failed after retries"
-    )
-
-def start_account_verification_async(username: str):
-    def worker():
-        try:
-            logger.info(f"[INFO] Starting verification process for {username}")
-            verifier = AccountVerifier(logger)
-            verifier.run(
-                mobile=get_auto_mobile_verification(),
-                email=get_auto_email_verification()
-            )
-            logger.info(f"[INFO] Account verification completed.")
-        except Exception:
-            logger.exception("[ERROR] Verification failed")
-
-    threading.Thread(
-        target=worker,
-        daemon=True
-    ).start()
-
-
-def signup_user(first_name, last_name, email, username, password):
-    session = requests.Session()
-    session.headers.update({
-        "user-agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "Chrome/143.0.0.0"
-        )
-    })
-
-    try:
-        # 1️⃣ GET signup page
-        resp = safe_get(session, SIGNUP_URL, restart_on_dns=get_auto_restart_dns())
-        resp.raise_for_status()
-
-        match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
-        if not match:
-            logger.error("[ERROR] Failed to get CSRF token.")
-            return False, "CSRF not found"
-
-        csrf = match.group(1)
-
-        fakeIp = random_public_ip()
-
-        payload = {
-            "_csrf": csrf,
-            "User[first_name]": first_name,
-            "User[last_name]": last_name,
-            "User[email]": email,
-            "User[display_name]": first_name,
-            "User[username]": username,
-            "User[password]": password,
-            "User[repeat_password]": password,
-            "User[role_id]": "player",
-            "User[timezone_id]": 1,
-            "User[ip_address]": fakeIp,
-            "User[status_id]": 1,
-            "User[user_referral_code]": "",
-            "User[send_sms]": 1,
-            "User[reCaptcha]": "",
-            "g-recaptcha-response": "",
-        }
-
-        raw_body = urlencode(payload)
-
-        headers = {
-            "content-type": "application/x-www-form-urlencoded",
-            "origin": BASE_URL,
-            "referer": SIGNUP_URL,
-            "x-csrf-token": csrf,
-            "x-requested-with": "XMLHttpRequest",
-        }
-
-        # 4️⃣ POST signup
-        r = session.post(
-            SIGNUP_URL,
-            headers=headers,
-            data=raw_body,
-            timeout=15,
-        )
-
-        success, msg = is_signup_success(r)
-
-        if success:
-            logger.info(f"[INFO] Account {username} created")
-            logger.info(f"[INFO] Password: {password}")
-            state.INGAME_STATE.setUsername(username)
-            state.INGAME_STATE.setPassword(password)
-            log_username(username)
-
-            if get_auto_email_verification() or get_auto_mobile_verification():
-                start_account_verification_async(username)
-
-            return True, msg
-        else:
-            logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
-            #logger.info(f"[DEBUG] Raw response: {r.text}")
-            return False, msg       
-
-    except (ConnectionError, Timeout, RemoteDisconnected) as e:
-        logger.warning(f"[NET] Signup dropped by server: {e}")
-        return False, "connection_dropped"
-    
-    except RequestException as e:
-        logger.error(f"[NETWORK_ERROR] Signup dropped by server: {e}")
-        return False, "Network error (DNS / connection failed)"
-
-    except Exception as e:
-        logger.exception("[FATAL] Unexpected signup error")
-        return False, str(e)
-
-# ============================================================
-# TKINTER UI
-# ============================================================
-
-def generate_username(prefix="", postfix=""):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    has_prefix = bool(prefix)
-    has_postfix = bool(postfix)
-
-    underscore_count = (1 if has_prefix else 0) + (1 if has_postfix else 0)
-    fixed_length = len(prefix) + len(postfix) + underscore_count
-
-    target_length = random.randint(
-        max(MIN_USERNAME_LENGTH, fixed_length + 1),
-        MAX_USERNAME_LENGTH
-    )
-
-    remaining = max(1, target_length - fixed_length)
-
-    random_part = generate_random_string(remaining, remaining)
-
-    if has_prefix and has_postfix:
-        return f"{prefix}{random_part}{postfix}"
-    elif has_prefix:
-        return f"{prefix}{random_part}"
-    elif has_postfix:
-        return f"{random_part}{postfix}"
-    else:
-        return random_part
-
-
-def generate_email(prefix="", postfix="", domain="mail.com", length=12):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    rand = generate_random_string(length, length)
-    local = "".join(p for p in [prefix, rand, postfix] if p)
-
-    return f"{local}@{domain}"
-
-
 
 # ============================================================
 # UI CALLBACKS
@@ -636,11 +196,7 @@ def start_rageborn_async(username, password):
 # ----------------- UI callbacks -----------------
 def get_effective_password():
     pwd = password_entry.get().strip()
-    return pwd if pwd else get_account_password
-
-def log_username(username, filename="signup_users.txt"):
-    with open(filename, "a", encoding="utf-8") as f:
-        f.write(username + "\n")
+    return pwd if pwd else state.get_account_password()
 
 def on_generate():
     prefix = prefix_entry.get().strip()
@@ -662,10 +218,10 @@ def on_generate():
         )
 
         if use_prefix_count:
-            set_username_prefix_count_start_at(prefix_counter - 1)
+            state.set_username_prefix_count_start_at(prefix_counter - 1)
 
         if use_postfix_count:
-            set_username_postfix_count_start_at(postfix_counter - 1)
+            state.set_username_postfix_count_start_at(postfix_counter - 1)
 
     else:
         # 🟢 Normal word-pool generator (existing behavior)
@@ -701,35 +257,36 @@ root.title(f"{INFO_NAME} v{VERSION}")
 auto_mode_var = tk.BooleanVar(value=False)
 duration_var = tk.StringVar(value="Duration: 00:00:00")
 iteration_var = tk.StringVar(value="Iterations completed: 0")
-auto_start_endless_var = tk.BooleanVar(value=get_auto_start_endless())
+auto_start_endless_var = tk.BooleanVar(value=state.get_auto_start_endless())
 auto_start_countdown_var = tk.StringVar(value="")
 auto_email_verification_var = tk.BooleanVar(
-    value=get_auto_email_verification()
+    value=state.get_auto_email_verification()
 )
 auto_mobile_verification_var = tk.BooleanVar(
-    value=get_auto_mobile_verification()
+    value=state.get_auto_mobile_verification()
 )
-auto_update_var = tk.BooleanVar(value=read_auto_update())
-auto_restart_dns_var = tk.BooleanVar(value=get_auto_restart_dns())
-settings_for_slower_pc_var = tk.BooleanVar(value=get_settings_for_slower_pc())
+auto_update_var = tk.BooleanVar(value=state.get_auto_update())
+auto_restart_dns_var = tk.BooleanVar(value=state.get_auto_restart_dns())
+settings_for_slower_pc_var = tk.BooleanVar(value=state.get_settings_for_slower_pc())
+is_ragequit_mode_enabled_var = tk.BooleanVar(value=state.get_is_ragequit_mode_enabled())
 
-_last_prefix_enabled = get_username_prefix_count_enabled()
-_last_postfix_enabled = get_username_postfix_count_enabled()
+_last_prefix_enabled = state.get_username_prefix_count_enabled()
+_last_postfix_enabled = state.get_username_postfix_count_enabled()
 
 add_prefix_count_var = tk.BooleanVar(
-    value=get_username_prefix_count_enabled()
+    value=state.get_username_prefix_count_enabled()
 )
 
 add_postfix_count_var = tk.BooleanVar(
-    value=get_username_postfix_count_enabled()
+    value=state.get_username_postfix_count_enabled()
 )
 
 prefix_count_start_var = tk.IntVar(
-    value=get_username_prefix_count_start_at()
+    value=state.get_username_prefix_count_start_at()
 )
 
 postfix_count_start_var = tk.IntVar(
-    value=get_username_postfix_count_start_at()
+    value=state.get_username_postfix_count_start_at()
 )
 
 def make_debouncer(root, delay, func):
@@ -966,7 +523,7 @@ def on_browse_executable():
         return
 
     game_exe_var.set(exe_path)
-    set_game_executable(exe_path)
+    state.set_game_executable(exe_path)
 
     logger.info(f"[INFO] Game executable set: {exe_path}")
     exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
@@ -1043,13 +600,13 @@ def validate_game_executable(show_error=True):
 
 def on_auto_start_checkbox_changed():    
     value = auto_start_endless_var.get()
-    set_auto_start_endless(value)
+    state.set_auto_start_endless(value)
 
     if value:
         # ✅ validate only (DO NOT LAUNCH)
         if not validate_game_executable():
             auto_start_endless_var.set(False)
-            set_auto_start_endless(False)
+            state.set_auto_start_endless(False)
             cancel_auto_start_endless()
             logger.error("[ERROR] Invalid game executable, auto-start cancelled")
             return
@@ -1075,7 +632,7 @@ def try_auto_start_from_config():
         )
 
         auto_start_endless_var.set(False)
-        set_auto_start_endless(False)
+        state.set_auto_start_endless(False)
         auto_start_countdown_var.set("")
         return
 
@@ -1165,25 +722,25 @@ def set_endless_mode_ui_idle():
     )
 
 def on_auto_email_verification_changed():
-    set_auto_email_verification(
+    state.set_auto_email_verification(
         auto_email_verification_var.get()
     )
 
 def on_auto_mobile_verification_changed():
-    set_auto_mobile_verification(
+    state.set_auto_mobile_verification(
         auto_mobile_verification_var.get()
     )
 
 def on_auto_update_changed():
-    set_auto_update(
+    state.set_auto_update(
         auto_update_var.get()
     )
 
 def on_username_prefix_add_count_changed():
-    set_username_prefix_count_enabled(add_prefix_count_var.get())
+    state.set_username_prefix_count_enabled(add_prefix_count_var.get())
 
 def on_username_postfix_add_count_changed():
-    set_username_postfix_count_enabled(add_postfix_count_var.get())
+    state.set_username_postfix_count_enabled(add_postfix_count_var.get())
 
 def on_prefix_checkbox_toggle():
     global _last_prefix_enabled
@@ -1192,14 +749,14 @@ def on_prefix_checkbox_toggle():
 
     if enabled and not _last_prefix_enabled:
         prefix_count_start_var.set(1)
-        set_username_prefix_count_start_at(1)
+        state.set_username_prefix_count_start_at(1)
         reset_prefix_counters()
 
     prefix_count_entry.config(
         state="normal" if enabled else "disabled"
     )
 
-    set_username_prefix_count_enabled(enabled)
+    state.set_username_prefix_count_enabled(enabled)
     _last_prefix_enabled = enabled
 
 
@@ -1210,14 +767,14 @@ def on_postfix_checkbox_toggle():
 
     if enabled and not _last_postfix_enabled:
         postfix_count_start_var.set(1)
-        set_username_postfix_count_start_at(1)
+        state.set_username_postfix_count_start_at(1)
         reset_postfix_counters()
 
     postfix_count_entry.config(
         state="normal" if enabled else "disabled"
     )
 
-    set_username_postfix_count_enabled(enabled)
+    state.set_username_postfix_count_enabled(enabled)
     _last_postfix_enabled = enabled
 
 def on_prefix_count_changed(*_):
@@ -1229,7 +786,7 @@ def on_prefix_count_changed(*_):
     except tk.TclError:
         return  # user is still typing / entry temporarily empty
 
-    set_username_prefix_count_start_at(value)
+    state.set_username_prefix_count_start_at(value)
     set_prefix_counters(value)
 
 
@@ -1242,7 +799,7 @@ def on_postfix_count_changed(*_):
     except tk.TclError:
         return
 
-    set_username_postfix_count_start_at(value)
+    state.set_username_postfix_count_start_at(value)
     set_postfix_counters(value)
 
 
@@ -1371,18 +928,16 @@ def build_chat_placeholder_guide(parent):
     )
     label.pack(fill="x")
 
-
-
 # ============================================================
 # Text field handler
-debounced_firstname_save = make_debouncer(root, DEBOUNCE_MS, set_account_firstname)
-debounced_lastname_save = make_debouncer(root, DEBOUNCE_MS, set_account_lastname)
-debounced_email_domain_save = make_debouncer(root, DEBOUNCE_MS, set_account_email_domain)
-debounced_password_save = make_debouncer(root, DEBOUNCE_MS, set_account_password)
-debounced_prefix_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix)
-debounced_prefix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix_count_start_at)
-debounced_postfix_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix)
-debounced_postfix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix_count_start_at)
+debounced_firstname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_firstname)
+debounced_lastname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_lastname)
+debounced_email_domain_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_email_domain)
+debounced_password_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_password)
+debounced_prefix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix)
+debounced_prefix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix_count_start_at)
+debounced_postfix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix)
+debounced_postfix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix_count_start_at)
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -1412,18 +967,18 @@ main_frame.columnconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 main_frame.rowconfigure(0, weight=1)
 
-first_name_entry = labeled_entry(form_frame, "First Name", get_account_firstname())
-last_name_entry = labeled_entry(form_frame, "Last Name", get_account_lastname())
-prefix_entry = labeled_entry(form_frame, "Prefix (optional)", get_username_prefix())
-postfix_entry = labeled_entry(form_frame, "Postfix (optional)", get_username_postfix())
-domain_entry = labeled_entry(form_frame, "Email Domain", get_account_email_domain())
+first_name_entry = labeled_entry(form_frame, "First Name", state.get_account_firstname())
+last_name_entry = labeled_entry(form_frame, "Last Name", state.get_account_lastname())
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)", state.get_username_prefix())
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)", state.get_username_postfix())
+domain_entry = labeled_entry(form_frame, "Email Domain", state.get_account_email_domain())
 email_entry = labeled_entry(form_frame, "Email")
 username_entry = labeled_entry(form_frame, "Username")
-password_entry = labeled_entry(form_frame, "Password", get_account_password())
+password_entry = labeled_entry(form_frame, "Password", state.get_account_password())
 
 vcmd_int = root.register(validate_int_only)
 
-game_exe_var = tk.StringVar(value=get_game_executable())
+game_exe_var = tk.StringVar(value=state.get_game_executable())
 exe_header = tk.Frame(form_frame)
 exe_header.pack(fill="x", pady=(8, 0))
 
@@ -1581,7 +1136,7 @@ tk.Checkbutton(
     app_settings_row,
     text="Auto Restart PC on DNS Failure",
     variable=auto_restart_dns_var,
-    command=lambda: set_auto_restart_dns(auto_restart_dns_var.get())
+    command=lambda: state.set_auto_restart_dns(auto_restart_dns_var.get())
 ).grid(row=0, column=1, sticky="w")
 
 app_settings_row2 = tk.Frame(app_settings_frame)
@@ -1591,8 +1146,16 @@ tk.Checkbutton(
     app_settings_row2,
     text="Settings for Slower PC",
     variable=settings_for_slower_pc_var,
-    command=lambda: set_settings_for_slower_pc(settings_for_slower_pc_var.get())
+    command=lambda: state.set_settings_for_slower_pc(settings_for_slower_pc_var.get())
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
+
+tk.Checkbutton(
+    app_settings_row2,
+    text="Use Ragequit Mode",
+    variable=is_ragequit_mode_enabled_var,
+    command=lambda: state.set_is_ragequit_mode_enabled(is_ragequit_mode_enabled_var.get()),
+    fg="red"
+).grid(row=0, column=1, sticky="w")
 
 # ============================================================
 username_settings_frame = tk.LabelFrame(

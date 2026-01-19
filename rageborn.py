@@ -1,31 +1,34 @@
 import pyautogui
-import numpy as np
 import time
-import win32api
 import win32gui
 import win32con
 import win32process
 import psutil
-from threads.hwnd_watchdog import start_hwnd_watchdog
-from utilities.appUtilities import is_fullscreen
-from utilities.loggerSetup import setup_logger
 import threading
 import utilities.constants as constant
-from threads.ingame import vote_requester, lobby_message_check_requester
-from utilities.common import interruptible_wait, interruptible_wait
-from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, image_exists_in_any_region
-from core.parameters import TARGETING_HERO
 import core.state as state
-from utilities.datasetLoader import load_dataset
 import utilities.coordinateAccess as assetsLibrary
 import keyboard
 import random
 import os
 import subprocess
+
+from threads.hwnd_watchdog import start_hwnd_watchdog
+from utilities.loggerSetup import setup_logger
+from threads.ingame import vote_requester, lobby_message_check_requester
+from utilities.common import interruptible_wait, interruptible_wait
+from utilities.imagesUtilities import find_and_click, image_exists, any_image_exists, image_exists_in_any_region
+from utilities.datasetLoader import load_dataset
 from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
+from utilities.accountGenerator import generate
+
 # Initialize Logger
 logger = setup_logger()
+
+from utilities.config import load_config
+# Load Config at startup
+load_config()
 
 # Safety: Move mouse to top-left to abort
 pyautogui.FAILSAFE = True
@@ -73,8 +76,11 @@ def start(username, password):
         # Validate Coordinate
         validate_coords(COORDS)
 
+        if state.RAGEQUIT_MODE:
+            logger.info("[INFO] RAGEQUIT MODE ENABLED")
+
         #
-        main(username, password)
+        main(username, password, isRageQuit=state.RAGEQUIT_MODE)
     finally:
         logger.info("[MAIN] shutting down")        
         stop_powershell()
@@ -308,7 +314,7 @@ def unpin_jokevio():
 #
 def type_text(text, enter=False):
     pyautogui.write(text, interval=0.05)
-    time.sleep(0.7)
+    interruptible_wait(0.7)
     if enter:
         pyautogui.press("enter")
 
@@ -509,18 +515,44 @@ def enterChat(text):
     pyautogui.click()
     type_text(text=text, enter=True)
 
-def pickingPhaseChat():
-    chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
-    if random.random() < chatChance:
-        # TODO: in sequence or random
-        randomString = get_ingame_chats()
+def pickingPhaseChat(isRageQuit: bool = False):
+    if not isRageQuit:
+        chatChance = 0.5 if not state.SLOWER_PC_MODE else 0.3 
+        if random.random() < chatChance:
+            # TODO: in sequence or random
+            randomString = get_picking_chats()
+            if not randomString:
+                return
+
+            text = random.choice(randomString)
+            text = apply_chat_placeholders(text)        
+            enterChat(text)
+    else:
+        if image_exists("team-chat-button.png", region=constant.SCREEN_REGION):
+            pyautogui.click(1068, 836) # toggle chat to all
+        randomString = get_picking_chats()
         if not randomString:
             return
-
         text = random.choice(randomString)
-        text = apply_chat_placeholders(text)        
+        text = apply_chat_placeholders(text)
+        text = "^r^:FAIL PC GAME!!!" # testing
         enterChat(text)
 
+        spamTimeout = round(random.uniform(3, 7), 2)
+        start = time.time()
+
+        while not state.STOP_EVENT.is_set():
+            if time.time() - start >= spamTimeout:
+                break
+
+            pyautogui.press("up")
+            pyautogui.press("enter")
+
+            # sleep BUT remain interruptible
+            if interruptible_wait(0.05):
+                break
+
+    return True
 
 def continuePickingPhaseChat():
     chatChance = 0.375 if not state.SLOWER_PC_MODE else 0.2
@@ -560,188 +592,209 @@ def continuePickingPhaseChat():
                 enterChat(text)
 
 
-def pickingPhase():
+def pickingPhase(isRageQuit: bool = False):
 
     # Just in case
     if image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
         interruptible_wait(0.5)
 
-    match state.INGAME_STATE.getCurrentMap():
-        case constant.MAP_FOC:
+    if isRageQuit:
+        username = None
+        password = None
+        status = False
+        while not state.STOP_EVENT.is_set():
+            status, username, password = generate()
+            if status:
+                logger.info(f"[INFO] Generated Username: {username}")
+                break
 
-            logger.info("[INFO] Detecting role..")
+            interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
 
-            # TODO: detect role that appear onscreen
-            carryRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_CARRY)
-            softSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
-            hardSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
-            offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
-            midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
+        pickingPhaseChat(isRageQuit)
 
-            timeout = 5 if not state.SLOWER_PC_MODE else 10
-            role = constant.FOC_ROLE_HARD_SUPPORT # default role
-            roleCheckStart = time.time()
-            while not state.STOP_EVENT.is_set():
-                now = time.time()
-                if image_exists(carryRole):
-                    logger.info("[INFO] Assignated Role: Carry")
-                    role = constant.FOC_ROLE_CARRY
-                    break
-                elif image_exists(softSupportRole):
-                    logger.info("[INFO] Assignated Role: Soft Support")
-                    role = constant.FOC_ROLE_SOFT_SUPPORT
-                    break
-                elif image_exists(hardSupportRole):
-                    logger.info("[INFO] Assignated Role: Hard Support")
-                    role = constant.FOC_ROLE_HARD_SUPPORT
-                    break
-                elif image_exists(offlaneRole):
-                    logger.info("[INFO] Assignated Role: Offlane")
-                    role = constant.FOC_ROLE_OFFLANE
-                    break
-                elif image_exists(midRole):
-                    logger.info("[INFO] Assignated Role: Mid")
-                    role = constant.FOC_ROLE_MID
-                    break
-                elif now - roleCheckStart > timeout:
-                    logger.info(f"[INFO] Unable to detect role.. use {role}")
-                    break
+        # Ragequit
+        logger.info("[INFO] Waiting to change account")
+        interruptible_wait(round(random.uniform(1, 3), 2))
+        
+        # random wait
+        return True, username, password
+    else:
+        match state.INGAME_STATE.getCurrentMap():
+            case constant.MAP_FOC:
 
-            state.INGAME_STATE.setFocRole(role=role)
+                logger.info("[INFO] Detecting role..")
 
-            randomWaitingChance = 0.6
-            if random.random() < randomWaitingChance:
-                interruptible_wait(round(random.uniform(5, 10), 2))
+                # TODO: detect role that appear onscreen
+                carryRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_CARRY)
+                softSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
+                hardSupportRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_SOFT_SUPPORT)
+                offlaneRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_OFFLANE)
+                midRole = assetsLibrary.get_foc_role_information(constant.FOC_ROLE_MID)
 
-            notafkChance = 0.93
-            if random.random() < notafkChance: 
-                x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
-                pyautogui.moveTo(x, y, duration=0.3)
-                pyautogui.click() # dismiss foc role information
-                logger.info("[INFO] FOC Role information dismissed..")
-                logger.info("[INFO] Picking phase begin..")
-                interruptible_wait(round(random.uniform(0.5, 1), 2))            
+                timeout = 5 if not state.SLOWER_PC_MODE else 10
+                role = constant.FOC_ROLE_HARD_SUPPORT # default role
+                roleCheckStart = time.time()
+                while not state.STOP_EVENT.is_set():
+                    now = time.time()
+                    if image_exists(carryRole):
+                        logger.info("[INFO] Assignated Role: Carry")
+                        role = constant.FOC_ROLE_CARRY
+                        break
+                    elif image_exists(softSupportRole):
+                        logger.info("[INFO] Assignated Role: Soft Support")
+                        role = constant.FOC_ROLE_SOFT_SUPPORT
+                        break
+                    elif image_exists(hardSupportRole):
+                        logger.info("[INFO] Assignated Role: Hard Support")
+                        role = constant.FOC_ROLE_HARD_SUPPORT
+                        break
+                    elif image_exists(offlaneRole):
+                        logger.info("[INFO] Assignated Role: Offlane")
+                        role = constant.FOC_ROLE_OFFLANE
+                        break
+                    elif image_exists(midRole):
+                        logger.info("[INFO] Assignated Role: Mid")
+                        role = constant.FOC_ROLE_MID
+                        break
+                    elif now - roleCheckStart > timeout:
+                        logger.info(f"[INFO] Unable to detect role.. use {role}")
+                        break
 
-                hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
-                logger.info(f"[INFO] Selecting {hero}")
-                pyautogui.moveTo(hx1, hy1, duration=0.3)
-                interruptible_wait(round(random.uniform(0.4, 1), 2))
+                state.INGAME_STATE.setFocRole(role=role)
 
-                shuffleSelectionChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
-                if random.random() < shuffleSelectionChance:
-                    number = random.randint(3, 6)
-                    for i in range(number):
-                        hero, hx, hy = assetsLibrary.get_role_heroes_coord(role)
-                        #logger.info(f"[INFO] Showcasing shuffle hero")
-                        pyautogui.moveTo(hx, hy, duration=0.3)
-                        pyautogui.click()
-                        interruptible_wait(round(random.uniform(0.7, 1.5), 2))
-                    pyautogui.moveTo(hx1, hy1, duration=0.3)
+                randomWaitingChance = 0.6
+                if random.random() < randomWaitingChance:
+                    interruptible_wait(round(random.uniform(5, 10), 2))
 
-                shadowpickChance = 0.65
-                if random.random() < shadowpickChance:
-                    pyautogui.click()
-                    interruptible_wait(round(random.uniform(4, 7), 2))                    
-                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                notafkChance = 0.93
+                if random.random() < notafkChance: 
+                    x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
+                    pyautogui.moveTo(x, y, duration=0.3)
+                    pyautogui.click() # dismiss foc role information
+                    logger.info("[INFO] FOC Role information dismissed..")
+                    logger.info("[INFO] Picking phase begin..")
+                    interruptible_wait(round(random.uniform(0.5, 1), 2))            
 
-                    randomWaitChance = 0.3
-                    if random.random() < randomWaitChance:
-                        interruptible_wait(round(random.uniform(5, 8), 2))
-
-                    reselectChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
-                    if random.random() < reselectChance:
-                        hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
-                        #logger.info(f"[INFO] Re-selecting {hero}")
-                        pyautogui.moveTo(hx2, hy2, duration=0.3)
-
-                        chance = 0.5 if not state.SLOWER_PC_MODE else 0.3
-                        if random.random() < chance:
-                            pyautogui.click()
-                        else:
-                            pyautogui.doubleClick()
-                        pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
-                        interruptible_wait(round(random.uniform(0.3, 0.6), 2))
-
-                else:
-                    pyautogui.doubleClick()
-                    pyautogui.doubleClick()
-                    logger.info(f"[INFO] {hero} selected")
-                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
-                    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
-
-                # team chat
-                if not state.SLOWER_PC_MODE:
-                    pickingPhaseChat()
-                    interruptible_wait(round(random.uniform(7, 11), 2))
-                    continuePickingPhaseChat()            
-            else:
-                logger.info("[INFO] Bot decided to AFK")
-                state.INGAME_STATE.setIsAfk(True)
-                interruptible_wait(round(random.uniform(35, 45), 2))
-                comebackChance = 0.2 if not state.SLOWER_PC_MODE else 0.15
-                if random.random() < comebackChance:
-                    state.INGAME_STATE.setIsAfk(False)
-                    logger.info("[INFO] Bot is back from AFK")
                     hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
                     logger.info(f"[INFO] Selecting {hero}")
                     pyautogui.moveTo(hx1, hy1, duration=0.3)
-                    pyautogui.doubleClick()
-                    x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
-                    pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                    interruptible_wait(round(random.uniform(0.4, 1), 2))
 
-            logger.info("[INFO] Waiting to rageborn")
-            # TODO: Alternative hero selection
-            # TODO: Separated grief mode
-            # if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
-            #     logger.info(f"[INFO] {TARGETING_HERO} selected")
-            #     interruptible_wait(0.5)        
-            #     pyautogui.moveTo(x, y, duration=0.3) # move off hover hero selection
-            #     logger.info("[INFO] Waiting to rageborn")
-            # else:
-            #     # TODO: Random is just fine?
-            #     logger.info(f"[INFO] {TARGETING_HERO} banned!")
-            #     logger.info("[INFO] Waiting to get random hero.")
+                    shuffleSelectionChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
+                    if random.random() < shuffleSelectionChance:
+                        number = random.randint(3, 6)
+                        for i in range(number):
+                            hero, hx, hy = assetsLibrary.get_role_heroes_coord(role)
+                            #logger.info(f"[INFO] Showcasing shuffle hero")
+                            pyautogui.moveTo(hx, hy, duration=0.3)
+                            pyautogui.click()
+                            interruptible_wait(round(random.uniform(0.7, 1.5), 2))
+                        pyautogui.moveTo(hx1, hy1, duration=0.3)
 
-        case constant.MAP_MIDWAR:
-            x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
-            interruptible_wait(round(random.uniform(5, 10), 2))
-            logger.info("[INFO] Waiting banning phase.")
-            hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
-            pyautogui.moveTo(bx, by, duration=0.3)
-            pyautogui.doubleClick()
-            logger.info(f"[INFO] Hero {hero} is now banned!")
-            logger.info("[INFO] Waiting picking phase.")
-            interruptible_wait(round(random.uniform(1, 5), 2))
-            pyautogui.moveTo(x, y, duration=0.3)
+                    shadowpickChance = 0.65
+                    if random.random() < shadowpickChance:
+                        pyautogui.click()
+                        interruptible_wait(round(random.uniform(4, 7), 2))                    
+                        pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
 
-            while not state.STOP_EVENT.is_set():
-                if image_exists("choose-a-hero-button.png"):
-                    break
+                        randomWaitChance = 0.3
+                        if random.random() < randomWaitChance:
+                            interruptible_wait(round(random.uniform(5, 8), 2))
 
-                interruptible_wait(round(random.uniform(1, 2), 2))
+                        reselectChance = 0.3 if not state.SLOWER_PC_MODE else 0.2
+                        if random.random() < reselectChance:
+                            hero, hx2, hy2 = assetsLibrary.get_role_heroes_coord(role)
+                            #logger.info(f"[INFO] Re-selecting {hero}")
+                            pyautogui.moveTo(hx2, hy2, duration=0.3)
 
-            logger.info("[INFO] Picking phase.")
-            interruptible_wait(round(random.uniform(10, 30), 2))
-            hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
-            pyautogui.moveTo(bx, by, duration=0.3)
-            pyautogui.doubleClick()
-            logger.info(f"[INFO] Hero {hero} is now selected!")
-            pyautogui.moveTo(x, y, duration=0.3)
+                            chance = 0.5 if not state.SLOWER_PC_MODE else 0.3
+                            if random.random() < chance:
+                                pyautogui.click()
+                            else:
+                                pyautogui.doubleClick()
+                            pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                            interruptible_wait(round(random.uniform(0.3, 0.6), 2))
 
-    while not state.STOP_EVENT.is_set():
-        if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
-            logger.info("[INFO] I see fountain, I see grief!")
-            logger.info("[INFO] Rageborn begin!")
-            interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
-            return True
-        
-        elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
-            # Back to lobby
-            logger.info("[INFO] Match aborted!")
-            return False
-        
-        interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+                    else:
+                        pyautogui.doubleClick()
+                        pyautogui.doubleClick()
+                        logger.info(f"[INFO] {hero} selected")
+                        pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+                        interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
+
+                    # team chat
+                    if not state.SLOWER_PC_MODE:
+                        pickingPhaseChat()
+                        interruptible_wait(round(random.uniform(7, 11), 2))
+                        continuePickingPhaseChat()            
+                else:
+                    logger.info("[INFO] Bot decided to AFK")
+                    state.INGAME_STATE.setIsAfk(True)
+                    interruptible_wait(round(random.uniform(35, 45), 2))
+                    comebackChance = 0.2 if not state.SLOWER_PC_MODE else 0.15
+                    if random.random() < comebackChance:
+                        state.INGAME_STATE.setIsAfk(False)
+                        logger.info("[INFO] Bot is back from AFK")
+                        hero, hx1, hy1 = assetsLibrary.get_role_heroes_coord(role)
+                        logger.info(f"[INFO] Selecting {hero}")
+                        pyautogui.moveTo(hx1, hy1, duration=0.3)
+                        pyautogui.doubleClick()
+                        x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
+                        pyautogui.moveTo(x, y, duration=0.3) # dismiss hero hover information
+
+                # TODO: Alternative hero selection
+                # TODO: Separated grief mode
+                # if click_until_image_appears(f"heroes/{TARGETING_HERO}/picking-phase.png", [f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-legion.png",f"heroes/{TARGETING_HERO}/picking-phase-self-portrait-hellbourne.png"], 60, 0.5) == True:
+                #     logger.info(f"[INFO] {TARGETING_HERO} selected")
+                #     interruptible_wait(0.5)        
+                #     pyautogui.moveTo(x, y, duration=0.3) # move off hover hero selection
+                #     logger.info("[INFO] Waiting to rageborn")
+                # else:
+                #     # TODO: Random is just fine?
+                #     logger.info(f"[INFO] {TARGETING_HERO} banned!")
+                #     logger.info("[INFO] Waiting to get random hero.")
+
+            case constant.MAP_MIDWAR:
+                x,y = assetsLibrary.get_picking_dismiss_safezone_coord()
+                interruptible_wait(round(random.uniform(5, 10), 2))
+                logger.info("[INFO] Waiting banning phase.")
+                hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
+                pyautogui.moveTo(bx, by, duration=0.3)
+                pyautogui.doubleClick()
+                logger.info(f"[INFO] Hero {hero} is now banned!")
+                logger.info("[INFO] Waiting picking phase.")
+                interruptible_wait(round(random.uniform(1, 5), 2))
+                pyautogui.moveTo(x, y, duration=0.3)
+
+                while not state.STOP_EVENT.is_set():
+                    if image_exists("choose-a-hero-button.png"):
+                        break
+
+                    interruptible_wait(round(random.uniform(1, 2), 2))
+
+                logger.info("[INFO] Picking phase.")
+                interruptible_wait(round(random.uniform(10, 30), 2))
+                hero, bx, by = assetsLibrary.get_heroes_coord(random_pick=True)
+                pyautogui.moveTo(bx, by, duration=0.3)
+                pyautogui.doubleClick()
+                logger.info(f"[INFO] Hero {hero} is now selected!")
+                pyautogui.moveTo(x, y, duration=0.3)
+
+        logger.info("[INFO] Waiting to rageborn")
+        while not state.STOP_EVENT.is_set():
+            if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
+                logger.info("[INFO] I see fountain, I see grief!")
+                logger.info("[INFO] Rageborn begin!")
+                interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
+                return True
+            
+            elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+                # Back to lobby
+                logger.info("[INFO] Match aborted!")
+                return False
+            
+            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
 
 # pause vote
 def do_pause_vote():
@@ -1110,8 +1163,27 @@ def ingame():
         case constant.MAP_MIDWAR:
             do_midwar_stuff()
 
+def logoutRelog(username, password):
+    logger.info("[INFO] Logout and Login")
+    pyautogui.click(1415, 235)
+    pyautogui.click(1000, 425)
+    interruptible_wait(2)
+    pyautogui.click(991, 341)
+    interruptible_wait(1)
+
+    # logout
+    pyautogui.click(1415, 235)
+    interruptible_wait(0.5)
+    pyautogui.doubleClick(1010, 568)
+
+    type_text(username)
+    pyautogui.press("tab")
+    pyautogui.press("enter")
+    # TODO: if fail to login, but low chance unless different password setup
+    return True
+
 #
-def main(username, password):
+def main(username, password, isRageQuit: bool = False):
     logger.info("[INFO] Rageborn boot up...")
 
     try:
@@ -1132,10 +1204,10 @@ def main(username, password):
                     break
                 
                 #
-                result = pickingPhase()          
+                result, username, password = pickingPhase(isRageQuit)          
 
-                if not result:
-
+                if not isRageQuit and not result:
+                    # Rageborn match aborted
                     messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
                     while not state.STOP_EVENT.is_set():
                         if not check_lobby_message():
@@ -1149,7 +1221,10 @@ def main(username, password):
                     logger.warning("[QUEUE] Match aborted, restarting queue")
                     continue
 
-                ingame()
+                if not isRageQuit:
+                    ingame()
+                else:
+                    logoutRelog(username, password)
 
         logger.info("[INFO] Rageborn shutting down...")
     
