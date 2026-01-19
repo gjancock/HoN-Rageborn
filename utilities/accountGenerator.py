@@ -21,9 +21,9 @@ def generate():
     firstname = state.get_account_firstname()
     lastname = state.get_account_lastname()
 
-    logger.info(f"[INFO] Generated Username: {username}")
-    logger.info(f"[INFO] Generated Email: {email}")
-    logger.info(f"[INFO] Password: {password}")
+    #logger.info(f"[DEBUG] Generated Username: {username}")
+    #logger.info(f"[DEBUG] Generated Email: {email}")
+    #logger.info(f"[DEBUG] Password: {password}")
 
     status = signup_user(firstname, lastname, email, username, password)
     return status, username, password
