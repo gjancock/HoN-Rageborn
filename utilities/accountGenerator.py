@@ -25,7 +25,7 @@ def generate():
     #logger.info(f"[DEBUG] Generated Email: {email}")
     #logger.info(f"[DEBUG] Password: {password}")
 
-    status = signup_user(firstname, lastname, email, username, password)
+    status = signup_user(firstname, lastname, email, username, password, False)
     return status, username, password
 
 def generateMandatoryField():

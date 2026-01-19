@@ -22,6 +22,7 @@ from utilities.datasetLoader import load_dataset
 from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
 from utilities.accountGenerator import generate
+from utilities.networkUtilities import getDisconnected, reconnect, wait_for_ping
 
 # Initialize Logger
 logger = setup_logger()
@@ -1170,24 +1171,48 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    logger.info("[INFO] Logout and Login")
-    pyautogui.click(1415, 235)
-    pyautogui.click(1000, 425)
-    interruptible_wait(2)
-    pyautogui.click(991, 341)
-    interruptible_wait(1)
+    adapter = getDisconnected()
+    logger.info("[INFO] Get Timed out NOW!")
 
-    # logout
-    pyautogui.click(1415, 235)
-    interruptible_wait(0.5)
+    # pyautogui.hotkey("ctrl", "f8")
+    # interruptible_wait(0.5)
+    # type_text("logout", True)
+    # pyautogui.hotkey("ctrl", "f8")
+
+    #interruptible_wait(1)
+        
+    reconnect(adapter)
+    logger.info("[INFO] Waiting to reconnect...")
+    restored = wait_for_ping(timeout=30)
+    if restored:
+        logger.info("[INFO] Got back connection!")
+        # pyautogui.click(1415, 235)
+        # pyautogui.click(1000, 425)
+        # interruptible_wait(2)
+        # pyautogui.click(991, 341)
+        interruptible_wait(5)
+
+    while not state.STOP_EVENT.is_set():
+        if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
+            logger.info("[INFO] At login page..")
+            break
+
+        if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            pyautogui.click(1415, 235) #logout
+            break
+
+        interruptible_wait(0.3)
+
+    # # logout
+    # pyautogui.click(1415, 235)
+    interruptible_wait(3)
     pyautogui.doubleClick(1010, 568)
-
     type_text(username)
     pyautogui.press("tab")
     pyautogui.press("enter")
     # TODO: if fail to login, but low chance unless different password setup
     
-    timeout = 1.5
+    timeout = 2
     loginTime = time.time()
     while not state.STOP_EVENT.is_set():
         now = time.time()
@@ -1196,6 +1221,12 @@ def logoutRelog(username, password):
             pyautogui.click(1010, 568)
             pyautogui.press("tab")
             pyautogui.press("enter")
+            break
+
+        if any_image_exists([
+            "play-button.png", "play-button-christmas.png"
+            ], region=constant.SCREEN_REGION):
+            logger.info(f"[LOGIN] Successfully logged in as {username}")
             break
 
     return True

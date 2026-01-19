@@ -1,4 +1,10 @@
 # =========================================================================== #
+# v1.10.3 - Feature Enhancement (19 January 2026)
+# =========================================================================== #
+- [x] Added disconnect / reconnect feature for Ragequit mode.
+- [x] Reoptimize performance on Ragequit mode with connection.
+
+# =========================================================================== #
 # v1.10.2 - Feature Enhancement (19 January 2026)
 # =========================================================================== #
 - [x] Added failsafe detection for Ragequit mode on relogin part.
