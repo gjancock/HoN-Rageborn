@@ -377,8 +377,8 @@ def prequeue():
 
         interruptible_wait(0.7)    
 
-def startQueue():
-    interruptible_wait(1.25)
+def startQueue(isRageQuit: bool = False):
+    interruptible_wait(1.25 if not isRageQuit else 0.5)
 
     #
     isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
@@ -400,7 +400,7 @@ def startQueue():
 
     # Click queue button
     x, y = assetsLibrary.get_queue_button_coord()
-    pyautogui.moveTo(x, y, duration=0.3)
+    pyautogui.moveTo(x, y, duration=0.1)
     interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
     pyautogui.click()    
     interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 3)
@@ -1186,6 +1186,18 @@ def logoutRelog(username, password):
     pyautogui.press("tab")
     pyautogui.press("enter")
     # TODO: if fail to login, but low chance unless different password setup
+    
+    timeout = 1.5
+    loginTime = time.time()
+    while not state.STOP_EVENT.is_set():
+        now = time.time()
+
+        if now - loginTime >= timeout and image_exists("startup/username-field.png", region=constant.SCREEN_REGION):    
+            pyautogui.click(1010, 568)
+            pyautogui.press("tab")
+            pyautogui.press("enter")
+            break
+
     return True
 
 #
