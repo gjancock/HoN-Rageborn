@@ -21,7 +21,7 @@ from utilities.accountVerification import AccountVerifier
 logger = setup_logger()
 
 # Main Function
-def signup_user(first_name, last_name, email, username, password):
+def signup_user(first_name, last_name, email, username, password, asyncVerification: bool = True):
     session = requests.Session()
     session.headers.update({
         "user-agent": (
@@ -91,7 +91,7 @@ def signup_user(first_name, last_name, email, username, password):
             log_username(username)
 
             if state.get_auto_email_verification() or state.get_auto_mobile_verification():
-                start_account_verification_async(username)
+                start_account_verification(username, async_mode=asyncVerification)
 
             return True, msg
         else:
@@ -199,7 +199,10 @@ def restart_windows(reason: str = ""):
     # Hard exit if shutdown is blocked
     sys.exit(1)
 
-def start_account_verification_async(username: str):
+def start_account_verification(
+    username: str,
+    async_mode: bool = True
+) -> bool | None:
     def worker():
         try:
             logger.info(f"[INFO] Starting verification process for {username}")
@@ -208,11 +211,20 @@ def start_account_verification_async(username: str):
                 mobile=state.get_auto_mobile_verification(),
                 email=state.get_auto_email_verification()
             )
-            logger.info(f"[INFO] Account verification completed.")
+            logger.info("[INFO] Account verification completed.")
         except Exception:
             logger.exception("[ERROR] Verification failed")
 
-    threading.Thread(
-        target=worker,
-        daemon=True
-    ).start()
+    if async_mode:
+        threading.Thread(
+            target=worker,
+            name=f"AccountVerification-{username}",
+            daemon=True
+        ).start()
+        return None   # explicitly say: async has no result
+    else:
+        try:
+            worker()
+            return True
+        except Exception:
+            return False

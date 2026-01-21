@@ -22,6 +22,7 @@ from utilities.datasetLoader import load_dataset
 from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
 from utilities.accountGenerator import generate
+from utilities.networkUtilities import getDisconnected, reconnect, wait_for_ping
 
 # Initialize Logger
 logger = setup_logger()
@@ -377,8 +378,8 @@ def prequeue():
 
         interruptible_wait(0.7)    
 
-def startQueue():
-    interruptible_wait(1.25)
+def startQueue(isRageQuit: bool = False):
+    interruptible_wait(1.25 if not isRageQuit else 0.5)
 
     #
     isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
@@ -400,7 +401,7 @@ def startQueue():
 
     # Click queue button
     x, y = assetsLibrary.get_queue_button_coord()
-    pyautogui.moveTo(x, y, duration=0.3)
+    pyautogui.moveTo(x, y, duration=0.1)
     interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
     pyautogui.click()    
     interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 3)
@@ -1170,22 +1171,70 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    logger.info("[INFO] Logout and Login")
-    pyautogui.click(1415, 235)
-    pyautogui.click(1000, 425)
-    interruptible_wait(2)
-    pyautogui.click(991, 341)
-    interruptible_wait(1)
+    timedoutChance = 0.55
+    if random.random() < timedoutChance:
+        adapter = getDisconnected()
+        logger.info("[INFO] Get Timed out NOW!")
+            
+        reconnect(adapter)
+        logger.info("[INFO] Waiting to reconnect...")
+        restored = wait_for_ping(timeout=30)
+        if restored:
+            logger.info("[INFO] Got back connection!")
+            # pyautogui.click(1415, 235)
+            # pyautogui.click(1000, 425)
+            # interruptible_wait(2)
+            # pyautogui.click(991, 341)
+            interruptible_wait(5)
 
-    # logout
-    pyautogui.click(1415, 235)
-    interruptible_wait(0.5)
+        while not state.STOP_EVENT.is_set():
+            if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
+                logger.info("[INFO] At login page..")
+                break
+
+            if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+                pyautogui.click(1415, 235) #logout
+                break
+
+            interruptible_wait(0.3)
+        
+        interruptible_wait(3)
+    else:
+        logger.info("[INFO] Logout and Login")
+        interruptible_wait(round(random.uniform(5, 10), 2))
+        pyautogui.click(1415, 235)
+        pyautogui.click(1000, 425)
+        interruptible_wait(2)
+        pyautogui.click(991, 341)
+        interruptible_wait(1)
+
+        # logout
+        pyautogui.click(1415, 235)
+        interruptible_wait(0.5)
+
+    # Relog
     pyautogui.doubleClick(1010, 568)
-
     type_text(username)
     pyautogui.press("tab")
     pyautogui.press("enter")
-    # TODO: if fail to login, but low chance unless different password setup
+    
+    timeout = 2
+    loginTime = time.time()
+    while not state.STOP_EVENT.is_set():
+        now = time.time()
+
+        if now - loginTime >= timeout and image_exists("startup/username-field.png", region=constant.SCREEN_REGION):    
+            pyautogui.click(1010, 568)
+            pyautogui.press("tab")
+            pyautogui.press("enter")
+            break
+
+        if any_image_exists([
+            "play-button.png", "play-button-christmas.png"
+            ], region=constant.SCREEN_REGION):
+            logger.info(f"[LOGIN] Successfully logged in as {username}")
+            break
+
     return True
 
 #
