@@ -1171,7 +1171,7 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    timedoutChance = 0.55
+    timedoutChance = 0.6
     if random.random() < timedoutChance:
         adapter = getDisconnected()
         logger.info("[INFO] Get Timed out NOW!")
@@ -1185,7 +1185,7 @@ def logoutRelog(username, password):
             # pyautogui.click(1000, 425)
             # interruptible_wait(2)
             # pyautogui.click(991, 341)
-            interruptible_wait(5)
+            interruptible_wait(5.5)
 
         while not state.STOP_EVENT.is_set():
             if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
@@ -1198,7 +1198,7 @@ def logoutRelog(username, password):
 
             interruptible_wait(0.3)
         
-        interruptible_wait(3)
+        interruptible_wait(4)
     else:
         logger.info("[INFO] Logout and Login")
         interruptible_wait(round(random.uniform(5, 10), 2))
