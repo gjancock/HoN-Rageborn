@@ -1171,7 +1171,7 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    timedoutChance = 0.6
+    timedoutChance = 0.8
     if random.random() < timedoutChance:
         adapter = getDisconnected()
         logger.info("[INFO] Oops! electricity goes off out of sudden")

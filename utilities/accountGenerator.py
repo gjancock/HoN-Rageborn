@@ -21,12 +21,12 @@ def generate():
     firstname = state.get_account_firstname()
     lastname = state.get_account_lastname()
 
-    #logger.info(f"[DEBUG] Generated Username: {username}")
-    #logger.info(f"[DEBUG] Generated Email: {email}")
-    #logger.info(f"[DEBUG] Password: {password}")
+    success, msg = signup_user(
+        firstname, lastname, email, username, password, False
+    )
 
-    status = signup_user(firstname, lastname, email, username, password, False)
-    return status, username, password
+    return success, username, password
+
 
 def generateMandatoryField():
     prefix = state.get_username_prefix()
