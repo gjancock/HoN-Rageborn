@@ -1174,7 +1174,7 @@ def logoutRelog(username, password):
     timedoutChance = 0.6
     if random.random() < timedoutChance:
         adapter = getDisconnected()
-        logger.info("[INFO] Get Timed out NOW!")
+        logger.info("[INFO] Oops! electricity goes off out of sudden")
             
         reconnect(adapter)
         logger.info("[INFO] Waiting to reconnect...")
@@ -1189,8 +1189,8 @@ def logoutRelog(username, password):
 
 
         while not state.STOP_EVENT.is_set():
-            if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
-                logger.info("[INFO] At login page..")
+            if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
+                logger.info("[INFO] Timed-out to login page..")
                 break
 
             if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
@@ -1202,7 +1202,7 @@ def logoutRelog(username, password):
         
         interruptible_wait(4)
     else:
-        logger.info("[INFO] Logout and Login")
+        logger.info("[INFO] Ready to disconnect..")
         interruptible_wait(round(random.uniform(5, 10), 2))
         pyautogui.click(1415, 235)
         pyautogui.click(1000, 425)
