@@ -1171,7 +1171,7 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    timedoutChance = 0.55
+    timedoutChance = 0.6
     if random.random() < timedoutChance:
         adapter = getDisconnected()
         logger.info("[INFO] Get Timed out NOW!")
@@ -1185,7 +1185,8 @@ def logoutRelog(username, password):
             # pyautogui.click(1000, 425)
             # interruptible_wait(2)
             # pyautogui.click(991, 341)
-            interruptible_wait(5)
+            interruptible_wait(5.5)
+
 
         while not state.STOP_EVENT.is_set():
             if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
@@ -1193,12 +1194,13 @@ def logoutRelog(username, password):
                 break
 
             if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+                logger.info("[INFO] Manually logout after timeout!")
                 pyautogui.click(1415, 235) #logout
                 break
 
             interruptible_wait(0.3)
         
-        interruptible_wait(3)
+        interruptible_wait(4)
     else:
         logger.info("[INFO] Logout and Login")
         interruptible_wait(round(random.uniform(5, 10), 2))
@@ -1217,13 +1219,15 @@ def logoutRelog(username, password):
     type_text(username)
     pyautogui.press("tab")
     pyautogui.press("enter")
+    logger.info("[INFO] Attempt to login")
     
-    timeout = 2
+    timeout = 10
     loginTime = time.time()
     while not state.STOP_EVENT.is_set():
         now = time.time()
 
-        if now - loginTime >= timeout and image_exists("startup/username-field.png", region=constant.SCREEN_REGION):    
+        if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):    
+            logger.info("[INFO] Reattempt to login")
             pyautogui.click(1010, 568)
             pyautogui.press("tab")
             pyautogui.press("enter")
@@ -1233,6 +1237,11 @@ def logoutRelog(username, password):
             "play-button.png", "play-button-christmas.png"
             ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {username}")
+            break
+
+        if now - loginTime >= timeout:
+            logger.info("[INFO] Seems stucked, aborting iteration.")
+            state.STOP_EVENT.set()
             break
 
     return True
