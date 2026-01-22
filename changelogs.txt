@@ -1,4 +1,9 @@
 # =========================================================================== #
+# v1.10.5 - Feature Enhancement (22 January 2026)
+# =========================================================================== #
+- [x] Added game stucked detection on account relog for Ragequit mode.
+
+# =========================================================================== #
 # v1.10.4 - Feature Enhancement (21 January 2026)
 # =========================================================================== #
 - [x] Adjusted Ragequit reconnect wait time to prevent game crashed.
