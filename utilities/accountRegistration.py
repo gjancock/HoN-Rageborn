@@ -97,7 +97,7 @@ def signup_user(first_name, last_name, email, username, password, asyncVerificat
         else:
             #logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
             logger.info(f"[DEBUG] Raw response: {r.text}")
-            return False, msg       
+            return False, msg
 
     except (ConnectionError, Timeout, RemoteDisconnected) as e:
         logger.warning(f"[NET] Signup dropped by server: {e}")

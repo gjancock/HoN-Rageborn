@@ -732,7 +732,7 @@ def pickingPhase(isRageQuit: bool = False):
 
                     # team chat
                     if not state.SLOWER_PC_MODE:
-                        pickingPhaseChat()
+                        pickingPhaseChat(isRageQuit)
                         interruptible_wait(round(random.uniform(7, 11), 2))
                         continuePickingPhaseChat()            
                 else:
@@ -794,12 +794,12 @@ def pickingPhase(isRageQuit: bool = False):
                 logger.info("[INFO] I see fountain, I see grief!")
                 logger.info("[INFO] Rageborn begin!")
                 interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
-                return True
+                return True, None, None
             
-            elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
                 # Back to lobby
                 logger.info("[INFO] Match aborted!")
-                return False
+                return False, None, None
             
             interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
 
@@ -1171,10 +1171,10 @@ def ingame():
             do_midwar_stuff()
 
 def logoutRelog(username, password):
-    timedoutChance = 0.6
+    timedoutChance = 0.8
     if random.random() < timedoutChance:
         adapter = getDisconnected()
-        logger.info("[INFO] Get Timed out NOW!")
+        logger.info("[INFO] Oops! electricity goes off out of sudden")
             
         reconnect(adapter)
         logger.info("[INFO] Waiting to reconnect...")
@@ -1189,8 +1189,8 @@ def logoutRelog(username, password):
 
 
         while not state.STOP_EVENT.is_set():
-            if image_exists("startup/username-field.png", region=constant.SCREEN_REGION):
-                logger.info("[INFO] At login page..")
+            if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
+                logger.info("[INFO] Timed-out to login page..")
                 break
 
             if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
@@ -1202,7 +1202,7 @@ def logoutRelog(username, password):
         
         interruptible_wait(4)
     else:
-        logger.info("[INFO] Logout and Login")
+        logger.info("[INFO] Ready to disconnect..")
         interruptible_wait(round(random.uniform(5, 10), 2))
         pyautogui.click(1415, 235)
         pyautogui.click(1000, 425)
