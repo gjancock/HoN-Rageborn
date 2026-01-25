@@ -732,7 +732,7 @@ def pickingPhase(isRageQuit: bool = False):
 
                     # team chat
                     if not state.SLOWER_PC_MODE:
-                        pickingPhaseChat()
+                        pickingPhaseChat(isRageQuit)
                         interruptible_wait(round(random.uniform(7, 11), 2))
                         continuePickingPhaseChat()            
                 else:
@@ -794,12 +794,12 @@ def pickingPhase(isRageQuit: bool = False):
                 logger.info("[INFO] I see fountain, I see grief!")
                 logger.info("[INFO] Rageborn begin!")
                 interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
-                return True
+                return True, None, None
             
-            elif any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
                 # Back to lobby
                 logger.info("[INFO] Match aborted!")
-                return False
+                return False, None, None
             
             interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
 
