@@ -1,19 +1,11 @@
 import logging
 import tkinter as tk
-import random
-import subprocess
 import threading
-import time
 import utilities.constants as constant
 import os
 import core.state as state
-import pyautogui
-import time
-import subprocess
 import keyboard
 
-from datetime import datetime
-from tkinter import messagebox
 from queue import Queue
 from utilities.loggerSetup import setup_logger
 # Logger
@@ -26,26 +18,12 @@ ui_formatter = logging.Formatter(
 from utilities.config import load_config
 # Load Config at startup
 config = load_config()
-from utilities.usernameGenerator import (
-    generate_counter_username, 
-    generate_word_username, 
-    reset_prefix_counters, 
-    reset_postfix_counters, 
-    set_prefix_counters, 
-    set_postfix_counters
-)
-from utilities.ipAddressGenerator import random_public_ip
 from tkinter import filedialog
 from tkinter import ttk
-from utilities.gameConfigUtilities import prepare_game_config
 from utilities.chatUtilities import (
-    get_chat_path,
-    read_chat_file,
-    validate_chat_lines,
-    save_chat_file
+    get_chat_path
 )
 from utilities.runtime import runtime_dir
-from utilities.emailGenerator import generate_email
 from utilities.accountRegistration import signup_user
 from ui.logic import (
     start_endless_ui_refresh
@@ -142,9 +120,6 @@ auto_update_var = tk.BooleanVar(value=state.get_auto_update())
 auto_restart_dns_var = tk.BooleanVar(value=state.get_auto_restart_dns())
 settings_for_slower_pc_var = tk.BooleanVar(value=state.get_settings_for_slower_pc())
 is_ragequit_mode_enabled_var = tk.BooleanVar(value=state.get_is_ragequit_mode_enabled())
-
-_last_prefix_enabled = state.get_username_prefix_count_enabled()
-_last_postfix_enabled = state.get_username_postfix_count_enabled()
 
 add_prefix_count_var = tk.BooleanVar(
     value=state.get_username_prefix_count_enabled()
