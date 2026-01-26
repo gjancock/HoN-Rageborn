@@ -8,9 +8,7 @@ import threading
 import utilities.constants as constant
 import core.state as state
 import utilities.coordinateAccess as assetsLibrary
-import keyboard
 import random
-import os
 import subprocess
 
 from threads.hwnd_watchdog import start_hwnd_watchdog
@@ -41,15 +39,6 @@ pyautogui.PAUSE = 0.3
 COORDS = load_dataset("coordinates_1920x1080")
 assetsLibrary.init(COORDS)
 
-# Chat data
-
-# ================= EMERGENCY STOP =================
-def emergency_stop():
-    logger.critical("[EMERGENCY] F11 pressed! HARD STOP triggered.")
-    os._exit(0)   # 🔥 immediate hard kill
-
-
-keyboard.add_hotkey("F11", emergency_stop)
 # =================================================
 
 #

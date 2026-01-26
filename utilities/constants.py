@@ -24,6 +24,7 @@ CONFIDENCE = 0.75  # Adjust if detection fails
 BASE_URL = "https://app.juvio.com"
 SIGNUP_URL = BASE_URL + "/signup"
 DEBOUNCE_MS = 600
+MAX_CHAT_LEN = 150
 
 # Map
 MAP_FOC = "foc"

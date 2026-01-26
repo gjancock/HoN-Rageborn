@@ -2,6 +2,7 @@ import threading
 import random
 
 from utilities.config import write_config_bool, write_config_str
+from datetime import datetime
 
 class InGameState:
     def __init__(self):
@@ -113,6 +114,33 @@ INGAME_STATE = InGameState()
 #
 CURRENT_CYCLE_NUMBER = None
 MAX_CYCLE_NUMBER = 3
+
+#
+ITERATION_COUNT = 0
+AUTO_START_TIME = None
+
+STATE_LOCK = threading.Lock()
+
+def reset_endless_stats():
+    global ITERATION_COUNT, AUTO_START_TIME
+    with STATE_LOCK:
+        ITERATION_COUNT = 0
+        AUTO_START_TIME = datetime.now()
+
+def increment_iteration():
+    global ITERATION_COUNT
+    with STATE_LOCK:
+        ITERATION_COUNT += 1
+
+def get_iteration_count():
+    with STATE_LOCK:
+        return ITERATION_COUNT
+
+def get_elapsed_seconds():
+    with STATE_LOCK:
+        if AUTO_START_TIME is None:
+            return 0
+        return int((datetime.now() - AUTO_START_TIME).total_seconds())
 
 def get_auto_start_endless():
     return AUTO_START_ENDLESS
