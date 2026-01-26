@@ -1203,6 +1203,9 @@ def logoutRelog(username, password):
         pyautogui.click(1415, 235)
         interruptible_wait(0.5)
 
+    # Increase complete count
+    state.increment_iteration()
+
     # Relog
     pyautogui.doubleClick(1010, 568)
     type_text(username)

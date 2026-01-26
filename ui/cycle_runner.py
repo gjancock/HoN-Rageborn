@@ -21,7 +21,7 @@ def run_cycle(
     """
 
     try:
-        while True:
+        while not state.STOP_EVENT.is_set():
             # 1️⃣ Generate credentials (UI callback)
             generate_credentials_cb()
 
