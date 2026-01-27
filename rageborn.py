@@ -588,13 +588,7 @@ def continuePickingPhaseChat():
                 enterChat(text)
 
 
-def pickingPhase(isRageQuit: bool = False):
-
-    # Just in case
-    if image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
-        find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-        interruptible_wait(0.5)
-
+def generateAccount():
     while not state.STOP_EVENT.is_set():
         status, username, password = generatePendingAccount()
         if status:
@@ -603,6 +597,17 @@ def pickingPhase(isRageQuit: bool = False):
 
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
 
+    return username, password
+
+
+def pickingPhase(isRageQuit: bool = False):
+
+    # Just in case
+    if image_exists("message-ok.png", region=constant.LOBBY_MESSAGE_REGION):
+        find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+        interruptible_wait(0.5)
+
+    generateAccount()
 
     if isRageQuit:
         # Ragequit
@@ -1268,33 +1273,32 @@ def main(username, password, isRageQuit: bool = False):
 
                 #
                 isEnterPickingPhase = startQueue()
-                if not isEnterPickingPhase:
-                    logger.warning("[INFO] Queue cooldown! Aborting..")
-                    state.STOP_EVENT.set()
-                    break
-                
-                #
-                result = pickingPhase(isRageQuit)
+                if isEnterPickingPhase:
+                    #
+                    result = pickingPhase(isRageQuit)
 
-                if not isRageQuit and not result:
-                    # Rageborn match aborted
-                    messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
-                    while not state.STOP_EVENT.is_set():
-                        if not check_lobby_message():
-                            break
+                    if not isRageQuit and not result:
+                        # Rageborn match aborted
+                        messageClearTime = 5 if not state.SLOWER_PC_MODE else 10
+                        while not state.STOP_EVENT.is_set():
+                            if not check_lobby_message():
+                                break
+                            find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+                            interruptible_wait(0.5)
+                            messageClearTime -= 0.5
+                            if messageClearTime <= 0:
+                                break                        
+
+                        logger.warning("[QUEUE] Match aborted, restarting queue")
+                        continue
+
+                    if not isRageQuit:
+                        ingame()
                         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-                        interruptible_wait(0.5)
-                        messageClearTime -= 0.5
-                        if messageClearTime <= 0:
-                            break                        
-
-                    logger.warning("[QUEUE] Match aborted, restarting queue")
-                    continue
-
-                if not isRageQuit:
-                    ingame()
-                    find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-                    logger.info("[INFO] KICKED! Closing dialog message.")
+                        logger.info("[INFO] KICKED! Closing dialog message.")
+                else:
+                    logger.warning("[INFO] Queue cooldown! Changing account..")
+                    generateAccount()
                 
                 # TODO: if want to use existing account can skip this step so it will loop
                 changeAccount(isRageQuit)
