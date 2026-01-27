@@ -1,41 +1,13 @@
 import logging
 import tkinter as tk
-from tkinter import messagebox
-import requests
-import re
-from urllib.parse import urlencode
-import random
-import subprocess
 import threading
-import time
-from datetime import datetime
-import sys
+import utilities.constants as constant
 import os
+import core.state as state
+import keyboard
+
 from queue import Queue
 from utilities.loggerSetup import setup_logger
-import core.state as state
-from utilities.config import load_config
-# Load Config at startup
-config = load_config()
-from utilities.usernameGenerator import generate_counter_username, generate_word_username, generate_random_string, reset_prefix_counters, reset_postfix_counters, set_prefix_counters, set_postfix_counters
-from requests.exceptions import ConnectionError, Timeout
-from http.client import RemoteDisconnected
-import configparser
-import pyautogui
-from utilities.common import resource_path
-from requests.exceptions import RequestException
-from utilities.ipAddressGenerator import random_public_ip
-from tkinter import filedialog
-from tkinter import ttk
-from utilities.accountVerification import AccountVerifier
-from utilities.gameConfigUtilities import prepare_game_config
-import time
-import subprocess
-import sys
-import socket
-import requests
-import psutil
-
 # Logger
 log_queue = Queue()
 logger = setup_logger(ui_queue=log_queue)
@@ -43,74 +15,77 @@ ui_formatter = logging.Formatter(
     "%(asctime)s | %(message)s",
     "%H:%M:%S"
 )
+from utilities.config import load_config
+# Load Config at startup
+config = load_config()
+from tkinter import filedialog
+from tkinter import ttk
+from utilities.chatUtilities import (
+    get_chat_path
+)
+from utilities.runtime import runtime_dir
+from utilities.accountRegistration import signup_user
+from ui.logic import (
+    start_endless_ui_refresh
+)
+from ui.endless_controller import EndlessController
 
-#
-auto_start_time = None
-iteration_count = 0
-
-#
-BASE_URL = "https://app.juvio.com"
-SIGNUP_URL = BASE_URL + "/signup"
-
-#
-MIN_USERNAME_LENGTH = 2
-MAX_USERNAME_LENGTH = 16
-
-#
-DEBOUNCE_MS = 600
-
-#
-auto_start_timer_id = None
-AUTO_START_DELAY_MS = 5000  # 5 seconds
-auto_start_countdown_id = None
-AUTO_START_DELAY_SECONDS = 5
-auto_start_remaining = 0
-
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        # Running as PyInstaller exe
-        return os.path.dirname(sys.executable)
-    else:
-        # Running as normal Python script
-        return os.path.dirname(os.path.abspath(__file__))
+# logging order matter
+import ui.autostart as autostart
+from ui.process import set_self_high_priority
+from ui.hotkeys import hard_exit
+from utilities.threadingException import global_thread_exception_handler
+from ui.rageborn_runner import start_rageborn_async, run_rageborn_flow
+from ui.ui_actions import (
+    get_effective_password,
+    on_generate,
+)
+from ui.cycle_runner import run_cycle, endless_worker
+from ui.log_view import poll_log_queue
+from ui.ui_handlers import (
+    on_login_only,
+    on_signup_and_run_once,
+    on_submit,
+)
+from ui.game_launcher import (
+    browse_executable,
+    launch_game_process,
+    validate_game_executable,
+)
+from ui.ui_widgets import (
+    labeled_entry,
+    set_endless_mode_ui_running
+)
+from ui.ui_handlers import (
+    on_auto_start_checkbox_changed,
+    try_auto_start_from_config,
+)
+from ui.ui_handlers import (
+    on_auto_email_verification_changed,
+    on_auto_mobile_verification_changed,
+    on_auto_update_changed,
+)
+from ui.ui_state_sync import (
+    on_prefix_checkbox_toggle,
+    on_postfix_checkbox_toggle,
+    on_prefix_count_changed,
+    on_postfix_count_changed,
+)
+from ui.chat_editor import (
+    build_chat_editor,
+    build_chat_placeholder_guide,
+    save_chat_settings,
+    reset_chat_to_default,
+)
 
 # ============================================================
 # APPLICATION SETTINGS
 # ============================================================
-def set_self_high_priority():
-    try:
-        p = psutil.Process(os.getpid())
-        p.nice(psutil.HIGH_PRIORITY_CLASS)
-        logger.info("[PRIORITY] Python process set to HIGH")
-
-    except psutil.AccessDenied:
-        logger.warning("[PRIORITY] Access denied – priority unchanged")
-
-    except Exception as e:
-        logger.warning(f"[PRIORITY] Failed to set priority: {e}")
-
-
-def global_thread_exception_handler(args):
-    logger.exception(
-        "[THREAD-CRASH] Unhandled exception",
-        exc_info=(args.exc_type, args.exc_value, args.exc_traceback)
-    )
-
 threading.excepthook = global_thread_exception_handler
-
-def get_runtime_dir():
-    if getattr(sys, "frozen", False):
-        # PyInstaller EXE location
-        return os.path.dirname(sys.executable)
-    else:
-        # Python script location
-        return os.path.dirname(os.path.abspath(__file__))
-
 
 def read_version():
     try:
-        path = os.path.join(exe_dir(), "VERSION")
+        path = os.path.join(runtime_dir(), "VERSION")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     except Exception:
@@ -122,605 +97,44 @@ INFO_NAME = "Rageborn"
 VERSION = read_version()
 
 # ============================================================
-# CONFIG (INI)
-# ============================================================
-
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
-
-def read_auto_update():
-    path = os.path.join(exe_dir(), "config.ini")
-    config = configparser.ConfigParser()
-
-    try:
-        config.read(path, encoding="utf-8")
-        return config.getboolean("settings", "auto_update", fallback=True)
-    except Exception:
-        return True  # safe default
-
-def write_config_bool(section: str, key: str, value: bool):
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if section not in config:
-        config[section] = {}
-    config[section][key] = "true" if value else "false"
-    with open(path, "w") as f:
-        config.write(f)
-
-def write_config_str(section: str, key: str, value: str):
-    config = configparser.ConfigParser()
-    path = os.path.join(exe_dir(), "config.ini")
-
-    if os.path.exists(path):
-        config.read(path)
-
-    if section not in config:
-        config[section] = {}
-    config[section][key] = value
-    with open(path, "w") as f:
-        config.write(f)
-
-def get_auto_start_endless():
-    return state.AUTO_START_ENDLESS
-
-def get_game_executable():
-    return state.GAME_EXECUTABLE
-
-def get_auto_email_verification():
-    return state.AUTO_EMAIL_VERIFICATION
-
-def get_auto_mobile_verification():
-    return state.AUTO_MOBILE_VERIFICATION
-
-def get_auto_restart_dns():
-    return state.AUTO_RESTART_DNS
-
-def get_auto_update():
-    return state.AUTO_UPDATE
-
-def get_settings_for_slower_pc():
-    return state.SLOWER_PC_MODE
-
-def get_username_prefix():
-    return state.USERNAME_PREFIX
-
-def get_username_postfix():
-    return state.USERNAME_POSTFIX
-
-def get_account_firstname():
-    return state.ACCOUNT_FIRSTNAME
-
-def get_account_lastname():
-    return state.ACCOUNT_LASTNAME
-
-def get_account_email_domain():
-    return state.ACCOUNT_EMAIL_DOMAIN
-
-def get_account_password():
-    return state.ACCOUNT_PASSWORD
-
-def get_username_prefix_count_enabled():
-    return state.USERNAME_PREFIX_COUNT_ENABLED
-
-def get_username_postfix_count_enabled():
-    return state.USERNAME_POSTFIX_COUNT_ENABLED
-
-def get_username_prefix_count_start_at():
-    return state.USERNAME_PREFIX_COUNT_START_AT
-
-def get_username_postfix_count_start_at():
-    return state.USERNAME_POSTFIX_COUNT_START_AT
-
-def set_auto_start_endless(value: bool):
-    state.AUTO_START_ENDLESS = value
-    write_config_bool("endless", "auto_start", value)
-
-def set_game_executable(executable_path: str):
-    state.GAME_EXECUTABLE = executable_path
-    write_config_str("paths", "game_executable", executable_path)
-
-def set_auto_email_verification(value: bool):
-    state.AUTO_EMAIL_VERIFICATION = value
-    write_config_bool("verification", "auto_email", value)
-
-def set_auto_mobile_verification(value: bool):
-    state.AUTO_MOBILE_VERIFICATION = value
-    write_config_bool("verification", "auto_mobile", value)
-
-def set_auto_restart_dns(value: bool):
-    state.AUTO_RESTART_DNS = value
-    write_config_bool("network", "auto_restart_dns", value)
-
-def set_auto_update(value: bool):
-    state.AUTO_UPDATE = value
-    write_config_bool("settings", "auto_updates", value)
-
-def set_settings_for_slower_pc(value: bool):
-    state.SLOWER_PC_MODE = value
-    write_config_bool("performance", "slower_pc_mode", value)
-
-def set_username_prefix(prefix: str):
-    state.USERNAME_PREFIX = prefix
-    write_config_str("username_generator", "prefix", prefix)
-
-def set_username_postfix(postfix: str):
-    state.USERNAME_POSTFIX = postfix
-    write_config_str("username_generator", "postfix", postfix)
-
-def set_account_firstname(firstname: str):
-    state.ACCOUNT_FIRSTNAME = firstname
-    write_config_str("account", "firstname", firstname)
-
-def set_account_lastname(lastname: str):
-    state.ACCOUNT_LASTNAME = lastname
-    write_config_str("account", "lastname", lastname)
-
-def set_account_email_domain(email_domain: str):
-    state.ACCOUNT_EMAIL_DOMAIN = email_domain
-    write_config_str("account", "email_domain", email_domain)
-
-def set_account_password(password: str):
-    state.ACCOUNT_PASSWORD = password
-    write_config_str("account", "password", password)
-
-def set_username_prefix_count_enabled(value: bool):
-    state.USERNAME_PREFIX_COUNT_ENABLED = value
-    write_config_bool("username_generator", "add_prefix_count", value)
-
-def set_username_postfix_count_enabled(value: bool):
-    state.USERNAME_POSTFIX_COUNT_ENABLED = value
-    write_config_bool("username_generator", "add_postfix_count", value)
-
-def set_username_prefix_count_start_at(value: int):
-    state.USERNAME_PREFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "prefix_count_start", str(value))
-
-def set_username_postfix_count_start_at(value: int):
-    state.USERNAME_POSTFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "postfix_count_start", str(value))
-
-# ============================================================
-# SIGNUP LOGIC (NO UI CODE HERE)
-# ============================================================
-
-def is_signup_success(r):
-    try:
-        data = r.json()
-    except ValueError:
-        return False, "Invalid JSON response"
-
-    if data.get("status") != "success":
-        return False, "Failed to signup: username existed or email used"
-
-    tokens = data.get("tokens", "")
-    if "csrf-token" not in tokens:
-        return False, "Missing CSRF token"
-
-    return True, "Signup success"
-
-
-def is_dns_error(exc: Exception) -> bool:
-    """
-    Detect DNS-related failures safely.
-    """
-    msg = str(exc).lower()
-
-    return (
-        isinstance(exc, requests.exceptions.ConnectionError)
-        and (
-            "getaddrinfo failed" in msg
-            or "name or service not known" in msg
-            or "failed to resolve" in msg
-        )
-    ) or isinstance(exc, socket.gaierror)
-
-
-def restart_windows(reason: str = ""):
-    """
-    Restart Windows immediately.
-    """
-    logger.critical("[SYSTEM] Restarting Windows due to DNS failure")
-    if reason:
-        logger.critical(f"[SYSTEM] Reason: {reason}")
-
-    # Force immediate restart
-    subprocess.run(
-        ["shutdown", "/r", "/t", "0"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
-    # Hard exit if shutdown is blocked
-    sys.exit(1)
-
-
-def safe_get(
-    session,
-    url,
-    retries=3,
-    delay=3,
-    restart_on_dns=False  # 🔥 toggle flag
-):
-    last_exception = None
-
-    for i in range(retries):
-        try:
-            return session.get(url, timeout=15)
-
-        except Exception as e:
-            last_exception = e
-            logger.warning(
-                f"[RETRY] GET failed ({i+1}/{retries}): {e}"
-            )
-
-            # Immediate escalation if DNS issue
-            if is_dns_error(e):
-                logger.error("[NETWORK] DNS resolution failure detected")
-
-                if restart_on_dns:
-                    restart_windows(reason=str(e))
-
-                break  # do not keep retrying DNS failures
-
-            time.sleep(delay)
-
-    raise RuntimeError(
-        "DNS resolution failed after retries"
-        if is_dns_error(last_exception)
-        else "HTTP GET failed after retries"
-    )
-
-def start_account_verification_async(username: str):
-    def worker():
-        try:
-            logger.info(f"[INFO] Starting verification process for {username}")
-            verifier = AccountVerifier(logger)
-            verifier.run(
-                mobile=get_auto_mobile_verification(),
-                email=get_auto_email_verification()
-            )
-            logger.info(f"[INFO] Account verification completed.")
-        except Exception:
-            logger.exception("[ERROR] Verification failed")
-
-    threading.Thread(
-        target=worker,
-        daemon=True
-    ).start()
-
-
-def signup_user(first_name, last_name, email, username, password):
-    session = requests.Session()
-    session.headers.update({
-        "user-agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "Chrome/143.0.0.0"
-        )
-    })
-
-    try:
-        # 1️⃣ GET signup page
-        resp = safe_get(session, SIGNUP_URL, restart_on_dns=get_auto_restart_dns())
-        resp.raise_for_status()
-
-        match = re.search(r'name="_csrf"\s+value="([^"]+)"', resp.text)
-        if not match:
-            logger.error("[ERROR] Failed to get CSRF token.")
-            return False, "CSRF not found"
-
-        csrf = match.group(1)
-
-        fakeIp = random_public_ip()
-
-        payload = {
-            "_csrf": csrf,
-            "User[first_name]": first_name,
-            "User[last_name]": last_name,
-            "User[email]": email,
-            "User[display_name]": first_name,
-            "User[username]": username,
-            "User[password]": password,
-            "User[repeat_password]": password,
-            "User[role_id]": "player",
-            "User[timezone_id]": 1,
-            "User[ip_address]": fakeIp,
-            "User[status_id]": 1,
-            "User[user_referral_code]": "",
-            "User[send_sms]": 1,
-            "User[reCaptcha]": "",
-            "g-recaptcha-response": "",
-        }
-
-        raw_body = urlencode(payload)
-
-        headers = {
-            "content-type": "application/x-www-form-urlencoded",
-            "origin": BASE_URL,
-            "referer": SIGNUP_URL,
-            "x-csrf-token": csrf,
-            "x-requested-with": "XMLHttpRequest",
-        }
-
-        # 4️⃣ POST signup
-        r = session.post(
-            SIGNUP_URL,
-            headers=headers,
-            data=raw_body,
-            timeout=15,
-        )
-
-        success, msg = is_signup_success(r)
-
-        if success:
-            logger.info(f"[INFO] Account {username} created")
-            logger.info(f"[INFO] Password: {password}")
-            state.INGAME_STATE.setUsername(username)
-            state.INGAME_STATE.setPassword(password)
-            log_username(username)
-
-            if get_auto_email_verification() or get_auto_mobile_verification():
-                start_account_verification_async(username)
-
-            return True, msg
-        else:
-            logger.info(f"[ERROR] Failed to create account {username}: due to username existed or duplicated email used.")
-            #logger.info(f"[DEBUG] Raw response: {r.text}")
-            return False, msg       
-
-    except (ConnectionError, Timeout, RemoteDisconnected) as e:
-        logger.warning(f"[NET] Signup dropped by server: {e}")
-        return False, "connection_dropped"
-    
-    except RequestException as e:
-        logger.error(f"[NETWORK_ERROR] Signup dropped by server: {e}")
-        return False, "Network error (DNS / connection failed)"
-
-    except Exception as e:
-        logger.exception("[FATAL] Unexpected signup error")
-        return False, str(e)
-
-# ============================================================
-# TKINTER UI
-# ============================================================
-
-def generate_username(prefix="", postfix=""):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    has_prefix = bool(prefix)
-    has_postfix = bool(postfix)
-
-    underscore_count = (1 if has_prefix else 0) + (1 if has_postfix else 0)
-    fixed_length = len(prefix) + len(postfix) + underscore_count
-
-    target_length = random.randint(
-        max(MIN_USERNAME_LENGTH, fixed_length + 1),
-        MAX_USERNAME_LENGTH
-    )
-
-    remaining = max(1, target_length - fixed_length)
-
-    random_part = generate_random_string(remaining, remaining)
-
-    if has_prefix and has_postfix:
-        return f"{prefix}{random_part}{postfix}"
-    elif has_prefix:
-        return f"{prefix}{random_part}"
-    elif has_postfix:
-        return f"{random_part}{postfix}"
-    else:
-        return random_part
-
-
-def generate_email(prefix="", postfix="", domain="mail.com", length=12):
-    prefix = str(prefix).strip().lower()
-    postfix = str(postfix).strip().lower()
-
-    rand = generate_random_string(length, length)
-    local = "".join(p for p in [prefix, rand, postfix] if p)
-
-    return f"{local}@{domain}"
-
-
-
-# ============================================================
-# UI CALLBACKS
-# ============================================================
-
-def schedule_auto_start_endless():
-    global auto_start_timer_id
-
-    # Avoid double scheduling
-    if auto_start_timer_id is not None:
-        return
-
-    logger.info("[INFO] Auto-start Endless Mode scheduled in 5 seconds")
-
-    auto_start_timer_id = root.after(
-        AUTO_START_DELAY_MS,
-        execute_auto_start_endless
-    )
-
-
-def cancel_auto_start_endless():
-    global auto_start_timer_id
-
-    if auto_start_timer_id is not None:
-        root.after_cancel(auto_start_timer_id)
-        auto_start_timer_id = None
-        logger.info("[INFO] Auto-start Endless Mode cancelled")
-
-
-def execute_auto_start_endless():
-    global auto_start_timer_id
-    auto_start_timer_id = None
-
-    # Final guard: user might untick at the last moment
-    if auto_start_endless_var.get():
-        logger.info("[INFO] Auto-starting Endless Mode now")
-        on_start_endless_mode()
-    else:
-        logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
-
-def resetState():
-    state.STOP_EVENT.clear()
-    state.CRASH_EVENT.clear()
-
-def run_rageborn_flow(username, password):
-    try:
-        if not launch_game_process():
-            logger.error("[ERROR] Game launch aborted")
-            return
-        
-        if state.SLOWER_PC_MODE:
-            logger.info("[INFO] RAGEBORN slow mode activated.")
-
-        import rageborn
-
-        resetState()
-        rageborn.start(username, password)
-
-        if state.CRASH_EVENT.is_set():
-            logger.exception("[FATAL] Rageborn crashed during runtime")
-            raise
-
-    except RuntimeError:
-        raise
-    except Exception:
-        logger.exception("[FATAL] Rageborn crashed")
-        raise
-    except pyautogui.FailSafeException:
-        logger.info("[SAFETY] FAILSAFE Triggered! Emergency stop.")
-        state.STOP_EVENT.set()
-        raise
-
-    finally:
-        kill_jokevio()
-        logger.info("[MAIN] Rageborn thread exited")
-
-
-def run_rageborn_flow_thread(username, password):
-    try:
-        run_rageborn_flow(username, password)
-    except RuntimeError as e:
-        logger.error(f"[THREAD-CRASH] {e}")
-    except Exception:
-        logger.exception("[THREAD-CRASH] Unexpected error")
-
-
-def start_rageborn_async(username, password):    
-    t = threading.Thread(
-        target=run_rageborn_flow_thread,
-        args=(username, password),
-        daemon=True
-    )
-    t.start()
-
-# ----------------- UI callbacks -----------------
-def get_effective_password():
-    pwd = password_entry.get().strip()
-    return pwd if pwd else get_account_password
-
-def log_username(username, filename="signup_users.txt"):
-    with open(filename, "a", encoding="utf-8") as f:
-        f.write(username + "\n")
-
-def on_generate():
-    prefix = prefix_entry.get().strip()
-    postfix = postfix_entry.get().strip()
-    domain = domain_entry.get().strip() or "mail.com"
-
-    use_prefix_count = add_prefix_count_var.get()
-    use_postfix_count = add_postfix_count_var.get()
-
-    # 🔴 Counter-based generation
-    if use_prefix_count or use_postfix_count:
-        username, prefix_counter, postfix_counter = generate_counter_username(
-            prefix=prefix,
-            postfix=postfix,
-            use_prefix_count=use_prefix_count,
-            use_postfix_count=use_postfix_count,
-            prefix_start=prefix_count_start_var.get(),
-            postfix_start=postfix_count_start_var.get(),
-        )
-
-        if use_prefix_count:
-            set_username_prefix_count_start_at(prefix_counter - 1)
-
-        if use_postfix_count:
-            set_username_postfix_count_start_at(postfix_counter - 1)
-
-    else:
-        # 🟢 Normal word-pool generator (existing behavior)
-        username = generate_word_username(prefix, postfix)
-
-    email = generate_email(prefix, postfix, domain)
-
-    username_entry.delete(0, tk.END)
-    username_entry.insert(0, username)
-
-    email_entry.delete(0, tk.END)
-    email_entry.insert(0, email)
-
-def kill_jokevio():
-    try:
-        subprocess.run(
-            ["taskkill", "/F", "/IM", "juvio.exe"],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        logger.info(f"[INFO] Jokevio.exe killed")
-    except subprocess.CalledProcessError:
-        logger.info(f"[INFO] Intend to kill Jokevio.exe, but its not running")
-
-# ============================================================
 # UI Application 
 # ============================================================
 root = tk.Tk()
 root.update_idletasks()  # ensure geometry info is ready
 root.title(f"{INFO_NAME} v{VERSION}")
 
+keyboard.add_hotkey("F11", hard_exit)
+
 auto_mode_var = tk.BooleanVar(value=False)
 duration_var = tk.StringVar(value="Duration: 00:00:00")
 iteration_var = tk.StringVar(value="Iterations completed: 0")
-auto_start_endless_var = tk.BooleanVar(value=get_auto_start_endless())
+auto_start_endless_var = tk.BooleanVar(value=state.get_auto_start_endless())
 auto_start_countdown_var = tk.StringVar(value="")
 auto_email_verification_var = tk.BooleanVar(
-    value=get_auto_email_verification()
+    value=state.get_auto_email_verification()
 )
 auto_mobile_verification_var = tk.BooleanVar(
-    value=get_auto_mobile_verification()
+    value=state.get_auto_mobile_verification()
 )
-auto_update_var = tk.BooleanVar(value=read_auto_update())
-auto_restart_dns_var = tk.BooleanVar(value=get_auto_restart_dns())
-settings_for_slower_pc_var = tk.BooleanVar(value=get_settings_for_slower_pc())
-
-_last_prefix_enabled = get_username_prefix_count_enabled()
-_last_postfix_enabled = get_username_postfix_count_enabled()
+auto_update_var = tk.BooleanVar(value=state.get_auto_update())
+auto_restart_dns_var = tk.BooleanVar(value=state.get_auto_restart_dns())
+settings_for_slower_pc_var = tk.BooleanVar(value=state.get_settings_for_slower_pc())
+is_ragequit_mode_enabled_var = tk.BooleanVar(value=state.get_is_ragequit_mode_enabled())
 
 add_prefix_count_var = tk.BooleanVar(
-    value=get_username_prefix_count_enabled()
+    value=state.get_username_prefix_count_enabled()
 )
 
 add_postfix_count_var = tk.BooleanVar(
-    value=get_username_postfix_count_enabled()
+    value=state.get_username_postfix_count_enabled()
 )
 
 prefix_count_start_var = tk.IntVar(
-    value=get_username_prefix_count_start_at()
+    value=state.get_username_prefix_count_start_at()
 )
 
 postfix_count_start_var = tk.IntVar(
-    value=get_username_postfix_count_start_at()
+    value=state.get_username_postfix_count_start_at()
 )
 
 def make_debouncer(root, delay, func):
@@ -734,101 +148,43 @@ def make_debouncer(root, delay, func):
 
     return wrapper
 
+def _generate_credentials():
+    on_generate(
+        prefix_entry=prefix_entry,
+        postfix_entry=postfix_entry,
+        domain_entry=domain_entry,
+        add_prefix_count_var=add_prefix_count_var,
+        add_postfix_count_var=add_postfix_count_var,
+        prefix_count_start_var=prefix_count_start_var,
+        postfix_count_start_var=postfix_count_start_var,
+        username_entry=username_entry,
+        email_entry=email_entry,
+    )
+
+
+def _read_credentials():
+    return (
+        username_entry.get(),
+        get_effective_password(password_entry),
+        first_name_entry.get(),
+        last_name_entry.get(),
+        email_entry.get(),
+    )
 
 def one_full_cycle():
-    try:
-        while True:
-            # 1️⃣ Generate username/email
-            on_generate()
+    return run_cycle(
+        generate_credentials_cb=_generate_credentials,
+        read_credentials_cb=_read_credentials,
+        signup_cb=signup_user,
+        launch_game_process=lambda: launch_game_process(game_exe_var)
+    )
 
-            # 2️⃣ Read generated credentials
-            username = username_entry.get()
-            password = get_effective_password()
-
-            logger.info("-------------------------------------------")
-            logger.info(f"[INFO] Generated account: {username}")
-
-            # 3️⃣ Run signup
-            try:
-                success, msg = signup_user(
-                    first_name_entry.get(),
-                    last_name_entry.get(),
-                    email_entry.get(),
-                    username,
-                    password
-                )
-            except Exception as e:
-                logger.warning(f"[WARN] Signup exception, regenerating: {e}")
-                success = False
-                msg = "exception"
-            
-            if success:
-                break
-            
-            logger.info(f"[INFO] Failed to signup account {username}: {msg}")
-            logger.info("[INFO] Regenerating new account")
-            time.sleep(random.uniform(1, 3))
-
-        logger.info(f"[INFO] Signup success! ")
-        logger.info(f"Username {username} launching Rageborn.exe")
-
-        # 4️⃣ Run rageborn (blocking inside worker thread)
-        run_rageborn_flow(username, password)
-
-        return True
-    except Exception:
-        logger.exception("[WARN] Cycle error, recovering")
-        time.sleep(10)
-        raise
-
-def auto_loop_worker():
-    logger.info(f"[INFO] --Endless mode started--v{VERSION}")
-
-    root.after(0, set_start_time)
-
-    global iteration_count
-    iteration_count = 0
-    root.after(0, lambda: iteration_var.set("Iterations completed: 0"))
-
-    while auto_mode_var.get():
-        try:
-            one_full_cycle()
-
-            root.after(0, increment_iteration)
-
-        except Exception as e:
-            # ABSOLUTE LAST LINE OF DEFENSE
-            logger.exception("[FATAL] Cycle crashed, recovering")
-
-            # Cooldown to avoid rapid crash loops
-            time.sleep(10)
-
-            # Continue forever
-            continue
-
-    logger.info("[INFO] Endless mode stopped")
-
-def set_start_time():
-    global auto_start_time
-    auto_start_time = datetime.now()
-    duration_var.set("Duration: 00:00:00")
-    
-def format_duration(seconds: int) -> str:
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    return f"{h:02}:{m:02}:{s:02}"
-
-def increment_iteration():
-    global iteration_count, auto_start_time
-
-    iteration_count += 1
-    iteration_var.set(f"Iterations completed: {iteration_count}")
-
-    if auto_start_time:
-        elapsed = int((datetime.now() - auto_start_time).total_seconds())
-        duration_var.set(f"Duration: {format_duration(elapsed)}")
-
+endless_controller = EndlessController(
+    lambda: endless_worker(
+        is_running_cb=auto_mode_var.get,
+        run_cycle_cb=one_full_cycle,
+    )
+)
 
 def validate_int_only(new_value: str) -> bool:
     if new_value == "":
@@ -836,421 +192,29 @@ def validate_int_only(new_value: str) -> bool:
     return new_value.isdigit()
 
 
-def poll_log_queue():
-    while not log_queue.empty():
-        record = log_queue.get()
-
-        # 1️⃣ Convert LogRecord → string
-        msg = ui_formatter.format(record)
-
-        log_text.config(state="normal")
-
-        # ---- LOG LEVEL DETECTION ----
-        tag = "INFO"
-
-        if (
-            "[FATAL]" in msg
-            or "Traceback" in msg
-            or "RuntimeError" in msg
-            or "Exception" in msg
-            or record.levelname in ("ERROR", "CRITICAL")
-        ):
-            tag = "ERROR"
-        elif record.levelname == "WARNING" or "[WARN]" in msg:
-            tag = "WARN"
-
-        # 2️⃣ Insert formatted string
-        log_text.insert("end", msg + "\n", tag)
-        log_text.see("end")
-        log_text.config(state="disabled")
-
-    root.after(100, poll_log_queue)
-
-
-def on_login_only():
-    user = username_entry.get().strip()
-    pwd = get_effective_password()
-
-    if not user or not pwd:
-        messagebox.showerror("Error", "Username and password are required")
-        return
-
-    logger.info(f"[INFO] Logging in with existing account: {user}")
-    start_rageborn_async(user, pwd)
-
-def on_signup_only():
-    """Sign up ONLY, no Rageborn"""
-    on_submit()
-
-def on_signup_and_run_once():
-    """Sign up, then run Rageborn once"""
-    first = first_name_entry.get()
-    last = last_name_entry.get()
-    email = email_entry.get()
-    user = username_entry.get()
-    pwd = get_effective_password()
-
-    if not all([first, last, email, user, pwd]):
-        messagebox.showerror("Error", "All fields are required")
-        return
-
-    success, msg = signup_user(first, last, email, user, pwd)
-
-    if success:
-        start_rageborn_async(user, pwd)
-    else:
-        messagebox.showerror("Failed", msg)
-
-
 def on_start_endless_mode():
-    """Start endless mode (replaces checkbox)"""
-    if not auto_mode_var.get():
-        auto_mode_var.set(True)
-
-        root.after(0, set_endless_mode_ui_running)
-
-        threading.Thread(
-            target=auto_loop_worker,
-            daemon=True
-        ).start()
-
-def on_submit():
-    first = first_name_entry.get()
-    last = last_name_entry.get()
-    email = email_entry.get()
-    user = username_entry.get()
-    pwd = get_effective_password()
-
-    if not all([first, last, email, user, pwd]):
-        messagebox.showerror("Error", "All fields are required")
+    if endless_controller.is_running():
         return
 
-    success, msg = signup_user(first, last, email, user, pwd)
+    auto_mode_var.set(True)
+    set_endless_mode_ui_running(start_endless_btn)
+    endless_controller.start()
 
-    if success:
-        logger.info("[INFO] Signup successful!")
-    else:
-        logger.error(f"[ERROR] Signup failed: {msg}")
 
-def on_browse_executable():
-    exe_path = filedialog.askopenfilename(
-        title="Select Juvio Game Executable",
-        filetypes=[("Executable files", "*.exe")]
-    )
-
-    if not exe_path:
-        return  # user cancelled
-
-    filename = os.path.basename(exe_path).lower()
-
-    if filename != "juvio.exe":
-        messagebox.showerror(
-            "Invalid Game Launcher",
-            "Invalid executable selected.\n\n"
-            "Please select:\n"
-            "juvio.exe"
-        )
-        return
-
-    if not os.path.isfile(exe_path):
-        messagebox.showerror("Error", "Selected file does not exist")
-        return
-
-    game_exe_var.set(exe_path)
-    set_game_executable(exe_path)
-
-    logger.info(f"[INFO] Game executable set: {exe_path}")
-    exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
-
-
-def launch_game_process():
-    exe = game_exe_var.get()
-
-    if not exe:
-        messagebox.showerror(
-            "Error",
-            "Please select game launcher first."
-        )
-        return False
-
-    if not os.path.isfile(exe):
-        messagebox.showerror(
-            "Executable missing",
-            "The selected executable no longer exists."
-        )
-        return False
-
-    if os.path.basename(exe).lower() != "juvio.exe":
-        messagebox.showerror(
-            "Invalid Game Launcher",
-            "Configured executable is not juvio.exe.\n"
-            "Please re-select the correct file."
-        )
-        return False
-    
-    # Prepare startup.cfg
-    prepare_game_config(
-        logger=logger,
-        window_mode=2,
-        width=1024,
-        height=768
-    )
-
-    subprocess.Popen(
-        [exe],
-        cwd=os.path.dirname(exe)
-    )
-    return True
-
-
-def validate_game_executable(show_error=True):
-    exe = game_exe_var.get()
-
-    if not exe:
-        if show_error:
-            messagebox.showerror(
-                "Error",
-                "Please select game launcher first."
-            )
-        return False
-
-    if not os.path.isfile(exe):
-        if show_error:
-            messagebox.showerror(
-                "Executable missing",
-                "The selected executable no longer exists."
-            )
-        return False
-
-    if os.path.basename(exe).lower() != "juvio.exe":
-        if show_error:
-            messagebox.showerror(
-                "Invalid Game Launcher",
-                "Configured executable is not juvio.exe."
-            )
-        return False
-
-    return True
-
-def on_auto_start_checkbox_changed():    
-    value = auto_start_endless_var.get()
-    set_auto_start_endless(value)
-
-    if value:
-        # ✅ validate only (DO NOT LAUNCH)
-        if not validate_game_executable():
-            auto_start_endless_var.set(False)
-            set_auto_start_endless(False)
-            cancel_auto_start_endless()
-            logger.error("[ERROR] Invalid game executable, auto-start cancelled")
-            return
-
-        # ✅ only schedule countdown
-        schedule_auto_start_endless()
-
-    else:
-        cancel_auto_start_endless()
-
-
-def try_auto_start_from_config():
-    """
-    Called on app startup when auto_start=true in config.
-    Must validate executable before scheduling countdown.
-    """
-    if not auto_start_endless_var.get():
-        return
-
-    if not validate_game_executable(show_error=False):
-        logger.error(
-            "[ERROR] Auto-start enabled in config, but game executable is invalid. Auto-start disabled."
-        )
-
-        auto_start_endless_var.set(False)
-        set_auto_start_endless(False)
-        auto_start_countdown_var.set("")
-        return
-
-    schedule_auto_start_endless()
-
-
-def update_auto_start_countdown():
-    global auto_start_remaining, auto_start_countdown_id
-
-    if auto_start_remaining <= 0:
-        auto_start_countdown_var.set("")
-        auto_start_countdown_id = None
-        execute_auto_start_endless()
-        return
-
-    auto_start_countdown_var.set(
-        f"Auto start in {auto_start_remaining}…"
-    )
-    auto_start_remaining -= 1
-
-    auto_start_countdown_id = root.after(1000, update_auto_start_countdown)
-
-
-def schedule_auto_start_endless():    
-    global auto_start_timer_id, auto_start_remaining
-
-    if auto_start_timer_id is not None:
-        return  # already scheduled
-
-    auto_start_remaining = AUTO_START_DELAY_SECONDS
-    auto_start_countdown_var.set(
-        f"Auto start in {auto_start_remaining}…"
-    )
-
-    logger.info("[INFO] Auto-start Endless Mode scheduled")
-
-    auto_start_timer_id = True  # logical flag
-    update_auto_start_countdown()
-
-
-def cancel_auto_start_endless():
-    global auto_start_timer_id, auto_start_countdown_id
-
-    if auto_start_countdown_id is not None:
-        root.after_cancel(auto_start_countdown_id)
-        auto_start_countdown_id = None
-
-    auto_start_timer_id = None
-    auto_start_countdown_var.set("")
-
-    logger.info("[INFO] Auto-start Endless Mode cancelled")
-
-
-def execute_auto_start_endless():
-    global auto_start_timer_id
-
-    auto_start_timer_id = None
-
-    if auto_start_endless_var.get():
-        logger.info("[INFO] Auto-starting Endless Mode now")
-        root.after(0, set_endless_mode_ui_running)
-        on_start_endless_mode()
-    else:
-        logger.info("[INFO] Auto-start aborted (checkbox unchecked)")
-
-
-def labeled_entry(parent, label, default=""):
-    tk.Label(parent, text=label, anchor="w").pack(fill="x")
-    e = tk.Entry(parent)
-    e.pack(fill="x", pady=2)
-    if default:
-        e.insert(0, default)
-    return e
-
-def set_endless_mode_ui_running():
-    start_endless_btn.config(
-        text="Hit F11 to stop",
-        fg="red",
-        state="disabled"
-    )
-
-def set_endless_mode_ui_idle():
-    start_endless_btn.config(
-        text="Start Endless Mode",
-        fg="black",
-        state="normal"
-    )
-
-def on_auto_email_verification_changed():
-    set_auto_email_verification(
-        auto_email_verification_var.get()
-    )
-
-def on_auto_mobile_verification_changed():
-    set_auto_mobile_verification(
-        auto_mobile_verification_var.get()
-    )
-
-def on_auto_update_changed():
-    set_auto_update(
-        auto_update_var.get()
-    )
-
-def on_username_prefix_add_count_changed():
-    set_username_prefix_count_enabled(add_prefix_count_var.get())
-
-def on_username_postfix_add_count_changed():
-    set_username_postfix_count_enabled(add_postfix_count_var.get())
-
-def on_prefix_checkbox_toggle():
-    global _last_prefix_enabled
-
-    enabled = add_prefix_count_var.get()
-
-    if enabled and not _last_prefix_enabled:
-        prefix_count_start_var.set(1)
-        set_username_prefix_count_start_at(1)
-        reset_prefix_counters()
-
-    prefix_count_entry.config(
-        state="normal" if enabled else "disabled"
-    )
-
-    set_username_prefix_count_enabled(enabled)
-    _last_prefix_enabled = enabled
-
-
-def on_postfix_checkbox_toggle():
-    global _last_postfix_enabled
-
-    enabled = add_postfix_count_var.get()
-
-    if enabled and not _last_postfix_enabled:
-        postfix_count_start_var.set(1)
-        set_username_postfix_count_start_at(1)
-        reset_postfix_counters()
-
-    postfix_count_entry.config(
-        state="normal" if enabled else "disabled"
-    )
-
-    set_username_postfix_count_enabled(enabled)
-    _last_postfix_enabled = enabled
-
-def on_prefix_count_changed(*_):
-    if not add_prefix_count_var.get():
-        return
-
-    try:
-        value = prefix_count_start_var.get()
-    except tk.TclError:
-        return  # user is still typing / entry temporarily empty
-
-    set_username_prefix_count_start_at(value)
-    set_prefix_counters(value)
-
-
-def on_postfix_count_changed(*_):
-    if not add_postfix_count_var.get():
-        return
-
-    try:
-        value = postfix_count_start_var.get()
-    except tk.TclError:
-        return
-
-    set_username_postfix_count_start_at(value)
-    set_postfix_counters(value)
-
-
-prefix_count_start_var.trace_add("write", on_prefix_count_changed)
-postfix_count_start_var.trace_add("write", on_postfix_count_changed)
+prefix_count_start_var.trace_add("write", lambda *_: on_prefix_count_changed(prefix_count_start_var))
+postfix_count_start_var.trace_add("write", lambda *_: on_postfix_count_changed(postfix_count_start_var))
 
 
 # ============================================================
 # Text field handler
-debounced_firstname_save = make_debouncer(root, DEBOUNCE_MS, set_account_firstname)
-debounced_lastname_save = make_debouncer(root, DEBOUNCE_MS, set_account_lastname)
-debounced_email_domain_save = make_debouncer(root, DEBOUNCE_MS, set_account_email_domain)
-debounced_password_save = make_debouncer(root, DEBOUNCE_MS, set_account_password)
-debounced_prefix_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix)
-debounced_prefix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_prefix_count_start_at)
-debounced_postfix_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix)
-debounced_postfix_count_save = make_debouncer(root, DEBOUNCE_MS, set_username_postfix_count_start_at)
+debounced_firstname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_firstname)
+debounced_lastname_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_lastname)
+debounced_email_domain_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_email_domain)
+debounced_password_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_account_password)
+debounced_prefix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix)
+debounced_prefix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_prefix_count_start_at)
+debounced_postfix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix)
+debounced_postfix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix_count_start_at)
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 800
@@ -1280,18 +244,18 @@ main_frame.columnconfigure(0, weight=0)
 main_frame.columnconfigure(1, weight=1)
 main_frame.rowconfigure(0, weight=1)
 
-first_name_entry = labeled_entry(form_frame, "First Name", get_account_firstname())
-last_name_entry = labeled_entry(form_frame, "Last Name", get_account_lastname())
-prefix_entry = labeled_entry(form_frame, "Prefix (optional)", get_username_prefix())
-postfix_entry = labeled_entry(form_frame, "Postfix (optional)", get_username_postfix())
-domain_entry = labeled_entry(form_frame, "Email Domain", get_account_email_domain())
+first_name_entry = labeled_entry(form_frame, "First Name", state.get_account_firstname())
+last_name_entry = labeled_entry(form_frame, "Last Name", state.get_account_lastname())
+prefix_entry = labeled_entry(form_frame, "Prefix (optional)", state.get_username_prefix())
+postfix_entry = labeled_entry(form_frame, "Postfix (optional)", state.get_username_postfix())
+domain_entry = labeled_entry(form_frame, "Email Domain", state.get_account_email_domain())
 email_entry = labeled_entry(form_frame, "Email")
 username_entry = labeled_entry(form_frame, "Username")
-password_entry = labeled_entry(form_frame, "Password", get_account_password())
+password_entry = labeled_entry(form_frame, "Password", state.get_account_password())
 
 vcmd_int = root.register(validate_int_only)
 
-game_exe_var = tk.StringVar(value=get_game_executable())
+game_exe_var = tk.StringVar(value=state.get_game_executable())
 exe_header = tk.Frame(form_frame)
 exe_header.pack(fill="x", pady=(8, 0))
 
@@ -1303,7 +267,7 @@ tk.Label(
 tk.Button(
     exe_header,
     text="Browse",
-    command=on_browse_executable,
+    command=lambda: browse_executable(game_exe_var, exe_entry),
     width=10
 ).pack(side="right")
 
@@ -1333,7 +297,13 @@ tk.Button(
 tk.Button(
     action_row,
     text="Login",
-    command=on_login_only,
+    command=lambda: on_login_only(
+        username_entry=username_entry,
+        password_entry=password_entry,
+        get_password_cb=get_effective_password,
+        start_async_cb=start_rageborn_async,
+        launch_game_process=lambda: launch_game_process(game_exe_var)
+    ),
     width=12
 ).pack(side="left", expand=True, padx=2)
 
@@ -1350,7 +320,16 @@ tk.Checkbutton(
     status_frame,
     text="Auto start Endless Mode on launch",
     variable=auto_start_endless_var,
-    command=on_auto_start_checkbox_changed
+    command=lambda: on_auto_start_checkbox_changed(
+        auto_start_var=auto_start_endless_var,
+        root=root,
+        countdown_var=auto_start_countdown_var,
+        validate_exe_cb=lambda show_error=True: validate_game_executable(
+            game_exe_var, show_error
+        ),
+        on_start_cb=on_start_endless_mode,
+        autostart_module=autostart,
+    )
 ).pack(anchor="w", pady=(2, 4))
 
 countdown_label = tk.Label(
@@ -1383,6 +362,7 @@ notebook.pack(fill="both", expand=True)
 
 extra_settings_tab = tk.Frame(notebook)
 logs_tab = tk.Frame(notebook)
+chat_settings_tab = tk.Frame(notebook)
 
 # ============================================================
 # EXTRA SETTINGS TAB
@@ -1448,7 +428,7 @@ tk.Checkbutton(
     app_settings_row,
     text="Auto Restart PC on DNS Failure",
     variable=auto_restart_dns_var,
-    command=lambda: set_auto_restart_dns(auto_restart_dns_var.get())
+    command=lambda: state.set_auto_restart_dns(auto_restart_dns_var.get())
 ).grid(row=0, column=1, sticky="w")
 
 app_settings_row2 = tk.Frame(app_settings_frame)
@@ -1458,8 +438,16 @@ tk.Checkbutton(
     app_settings_row2,
     text="Settings for Slower PC",
     variable=settings_for_slower_pc_var,
-    command=lambda: set_settings_for_slower_pc(settings_for_slower_pc_var.get())
+    command=lambda: state.set_settings_for_slower_pc(settings_for_slower_pc_var.get())
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
+
+tk.Checkbutton(
+    app_settings_row2,
+    text="Use Ragequit Mode",
+    variable=is_ragequit_mode_enabled_var,
+    command=lambda: state.set_is_ragequit_mode_enabled(is_ragequit_mode_enabled_var.get()),
+    fg="red"
+).grid(row=0, column=1, sticky="w")
 
 # ============================================================
 username_settings_frame = tk.LabelFrame(
@@ -1480,11 +468,17 @@ username_settings_frame.pack(
 username_settings_row = tk.Frame(username_settings_frame)
 username_settings_row.pack(anchor="w", pady=4)
 
+_prefix_state = {"value": False}
 tk.Checkbutton(
     username_settings_row,
     text="Add count on Prefix",
     variable=add_prefix_count_var,
-    command=lambda: on_prefix_checkbox_toggle()
+    command=lambda: on_prefix_checkbox_toggle(
+        enabled_var=add_prefix_count_var,
+        count_var=prefix_count_start_var,
+        entry_widget=prefix_count_entry,
+        last_enabled_ref=_prefix_state,
+    )
 ).grid(row=0, column=0, sticky="w", padx=5)
 
 tk.Checkbutton(
@@ -1529,6 +523,41 @@ postfix_count_entry = tk.Entry(
 postfix_count_entry.grid(row=0, column=3, padx=5)
 
 # ============================================================
+# CHAT TAB
+# ============================================================
+notebook.add(chat_settings_tab, text="Chat Settings")
+
+build_chat_placeholder_guide(chat_settings_tab)
+
+CHAT_PICKING_PATH = get_chat_path("chat_picking.txt")
+CHAT_INGAME_PATH  = get_chat_path("chat_ingame.txt")
+
+picking_text = build_chat_editor(
+    chat_settings_tab,
+    "Picking Phase Chat",
+    CHAT_PICKING_PATH,
+    default_relative_path="data/chat_picking.txt"
+)
+ingame_text = build_chat_editor(
+    chat_settings_tab,
+    "In-Game Chat",
+    CHAT_INGAME_PATH,
+    default_relative_path="data/chat_ingame.txt"
+)
+
+tk.Button(
+    chat_settings_tab,
+    text="Save Chat Settings",
+    command=lambda: save_chat_settings(
+        picking_text=picking_text,
+        ingame_text=ingame_text,
+        picking_path=CHAT_PICKING_PATH,
+        ingame_path=CHAT_INGAME_PATH,
+    )
+).pack(pady=10)
+
+
+# ============================================================
 # LOGS TAB
 # ============================================================
 notebook.add(logs_tab, text="Logs")
@@ -1552,10 +581,45 @@ style = ttk.Style()
 style.theme_use("default")
 
 # ============================================================
-poll_log_queue()
+poll_log_queue(
+    root=root,
+    log_queue=log_queue,
+    log_text=log_text,
+    formatter=ui_formatter,
+)
+
+start_endless_ui_refresh(
+    root,
+    duration_var,
+    iteration_var,
+    interval_ms=1000
+)
+
 exe_entry.after(1, lambda: exe_entry.xview_moveto(1.0))
-on_prefix_checkbox_toggle()
-on_postfix_checkbox_toggle()
+_prefix_state = {"value": False}
+
+add_prefix_count_var.trace_add(
+    "write",
+    lambda *_: on_prefix_checkbox_toggle(
+        enabled_var=add_prefix_count_var,
+        count_var=prefix_count_start_var,
+        entry_widget=prefix_count_entry,
+        last_enabled_ref=_prefix_state,
+    )
+)
+
+_postfix_state = {"value": False}
+
+add_postfix_count_var.trace_add(
+    "write",
+    lambda *_: on_postfix_checkbox_toggle(
+        enabled_var=add_postfix_count_var,
+        count_var=postfix_count_start_var,
+        entry_widget=postfix_count_entry,
+        last_enabled_ref=_postfix_state,
+    )
+)
+
 
 # ============================================================
 first_name_entry.bind(
@@ -1617,10 +681,19 @@ postfix_count_entry.bind(
 # ============================================================
 # AUTO START ENDLESS MODE (DELAYED & CANCELLABLE)
 # ============================================================
-
 if auto_start_endless_var.get():
-    try_auto_start_from_config()
+    try_auto_start_from_config(
+        auto_start_var=auto_start_endless_var,
+        root=root,
+        countdown_var=auto_start_countdown_var,
+        validate_exe_cb=lambda show_error=False: validate_game_executable(
+            game_exe_var, show_error
+        ),
+        on_start_cb=on_start_endless_mode,
+        autostart_module=autostart,
+    )
+
 
 if __name__ == "__main__":
-    set_self_high_priority()
+    set_self_high_priority() 
     root.mainloop()

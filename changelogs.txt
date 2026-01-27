@@ -1,4 +1,68 @@
 # =========================================================================== #
+# v2.0.0 - Feature Reworks (27 January 2026)
+# =========================================================================== #
+- [x] Improvement on QoL stuff related.
+- [x] Improvement on duration timer live update state.
+- [x] Improvement on F11 emergency stop process.
+- [x] Improvement on Rageborn account changing method.
+
+# =========================================================================== #
+# v1.10.6 - Bug Fixes (25 January 2026)
+# =========================================================================== #
+- [x] Fixed Rageborn crashing issue.
+
+# =========================================================================== #
+# v1.10.5 - Feature Enhancement (22 January 2026)
+# =========================================================================== #
+- [x] Added game stucked detection on account relog for Ragequit mode.
+- [x] Adjusted Ragequit timeout chance to 80%.
+
+# =========================================================================== #
+# v1.10.4 - Feature Enhancement (21 January 2026)
+# =========================================================================== #
+- [x] Adjusted Ragequit reconnect wait time to prevent game crashed.
+
+# =========================================================================== #
+# v1.10.3 - Feature Enhancement (19 January 2026)
+# =========================================================================== #
+- [x] Added disconnect / reconnect feature for Ragequit mode.
+- [x] Reoptimize performance on Ragequit mode with connection.
+- [x] Added random chances on deciding timeout or disconnect directly.
+
+# =========================================================================== #
+# v1.10.2 - Feature Enhancement (19 January 2026)
+# =========================================================================== #
+- [x] Added failsafe detection for Ragequit mode on relogin part.
+
+# =========================================================================== #
+# v1.10.1 - Feature Enhancement (19 January 2026)
+# =========================================================================== #
+- [x] Improvement on Ragequit mode performance.
+
+# =========================================================================== #
+# v1.10.0 - Feature Enhancement (19 January 2026)
+# =========================================================================== #
+- [x] Added Ragequit mode.
+
+# =========================================================================== #
+# v1.9.1 - Minor Bug Fixes (17 January 2026)
+# =========================================================================== #
+- [x] Improvement on QoL stuff related.
+- [x] Fixed issue where picking phase chat is not using it correctly.
+
+# =========================================================================== #
+# v1.9.0 - Feature Enhancement (17 January 2026)
+# =========================================================================== #
+- [x] Added in-game / picking phase chat customization.
+- [x] Improvement on dialog message dismiss function.
+
+# =========================================================================== #
+# v1.8.2 - Feature Enhancement (17 January 2026)
+# =========================================================================== #
+- [x] Improvement on requeue detection.
+- [x] Improvement error message pops up detection and dismiss during in-queue phase.
+
+# =========================================================================== #
 # v1.8.1 - Minor Bug Fixes (17 January 2026)
 # =========================================================================== #
 - [x] Fixed game crashed on Midwar map when trying to teleport to tower.

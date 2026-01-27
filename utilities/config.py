@@ -3,13 +3,9 @@ import os
 import sys
 import core.state as state
 from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+from utilities.runtime import runtime_dir
 
-def exe_dir():
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-
-CONFIG_FILE = os.path.join(exe_dir(), "config.ini")
+CONFIG_FILE = os.path.join(runtime_dir(), "config.ini")
 
 def load_config():
     config = configparser.ConfigParser()
@@ -25,6 +21,7 @@ def load_config():
     state.AUTO_RESTART_DNS = config.getboolean("network", "auto_restart_dns", fallback=False)
     state.SLOWER_PC_MODE = config.getboolean("performance", "slower_pc_mode", fallback=False)
     state.AUTO_UPDATE = config.getboolean("settings", "auto_update", fallback=True)
+    state.RAGEQUIT_MODE = config.getboolean("settings", "ragequit", fallback=False)
 
     # ---- Strings ----
     state.GAME_EXECUTABLE = config.get("paths", "game_executable", fallback="")
@@ -51,4 +48,46 @@ def load_config():
     )
 
     return config
+
+def _atomic_write(config, path):
+    tmp = path + ".tmp"
+
+    with open(tmp, "w", encoding="utf-8") as f:
+        config.write(f)
+        f.flush()
+        os.fsync(f.fileno())
+
+    os.replace(tmp, path)  # atomic on Windows
+
+def write_config_bool(section: str, key: str, value: bool):
+    config = configparser.ConfigParser()
+    path = os.path.join(runtime_dir(), "config.ini")
+
+    if os.path.exists(path):
+        try:
+            config.read(path, encoding="utf-8")
+        except Exception:
+            pass
+
+    if section not in config:
+        config[section] = {}
+
+    config[section][key] = "true" if value else "false"
+    _atomic_write(config, path)
+
+def write_config_str(section: str, key: str, value: str):
+    config = configparser.ConfigParser()
+    path = os.path.join(runtime_dir(), "config.ini")
+
+    if os.path.exists(path):
+        try:
+            config.read(path, encoding="utf-8")
+        except Exception:
+            pass
+
+    if section not in config:
+        config[section] = {}
+
+    config[section][key] = value
+    _atomic_write(config, path)
 

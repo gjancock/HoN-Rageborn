@@ -11,6 +11,7 @@ from tkinter import ttk
 import ctypes
 import hashlib
 from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+from utilities.runtime import runtime_dir
 
 
 # --------------------------------------------------
@@ -25,10 +26,7 @@ set_app_id()
 # --------------------------------------------------
 # Paths (ALWAYS relative to launcher.exe)
 # --------------------------------------------------
-def exe_dir():
-    return os.path.dirname(os.path.abspath(sys.executable))
-
-BASE_DIR = exe_dir()
+BASE_DIR = runtime_dir()
 
 APP_EXE = os.path.join(BASE_DIR, "Rageborn.exe")          # MAIN APP
 TEMP_EXE = os.path.join(BASE_DIR, "Rageborn.new.exe")

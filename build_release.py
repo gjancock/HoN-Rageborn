@@ -30,6 +30,7 @@ def build_exe():
         "--noconsole",
         "--name", APP_NAME,
 
+        # Core runtime
         "--hidden-import=pyautogui",
         "--hidden-import=pyscreeze",
         "--hidden-import=pygetwindow",
@@ -40,18 +41,33 @@ def build_exe():
         "--hidden-import=win32con",
         "--hidden-import=win32process",
         "--hidden-import=keyboard",
-        "--hidden-import=core.state",
-        "--hidden-import=accountVerification",
 
+        # Internal modules (defensive)
+        "--hidden-import=core.state",
+        "--hidden-import=ui.autostart",
+        "--hidden-import=ui.game_launcher",
+        "--hidden-import=ui.chat_editor",
+        "--hidden-import=ui.cycle_runner",
+        "--hidden-import=ui.ui_handlers",
+        "--hidden-import=ui.ui_state_sync",
+        "--hidden-import=ui.rageborn_runner",
+        "--hidden-import=ui.log_view",
+
+        # UI safety
+        "--hidden-import=tkinter",
+
+        # Data files
         "--add-data", "VERSION;.",
         "--add-data", "images;images",
         "--add-data", "datasets;datasets",
         "--add-data", "scripts;scripts",
+        "--add-data", "data;data",
 
         "ragebirth.py"
     ]
 
     subprocess.check_call(cmd)
+
 
 # -----------------------------
 # Write checksum

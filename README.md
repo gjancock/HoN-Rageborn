@@ -9,8 +9,9 @@ How to Use
 -------------------------------------
 1. Download launcher.exe (one-time)
    - https://github.com/gjancock/HoN-Rageborn/releases/tag/launcher-v1.1.0
-2. Run it.
-3. Enjoy.
+2. Right click -> Properties -> Compatibility tab -> Run this program as an administrator -> OK
+3. Run it.
+4. Enjoy.
 
 Do take note on settings below:
 -------------------------------------
