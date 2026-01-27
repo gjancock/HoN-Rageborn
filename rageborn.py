@@ -1214,6 +1214,12 @@ def changeAccount(isRageQuit: bool = False):
 
     # Re-enter username field
     pyautogui.doubleClick(1010, 568)
+
+    if not acc or not isinstance(acc.username, str):
+        logger.error(f"[CHANGE] Invalid pending account: {acc}")
+        state.STOP_EVENT.set()
+        return False
+
     type_text(acc.username)
     pyautogui.press("tab")
     pyautogui.press("enter")
@@ -1236,6 +1242,7 @@ def changeAccount(isRageQuit: bool = False):
             ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {acc.username}")
             state.INGAME_STATE.setIsReInitiated(True)
+            state.clear_pending_account(acc.username)
             break
 
         if now - loginTime >= timeout:
@@ -1289,6 +1296,7 @@ def main(username, password, isRageQuit: bool = False):
                     find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
                     logger.info("[INFO] KICKED! Closing dialog message.")
                 
+                # TODO: if want to use existing account can skip this step so it will loop
                 changeAccount(isRageQuit)
 
         logger.info("[INFO] Rageborn shutting down...")

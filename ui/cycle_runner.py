@@ -7,7 +7,6 @@ from ui import rageborn_runner
 
 logger = logging.getLogger("rageborn")
 
-
 def run_cycle(
     *,
     generate_credentials_cb,
@@ -20,18 +19,30 @@ def run_cycle(
     No Tk imports. No UI globals.
     """
 
-    try:
-        while not state.STOP_EVENT.is_set():
-            # 1️⃣ Generate credentials (UI callback)
-            generate_credentials_cb()
+    username = None
+    password = None
 
-            # 2️⃣ Read credentials (UI callback)
+    try:
+        # --------------------------------------------------
+        # 1️⃣ Resolve account (pending OR new)
+        # --------------------------------------------------
+        while not state.STOP_EVENT.is_set():
+
+            pending = state.get_latest_pending_account()
+
+            if pending:
+                logger.info(f"[CYCLE] Using pending account: {pending.username}")
+                username = pending.username
+                password = pending.password
+                break  # ✅ do NOT signup again
+
+            # No pending account → create new
+            generate_credentials_cb()
             username, password, first, last, email = read_credentials_cb()
 
             logger.info("-------------------------------------------")
             logger.info(f"[INFO] Generated account: {username}")
 
-            # 3️⃣ Signup attempt
             try:
                 success, msg = signup_cb(
                     first,
@@ -42,26 +53,38 @@ def run_cycle(
                 )
             except Exception as e:
                 logger.warning(f"[WARN] Signup exception, regenerating: {e}")
-                success = False
-                msg = "exception"
+                time.sleep(random.uniform(1, 3))
+                continue
 
             if success:
+                logger.info("[INFO] Signup success!")
                 break
 
-            logger.info(
-                f"[INFO] Failed to signup account {username}: {msg}"
-            )
+            logger.info(f"[INFO] Failed to signup account {username}: {msg}")
             logger.info("[INFO] Regenerating new account")
             time.sleep(random.uniform(1, 3))
 
-        logger.info("[INFO] Signup success!")
+        # --------------------------------------------------
+        # 2️⃣ Sanity check before launch
+        # --------------------------------------------------
+        if not username or not password:
+            raise RuntimeError("No valid credentials resolved for cycle")
+
         logger.info(f"[INFO] Username {username} launching Rageborn.exe")
 
+        # --------------------------------------------------
+        # 3️⃣ Launch Rageborn
+        # --------------------------------------------------
         rageborn_runner.run_rageborn_flow(
             username,
             password,
             launch_game_process,
         )
+
+        # --------------------------------------------------
+        # 4️⃣ Pending account successfully consumed
+        # --------------------------------------------------
+        state.clear_pending_account(username)
 
         return True
 
@@ -69,6 +92,7 @@ def run_cycle(
         logger.exception("[WARN] Cycle error, recovering")
         time.sleep(10)
         raise
+
 
 def endless_worker(
     *,
