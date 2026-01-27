@@ -19,7 +19,7 @@ from utilities.imagesUtilities import find_and_click, image_exists, any_image_ex
 from utilities.datasetLoader import load_dataset
 from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
-from utilities.accountGenerator import generate
+from utilities.accountGenerator import generatePendingAccount
 from utilities.networkUtilities import getDisconnected, reconnect, wait_for_ping
 
 # Initialize Logger
@@ -371,10 +371,10 @@ def startQueue(isRageQuit: bool = False):
     interruptible_wait(1.25 if not isRageQuit else 0.5)
 
     #
-    isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
+    isReInitiated = state.INGAME_STATE.getIsReInitiated()
 
     # Tune matchmaking bar
-    if not isRageQuitInitiated:
+    if not isReInitiated:
         x, y = assetsLibrary.get_matchmaking_tuner_coord()
         pyautogui.moveTo(x, y, duration=0.3)    
         pyautogui.click()
@@ -522,13 +522,13 @@ def pickingPhaseChat(isRageQuit: bool = False):
             text = apply_chat_placeholders(text)        
             enterChat(text)
     else:
-        isRageQuitInitiated = state.INGAME_STATE.getIsRageQuitInitiated()
+        isReInitiated = state.INGAME_STATE.getIsReInitiated()
 
         randomString = get_picking_chats()
         if not randomString:
             return
         
-        if not isRageQuitInitiated:
+        if not isReInitiated:
             pyautogui.click(1068, 836) # toggle chat to all
         text = random.choice(randomString)
         text = apply_chat_placeholders(text)
@@ -595,26 +595,21 @@ def pickingPhase(isRageQuit: bool = False):
         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
         interruptible_wait(0.5)
 
+    while not state.STOP_EVENT.is_set():
+        status, username, password = generatePendingAccount()
+        if status:
+            logger.info(f"[INFO] Generated Username: {username}")
+            break
+
+        interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
+
+
     if isRageQuit:
-        username = None
-        password = None
-        status = False
-        while not state.STOP_EVENT.is_set():
-            status, username, password = generate()
-            if status:
-                logger.info(f"[INFO] Generated Username: {username}")
-                break
-
-            interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
-
-        pickingPhaseChat(isRageQuit)
-
         # Ragequit
         logger.info("[INFO] Waiting to change account")
         interruptible_wait(round(random.uniform(1, 3), 2))
-        
-        # random wait
-        return True, username, password
+
+        return True    
     else:
         match state.INGAME_STATE.getCurrentMap():
             case constant.MAP_FOC:
@@ -777,20 +772,20 @@ def pickingPhase(isRageQuit: bool = False):
                 logger.info(f"[INFO] Hero {hero} is now selected!")
                 pyautogui.moveTo(x, y, duration=0.3)
 
-        logger.info("[INFO] Waiting to rageborn")
-        while not state.STOP_EVENT.is_set():
-            if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
-                logger.info("[INFO] I see fountain, I see grief!")
-                logger.info("[INFO] Rageborn begin!")
-                interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
-                return True, None, None
-            
-            if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
-                # Back to lobby
-                logger.info("[INFO] Match aborted!")
-                return False, None, None
-            
-            interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
+    logger.info("[INFO] Waiting to rageborn")
+    while not state.STOP_EVENT.is_set():
+        if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
+            logger.info("[INFO] I see fountain, I see grief!")
+            logger.info("[INFO] Rageborn begin!")
+            interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
+            return True
+        
+        if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+            # Back to lobby
+            logger.info("[INFO] Match aborted!")
+            return False
+        
+        interruptible_wait(2 if not state.SLOWER_PC_MODE else 2.5)
 
 # pause vote
 def do_pause_vote():
@@ -1015,13 +1010,13 @@ def do_foc_stuff():
 
             if check_lobby_message():    
                 pyautogui.keyUp("c") # stop spamming
-                state.STOP_EVENT.set()
+                # state.STOP_EVENT.set()
                 break
         
         if elapsed >= matchTimedout:    
             pyautogui.keyUp("c") # stop spamming
             logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
-            state.STOP_EVENT.set()
+            # state.STOP_EVENT.set()
             break
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
@@ -1120,13 +1115,13 @@ def do_midwar_stuff():
 
             if check_lobby_message():    
                 pyautogui.keyUp("c") # stop spamming
-                state.STOP_EVENT.set()
+                # state.STOP_EVENT.set()
                 break
         
         if elapsed >= matchTimedout:    
             pyautogui.keyUp("c") # stop spamming
             logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
-            state.STOP_EVENT.set()
+            # state.STOP_EVENT.set()
             break
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
@@ -1159,56 +1154,67 @@ def ingame():
         case constant.MAP_MIDWAR:
             do_midwar_stuff()
 
-def logoutRelog(username, password):
-    timedoutChance = 0.8
-    if random.random() < timedoutChance:
-        adapter = getDisconnected()
-        logger.info("[INFO] Oops! electricity goes off out of sudden")
+def changeAccount(isRageQuit: bool = False):
+    acc = state.get_latest_pending_account()
+
+    if not acc:
+        logger.error("[ERROR] No pending account to change, aborting..")
+        state.increment_iteration()
+        state.STOP_EVENT.set() # quit loop
+
+    if isRageQuit:
+        timedoutChance = 0.8
+        if random.random() < timedoutChance:
+            adapter = getDisconnected()
+            logger.info("[INFO] Oops! electricity goes off out of sudden")
+                
+            reconnect(adapter)
+            logger.info("[INFO] Waiting to reconnect...")
+            restored = wait_for_ping(timeout=30)
+            if restored:
+                logger.info("[INFO] Got back connection!")
+                # pyautogui.click(1415, 235)
+                # pyautogui.click(1000, 425)
+                # interruptible_wait(2)
+                # pyautogui.click(991, 341)
+                interruptible_wait(5.5)
+
+
+            while not state.STOP_EVENT.is_set():
+                if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
+                    logger.info("[INFO] Timed-out to login page..")
+                    break
+
+                if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
+                    logger.info("[INFO] Manually logout after timeout!")
+                    pyautogui.click(1415, 235) #logout
+                    break
+
+                interruptible_wait(0.3)
             
-        reconnect(adapter)
-        logger.info("[INFO] Waiting to reconnect...")
-        restored = wait_for_ping(timeout=30)
-        if restored:
-            logger.info("[INFO] Got back connection!")
-            # pyautogui.click(1415, 235)
-            # pyautogui.click(1000, 425)
-            # interruptible_wait(2)
-            # pyautogui.click(991, 341)
-            interruptible_wait(5.5)
+            interruptible_wait(4)
+        else:
+            logger.info("[INFO] Ready to disconnect..")
+            interruptible_wait(round(random.uniform(5, 10), 2))
+            pyautogui.click(1415, 235)
+            pyautogui.click(1000, 425)
+            interruptible_wait(2)
+            pyautogui.click(991, 341)
+            interruptible_wait(1)
 
-
-        while not state.STOP_EVENT.is_set():
-            if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
-                logger.info("[INFO] Timed-out to login page..")
-                break
-
-            if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
-                logger.info("[INFO] Manually logout after timeout!")
-                pyautogui.click(1415, 235) #logout
-                break
-
-            interruptible_wait(0.3)
-        
-        interruptible_wait(4)
+            # logout
+            pyautogui.click(1415, 235)
+            interruptible_wait(0.5)
     else:
-        logger.info("[INFO] Ready to disconnect..")
-        interruptible_wait(round(random.uniform(5, 10), 2))
-        pyautogui.click(1415, 235)
-        pyautogui.click(1000, 425)
-        interruptible_wait(2)
-        pyautogui.click(991, 341)
-        interruptible_wait(1)
-
-        # logout
         pyautogui.click(1415, 235)
         interruptible_wait(0.5)
 
     # Increase complete count
     state.increment_iteration()
 
-    # Relog
+    # Re-enter username field
     pyautogui.doubleClick(1010, 568)
-    type_text(username)
+    type_text(acc.username)
     pyautogui.press("tab")
     pyautogui.press("enter")
     logger.info("[INFO] Attempt to login")
@@ -1228,7 +1234,8 @@ def logoutRelog(username, password):
         if any_image_exists([
             "play-button.png", "play-button-christmas.png"
             ], region=constant.SCREEN_REGION):
-            logger.info(f"[LOGIN] Successfully logged in as {username}")
+            logger.info(f"[LOGIN] Successfully logged in as {acc.username}")
+            state.INGAME_STATE.setIsReInitiated(True)
             break
 
         if now - loginTime >= timeout:
@@ -1260,7 +1267,7 @@ def main(username, password, isRageQuit: bool = False):
                     break
                 
                 #
-                result, username, password = pickingPhase(isRageQuit)          
+                result = pickingPhase(isRageQuit)
 
                 if not isRageQuit and not result:
                     # Rageborn match aborted
@@ -1279,9 +1286,10 @@ def main(username, password, isRageQuit: bool = False):
 
                 if not isRageQuit:
                     ingame()
-                else:
-                    state.INGAME_STATE.setIsRageQuitInitiated(True)
-                    logoutRelog(username, password)
+                    find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+                    logger.info("[INFO] KICKED! Closing dialog message.")
+                
+                changeAccount(isRageQuit)
 
         logger.info("[INFO] Rageborn shutting down...")
     
