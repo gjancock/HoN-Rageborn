@@ -68,7 +68,17 @@ def run_cycle(
         # 2️⃣ Sanity check before launch
         # --------------------------------------------------
         if not username or not password:
-            raise RuntimeError("No valid credentials resolved for cycle")
+            logger.warning("[WARN] Missing credentials before launch, invoking failsafe")
+
+            username, password = _force_generate_account(
+                generate_credentials_cb,
+                read_credentials_cb,
+                signup_cb,
+            )
+
+            if not username or not password:
+                logger.error("[FATAL] Failsafe account generation failed, skipping cycle")
+                return False
 
         logger.info(f"[INFO] Username {username} launching Rageborn.exe")
 
@@ -110,3 +120,35 @@ def endless_worker(
             time.sleep(10)
 
     logger.info("[INFO] Endless mode stopped")
+
+
+def _force_generate_account(generate_credentials_cb, read_credentials_cb, signup_cb):
+    """
+    Hard fallback: force-generate a brand new account once.
+    """
+    logger.warning("[FAILSAFE] Forcing fresh account generation")
+
+    while not state.STOP_EVENT.is_set():
+        generate_credentials_cb()
+        username, password, first, last, email = read_credentials_cb()
+
+        if not username or not password:
+            logger.error("[FAILSAFE] UI returned empty credentials")
+            return None, None
+
+        try:
+            success, msg = signup_cb(first, last, email, username, password)
+            if success:
+                break
+
+        except Exception as e:
+            logger.exception("[FAILSAFE] Signup exception during forced recovery")
+            return None, None
+
+    if not success:
+        logger.error(f"[FAILSAFE] Forced signup failed: {msg}")
+        return None, None
+
+    logger.info("[FAILSAFE] Forced signup successful")
+    return username, password
+
