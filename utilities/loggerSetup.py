@@ -1,6 +1,10 @@
 import logging
 import os
+
 from datetime import date
+
+#
+LOGGER_NAME = "rageborn"
 
 class TkLogHandler(logging.Handler):
     def __init__(self, log_queue):
@@ -17,11 +21,13 @@ def setup_logger(
     ui_queue=None
 ):
     os.makedirs(log_dir, exist_ok=True)
-    name = date.today().strftime("%d-%m-%Y")
 
-    log_file = os.path.join(log_dir, f"{name}.log")
+    log_file = os.path.join(
+        log_dir,
+        f"{date.today().strftime('%d-%m-%Y')}.log"
+    )
 
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
 
     if logger.handlers:

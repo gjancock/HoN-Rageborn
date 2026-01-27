@@ -1,4 +1,12 @@
 # =========================================================================== #
+# v2.0.0 - Feature Reworks (27 January 2026)
+# =========================================================================== #
+- [x] Improvement on QoL stuff related.
+- [x] Improvement on duration timer live update state.
+- [x] Improvement on F11 emergency stop process.
+- [x] Improvement on Rageborn account changing method.
+
+# =========================================================================== #
 # v1.10.6 - Bug Fixes (25 January 2026)
 # =========================================================================== #
 - [x] Fixed Rageborn crashing issue.

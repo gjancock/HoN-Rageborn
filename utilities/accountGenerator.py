@@ -16,7 +16,7 @@ from utilities.accountRegistration import (
 # Initialize Logger
 logger = setup_logger()
 
-def generate():
+def generatePendingAccount():
     username, password, email = generateMandatoryField()
     firstname = state.get_account_firstname()
     lastname = state.get_account_lastname()
@@ -24,6 +24,9 @@ def generate():
     success, msg = signup_user(
         firstname, lastname, email, username, password, False
     )
+
+    if success:
+        state.add_pending_account(username, password)
 
     return success, username, password
 
