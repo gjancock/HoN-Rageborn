@@ -122,33 +122,68 @@ def endless_worker(
     logger.info("[INFO] Endless mode stopped")
 
 
-def _force_generate_account(generate_credentials_cb, read_credentials_cb, signup_cb):
+def _force_generate_account(
+    generate_credentials_cb,
+    read_credentials_cb,
+    signup_cb,
+    *,
+    max_attempts: int = 10,
+):
     """
-    Hard fallback: force-generate a brand new account once.
+    Hard fallback: force-generate a brand new account.
+    Guaranteed to exit via:
+    - success
+    - STOP_EVENT
+    - max_attempts reached
     """
+
     logger.warning("[FAILSAFE] Forcing fresh account generation")
 
+    attempt = 0
+
     while not state.STOP_EVENT.is_set():
+        attempt += 1
+
+        if attempt > max_attempts:
+            logger.error(
+                f"[FAILSAFE] Aborting after {max_attempts} failed attempts"
+            )
+            return None, None
+
+        logger.info(f"[FAILSAFE] Attempt {attempt}/{max_attempts}")
+
+        # 1️⃣ Generate new credentials
         generate_credentials_cb()
+
+        # 2️⃣ Read credentials
         username, password, first, last, email = read_credentials_cb()
 
         if not username or not password:
             logger.error("[FAILSAFE] UI returned empty credentials")
             return None, None
 
+        # 3️⃣ Attempt signup
         try:
             success, msg = signup_cb(first, last, email, username, password)
-            if success:
-                break
+        except Exception:
+            logger.exception(
+                "[FAILSAFE] Signup exception during forced recovery"
+            )
+            continue  # retry, do NOT abort
 
-        except Exception as e:
-            logger.exception("[FAILSAFE] Signup exception during forced recovery")
-            return None, None
+        if success:
+            logger.info("[FAILSAFE] Forced signup successful")
+            return username, password
 
-    if not success:
-        logger.error(f"[FAILSAFE] Forced signup failed: {msg}")
-        return None, None
+        logger.warning(
+            f"[FAILSAFE] Signup failed ({attempt}/{max_attempts}): {msg}"
+        )
 
-    logger.info("[FAILSAFE] Forced signup successful")
-    return username, password
+        time.sleep(random.uniform(1, 3))
+
+
+    # STOP_EVENT triggered
+    logger.info("[FAILSAFE] Aborted due to STOP_EVENT")
+    return None, None
+
 
