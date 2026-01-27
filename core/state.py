@@ -3,6 +3,13 @@ import random
 
 from utilities.config import write_config_bool, write_config_str
 from datetime import datetime
+from dataclasses import dataclass, field
+
+@dataclass
+class PendingAccount:
+    username: str
+    password: str
+    created_at: datetime = field(default_factory=datetime.utcnow)
 
 class InGameState:
     def __init__(self):
@@ -14,7 +21,7 @@ class InGameState:
         self._position = 0
         self._focRole = ""
         self._isAfk = False
-        self._isRageQuitInitiated = False
+        self._isReInitiated = False
 
     def setCurrentMap(self, map):
         with self._lock:
@@ -44,9 +51,9 @@ class InGameState:
         with self._lock:
             self._isAfk = isAfk
 
-    def setIsRageQuitInitiated(self, isRageQuitInitiated):
+    def setIsReInitiated(self, isReInitiated):
         with self._lock:
-            self._isRageQuitInitiated = isRageQuitInitiated
+            self._isReInitiated = isReInitiated
 
     def getCurrentMap(self):
         with self._lock:
@@ -76,9 +83,42 @@ class InGameState:
         with self._lock:
             return self._isAfk
         
-    def getIsRageQuitInitiated(self):
+    def getIsReInitiated(self):
         with self._lock:
-            return self._isRageQuitInitiated
+            return self._isReInitiated
+
+class PendingAccountStore:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._accounts: dict[str, PendingAccount] = {}
+
+    def add(self, username: str, password: str):
+        with self._lock:
+            self._accounts[username] = PendingAccount(
+                username=username,
+                password=password
+            )
+
+    def remove(self, username: str):
+        with self._lock:
+            self._accounts.pop(username, None)
+
+    def exists(self, username: str) -> bool:
+        with self._lock:
+            return username in self._accounts
+
+    def get(self, username: str) -> PendingAccount | None:
+        with self._lock:
+            return self._accounts.get(username)
+
+    def clear(self):
+        with self._lock:
+            self._accounts.clear()
+
+    def all(self) -> list[PendingAccount]:
+        with self._lock:
+            return list(self._accounts.values())
+
 
 #
 CRASH_EVENT = threading.Event()
@@ -109,7 +149,8 @@ USERNAME_PREFIX_COUNT_START_AT = 1
 USERNAME_POSTFIX_COUNT_START_AT = 1
 
 #
-INGAME_STATE = InGameState() 
+INGAME_STATE = InGameState()
+PENDING_ACCOUNTS = PendingAccountStore()
 
 #
 CURRENT_CYCLE_NUMBER = None
@@ -284,7 +325,21 @@ def set_username_prefix_count_start_at(value: int):
 def set_username_postfix_count_start_at(value: int):
     global USERNAME_POSTFIX_COUNT_START_AT
     USERNAME_POSTFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "postfix_count_start", str(value))
+    write_config_str("username_generator", "postfix_count_start", str(value))    
+
+def add_pending_account(username: str, password: str):
+    PENDING_ACCOUNTS.add(username, password)
+
+def clear_pending_account(username: str):
+    PENDING_ACCOUNTS.remove(username)
+
+def is_pending_account(username: str) -> bool:
+    return PENDING_ACCOUNTS.exists(username)
+
+def get_latest_pending_account():
+    accounts = PENDING_ACCOUNTS.all()
+    return accounts[-1] if accounts else None
+
 
 def get_cycle_number():
     return CURRENT_CYCLE_NUMBER
