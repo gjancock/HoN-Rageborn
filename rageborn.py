@@ -535,7 +535,7 @@ def getTeam():
 
             # 1️⃣ strict match (fast path)
             if my_username in text or text in my_username:
-                logger.info(f"[INFO] Detected team: {team} (strict)")
+                logger.info(f"[INFO] Detected team: {team} in pos: {index}")
                 state.INGAME_STATE.setCurrentTeam(team)
                 state.INGAME_STATE.setPosition(index)
                 return True
