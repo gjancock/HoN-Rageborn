@@ -18,6 +18,8 @@ def run_cycle(
     One full signup + rageborn cycle.
     No Tk imports. No UI globals.
     """
+    state.STOP_EVENT.clear()
+    state.CRASH_EVENT.clear()
 
     username = None
     password = None

@@ -23,7 +23,6 @@ from tkinter import ttk
 from utilities.chatUtilities import (
     get_chat_path
 )
-from utilities.runtime import runtime_dir
 from utilities.accountRegistration import signup_user
 from ui.logic import (
     start_endless_ui_refresh
@@ -77,6 +76,7 @@ from ui.chat_editor import (
     save_chat_settings,
     reset_chat_to_default,
 )
+from utilities.paths import VERSION_FILE
 
 # ============================================================
 # APPLICATION SETTINGS
@@ -85,9 +85,7 @@ threading.excepthook = global_thread_exception_handler
 
 def read_version():
     try:
-        path = os.path.join(runtime_dir(), "VERSION")
-        with open(path, "r", encoding="utf-8") as f:
-            return f.read().strip()
+        return VERSION_FILE.read_text(encoding="utf-8").strip()
     except Exception:
         logger.error("[ERROR] Unable to find VERSION")
         return "unknown"

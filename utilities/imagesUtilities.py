@@ -1,9 +1,10 @@
 import pyautogui
 import time
 import os
-import sys
-from utilities.common import resource_path, wait
-from utilities.constants import GAME_REGION, BASE_IMAGE_DIR, CONFIDENCE
+
+from utilities.paths import get_launcher_dir
+from utilities.common import wait
+from utilities.constants import GAME_REGION, CONFIDENCE
 from utilities.loggerSetup import setup_logger
 from core.parameters import TARGETING_HERO
 import pyscreeze
@@ -11,34 +12,23 @@ import pyscreeze
 # Initialize Logger
 logger = setup_logger()
 
-def resolve_image_path(image_name: str) -> str:
+IMAGE_ROOT = get_launcher_dir() / "images"
+
+def resolve_image_path(image_rel_path: str) -> str:
     """
-    Resolves absolute path to an image inside the /images directory.
-
-    Works for:
-    - python script execution
-    - VS Code
-    - PyInstaller --onefile EXE
+    Resolve absolute path to a bundled image.
     """
+    image_path = IMAGE_ROOT / image_rel_path
 
-    # PyInstaller EXE
-    if hasattr(sys, "_MEIPASS"):
-        base_dir = sys._MEIPASS
-    else:
-        # project_root = Rageborn/
-        base_dir = os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
-        )
-
-    image_path = os.path.join(base_dir, "images", image_name)
-
-    if not os.path.exists(image_path):
+    if not image_path.exists():
         logger.error(f"[IMAGE] File does not exist: {image_path}")
 
-    return image_path
+    return str(image_path)
+
 
 def image_exists(image_rel_path, region=None, confidence=None, throwException=False):
-    full_path = resource_path(os.path.join(BASE_IMAGE_DIR, image_rel_path))
+    full_path = resolve_image_path(image_rel_path)
+
     try:
         return pyautogui.locateOnScreen(
             full_path,
@@ -46,16 +36,18 @@ def image_exists(image_rel_path, region=None, confidence=None, throwException=Fa
             region=region if region is not None else GAME_REGION
         ) is not None
     except pyautogui.ImageNotFoundException:
-        if throwException:
-            return False
-        else:
-            return None
+        return False if throwException else None
+
     
 def any_image_exists(image_rel_paths, region=None, confidence=None):
+    """
+    Check if ANY image (relative path) exists on screen.
+    """
     for img in image_rel_paths:
-        if image_exists(img, region, confidence):
+        if image_exists(img, region=region, confidence=confidence):
             return True
     return False
+
 
 def image_exists_in_any_region(image_path, regions):
     """
@@ -140,21 +132,20 @@ def click_until_image_appears(
     if isinstance(wait_image_rel_path, str):
         wait_image_rel_path = [wait_image_rel_path]
 
-    full_click_path = resource_path(
-        os.path.join(BASE_IMAGE_DIR, click_image_rel_path)
-    )
+    full_click_path = resolve_image_path(click_image_rel_path)
 
     full_wait_paths = [
-        resource_path(os.path.join(BASE_IMAGE_DIR, p))
+        resolve_image_path(p)
         for p in wait_image_rel_path
     ]
+
 
     start = time.time()
 
     while time.time() - start < timeout:
 
         # Stop condition (OR logic)
-        if any_image_exists(full_wait_paths, region):
+        if any_image_exists(wait_image_rel_path, region):
             #logger.info(f"[INFO] One of {wait_image_rel_path} appeared") # DEBUG
             return True
 

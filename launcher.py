@@ -3,16 +3,27 @@ import subprocess
 import sys
 import os
 import time
-from requests.exceptions import ConnectionError, Timeout, RequestException
-from packaging import version
 import configparser
 import tkinter as tk
-from tkinter import ttk
 import ctypes
 import hashlib
-from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
-from utilities.runtime import runtime_dir
+import zipfile
+import shutil
+import traceback
 
+from tkinter import ttk
+from requests.exceptions import ConnectionError, Timeout, RequestException
+from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+from utilities.paths import (
+    CONFIG_PATH,
+    VERSION_FILE,
+    RAGEBORN_EXE,
+    TESSERACT_EXE,
+    TESSERACT_DIR,
+    TESSERACT_RUNTIME_DIR,
+    get_launcher_dir,
+    RAGEBORN_DIR,
+)
 
 # --------------------------------------------------
 # Identity (taskbar / icon grouping)
@@ -26,12 +37,15 @@ set_app_id()
 # --------------------------------------------------
 # Paths (ALWAYS relative to launcher.exe)
 # --------------------------------------------------
-BASE_DIR = runtime_dir()
+BASE_DIR = get_launcher_dir()
 
-APP_EXE = os.path.join(BASE_DIR, "Rageborn.exe")          # MAIN APP
-TEMP_EXE = os.path.join(BASE_DIR, "Rageborn.new.exe")
-VERSION_FILE = os.path.join(BASE_DIR, "VERSION")
-CONFIG_FILE = os.path.join(BASE_DIR, "config.ini")
+APP_DIR = RAGEBORN_DIR
+APP_EXE = str(RAGEBORN_EXE)
+
+CONFIG_FILE = str(CONFIG_PATH)
+
+RAGEBORN_ZIP = get_launcher_dir() / "Rageborn-win64.zip"
+RAGEBORN_SHA_LOCAL = RAGEBORN_DIR / "installed.sha256"
 
 # --------------------------------------------------
 # Config
@@ -46,6 +60,17 @@ CONFIG_PASSWORD_KEY = "password"
 
 REPO = "gjancock/HoN-Rageborn"
 API_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
+
+TESSERACT_ZIP_URL = (
+    "https://github.com/gjancock/HoN-Rageborn/releases/"
+    "download/ocr-v1.0.0/tesseract-5.3.3-win64.zip"
+)
+TESSERACT_SHA_URL = (
+    "https://github.com/gjancock/HoN-Rageborn/releases/"
+    "download/ocr-v1.0.0/tesseract-5.3.3-win64.zip.sha256"
+)
+TESSERACT_SHA_LOCAL = os.path.join(TESSERACT_DIR, "installed.sha256")
+
 
 # --------------------------------------------------
 # Helpers
@@ -76,30 +101,22 @@ def get_latest_release():
     data = r.json()
 
     remote_version = data["tag_name"].lstrip("v")
-    exe_url = None
+    zip_url = None
     sha_url = None
 
     for asset in data["assets"]:
-        if asset["name"] == "Rageborn.exe":
-            exe_url = asset["browser_download_url"]
-        elif asset["name"] == "Rageborn.exe.sha256":
+        if asset["name"] == "Rageborn-win64.zip":
+            zip_url = asset["browser_download_url"]
+        elif asset["name"] == "Rageborn-win64.zip.sha256":
             sha_url = asset["browser_download_url"]
 
-    if not exe_url:
+    if not zip_url or not sha_url:
         raise RuntimeError(
-            "Rageborn.exe not found in release assets.\n"
-            "This usually means the release was published incorrectly.\n"
-            "Please report this issue to gjancock."
+            "Rageborn release assets incomplete.\n"
+            "Expected Rageborn-win64.zip and Rageborn-win64.zip.sha256"
         )
 
-    if not sha_url:
-        raise RuntimeError(
-            "Rageborn.exe.sha256 not found in release assets.\n"
-            "Checksum verification is required.\n"
-            "Please report this issue to gjancock."
-        )
-
-    return remote_version, exe_url, sha_url
+    return remote_version, zip_url, sha_url
 
 
 def sha256_of_file(path):
@@ -131,35 +148,15 @@ def ensure_config_exists():
             config.write(f)
     except Exception:
         pass  # launcher must not crash because of config
+   
 
-
-def get_remote_hash(sha_url):
-    r = requests.get(sha_url, timeout=10)
-    r.raise_for_status()
-    return r.text.split()[0]
-
-
-def needs_download(app_path, remote_hash):
-    if not os.path.exists(app_path):
-        return True
-
-    try:
-        local_hash = sha256_of_file(app_path)
-        return local_hash != remote_hash
-    except Exception:
-        return True
-    
-
-def is_network_error(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    return (
-        isinstance(exc, (ConnectionError, Timeout, RequestException))
-        or "connection broken" in msg
-        or "connection aborted" in msg
-        or "remote disconnected" in msg
-        or "failed to establish a new connection" in msg
-        or "name resolution" in msg
-    )
+def is_network_error(e: Exception) -> bool:
+    return isinstance(e, (
+        IOError,
+        OSError,
+        requests.exceptions.RequestException,
+        zipfile.BadZipFile,
+    ))
 
 
 def retry_countdown(ui, seconds):
@@ -170,6 +167,114 @@ def retry_countdown(ui, seconds):
         )
         time.sleep(1)
 
+
+def download_text(url: str) -> str:
+    """
+    Download a small text file (e.g. .sha256) and return its content.
+    """
+    resp = requests.get(url, timeout=15)
+    resp.raise_for_status()
+    return resp.text.strip()
+
+
+def ensure_tesseract(ui=None):
+    from utilities.paths import (
+        TESSERACT_DIR,
+        TESSERACT_EXE,
+        TESSERACT_RUNTIME_DIR,
+        get_user_data_dir,
+    )
+
+    expected_sha = download_text(TESSERACT_SHA_URL).split()[0]
+    sha_record = TESSERACT_DIR / "installed.sha256"
+
+    # Already installed & valid
+    if TESSERACT_EXE.exists() and sha_record.exists():
+        if sha_record.read_text().strip() == expected_sha:
+            return
+
+    if ui:
+        ui.set_text("Installing OCR engine...")
+
+    # ✅ Download ZIP to a SAFE temp location
+    temp_zip = get_user_data_dir() / "tesseract.zip"
+
+    # Clean any previous temp zip
+    temp_zip.unlink(missing_ok=True)
+
+    download(TESSERACT_ZIP_URL, temp_zip, ui)
+
+    # Verify ZIP
+    actual_sha = sha256_of_file(temp_zip)
+    if actual_sha != expected_sha:
+        temp_zip.unlink(missing_ok=True)
+        raise IOError("Tesseract checksum mismatch")
+
+    # ❗ NOW it is safe to delete runtime
+    shutil.rmtree(TESSERACT_RUNTIME_DIR, ignore_errors=True)
+
+    # Extract ZIP ROOT to USER DATA DIR
+    with zipfile.ZipFile(temp_zip, "r") as z:
+        z.extractall(get_user_data_dir())
+
+    temp_zip.unlink(missing_ok=True)
+
+    # Hard verify install
+    if not TESSERACT_EXE.exists():
+        raise OSError(
+            f"Tesseract install incomplete.\n"
+            f"Expected: {TESSERACT_EXE}"
+        )
+
+    # Mark installed ONLY after success
+    sha_record.write_text(expected_sha)
+
+
+def ensure_rageborn(ui=None):
+    os.makedirs(BASE_DIR, exist_ok=True)
+
+    remote_version, zip_url, sha_url = get_latest_release()
+    expected_sha = download_text(sha_url).split()[0]
+
+    # Already installed & matches
+    if os.path.exists(APP_EXE) and os.path.exists(RAGEBORN_SHA_LOCAL):
+        installed_sha = open(RAGEBORN_SHA_LOCAL, "r").read().strip()
+        if installed_sha == expected_sha:
+            return
+
+    if ui:
+        ui.set_text("Installing / Updating Rageborn...")
+
+    ui.set_progress(0)
+
+    # Download ZIP
+    download(zip_url, RAGEBORN_ZIP, ui)
+
+    # Verify ZIP
+    actual_sha = sha256_of_file(RAGEBORN_ZIP)
+    if actual_sha != expected_sha:
+        os.remove(RAGEBORN_ZIP)
+        raise RuntimeError("Rageborn checksum mismatch")
+
+    # Clean old install
+    shutil.rmtree(APP_DIR, ignore_errors=True)
+    os.makedirs(APP_DIR, exist_ok=True)
+
+    # Extract ZIP (contains Rageborn/ folder)
+    with zipfile.ZipFile(RAGEBORN_ZIP, "r") as z:
+        z.extractall(BASE_DIR)
+
+    os.remove(RAGEBORN_ZIP)
+
+    # Record installed SHA + version
+    with open(RAGEBORN_SHA_LOCAL, "w", encoding="utf-8") as f:
+        f.write(expected_sha)
+
+    with open(VERSION_FILE, "w", encoding="utf-8") as f:
+        f.write(remote_version)
+
+    if not os.path.exists(APP_EXE):
+        raise RuntimeError("Rageborn install incomplete")
 
 
 # --------------------------------------------------
@@ -267,61 +372,42 @@ def main():
 
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            # -------------------------------
-            # FIRST RUN (BOOTSTRAP)
-            # -------------------------------
-            if not app_exists():
-                ui.set_text("Installing Rageborn...")
-                remote, exe_url, sha_url = get_latest_release()
-                remote_hash = get_remote_hash(sha_url)
+            ui.set_text(f"Preparing Rageborn... (Attempt {attempt}/{MAX_RETRIES})")
 
-                download(exe_url, TEMP_EXE, ui)
-                os.replace(TEMP_EXE, APP_EXE)
-
-                with open(VERSION_FILE, "w", encoding="utf-8") as f:
-                    f.write(remote)
-
-            # -------------------------------
-            # NORMAL UPDATE FLOW
-            # -------------------------------
-            elif auto_update_enabled():
-                ui.set_text("Checking for updates...")
-                remote, exe_url, sha_url = get_latest_release()
-                remote_hash = get_remote_hash(sha_url)
-
-                if needs_download(APP_EXE, remote_hash):
-                    ui.set_text(f"Updating to v{remote}...")
-                    download(exe_url, TEMP_EXE, ui)
-                    os.replace(TEMP_EXE, APP_EXE)
-
-                    with open(VERSION_FILE, "w", encoding="utf-8") as f:
-                        f.write(remote)
-                else:
-                    ui.set_text("Rageborn is up to date.")
-
-            # -------------------------------
-            # AUTO UPDATE DISABLED
-            # -------------------------------
+            if auto_update_enabled():
+                ensure_rageborn(ui)
             else:
-                ui.set_text("Auto-update disabled.")
+                if not os.path.exists(APP_EXE):
+                    raise RuntimeError("Rageborn not installed")
 
-            # ✅ SUCCESS — exit retry loop
-            break
+            ui.set_text("Installing OCR engine...")
+            ensure_tesseract(ui)
+
+            break  # ✅ success
 
         except Exception as e:
-            # 🔁 Network-related retry
             if is_network_error(e) and attempt < MAX_RETRIES:
+                ui.set_text(
+                    f"Temporary error occurred.\n"
+                    f"Retrying in {RETRY_DELAY} seconds...\n\n"
+                    f"{e}"
+                )
                 retry_countdown(ui, RETRY_DELAY)
                 continue
 
-            # 🔴 Permanent failure
+            # ui.set_text(
+            #     "Update failed permanently:\n\n"
+            #     f"{e}\n\n"
+            #     "Please check your internet connection."
+            # )
             ui.set_text(
                 "Update failed permanently:\n\n"
-                f"{e}\n\n"
-                "Please check your internet connection."
+                f"{repr(e)}\n\n"
+                f"{traceback.format_exc()}"
             )
             ui.root.mainloop()
             return
+
 
     # -------------------------------
     # SUCCESS PATH
