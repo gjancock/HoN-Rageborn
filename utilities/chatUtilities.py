@@ -5,6 +5,7 @@ from utilities.common import resource_path
 from itertools import cycle
 import core.state as state
 import utilities.constants as constant
+from utilities.paths import get_user_data_dir
 
 MAX_CHAT_LENGTH = 150
 
@@ -81,17 +82,7 @@ def get_next_chat_line(path):
     return next(_chat_iterators[path])
 
 def get_chat_path(filename: str) -> str:
-    """
-    Writable chat file path.
-    Always resolves next to Rageborn.exe (or cwd in dev).
-    """
-    if getattr(sys, "frozen", False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.getcwd()
-
-    return os.path.join(base_dir, filename)
-
+    return str(get_user_data_dir() / filename)
 
 def read_chat_file(path: str, default_relative_path: str | None = None) -> list[str]:
     """

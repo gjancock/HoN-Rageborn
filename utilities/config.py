@@ -1,18 +1,21 @@
 import configparser
 import os
-import sys
 import core.state as state
-from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
-from utilities.runtime import runtime_dir
 
-CONFIG_FILE = os.path.join(runtime_dir(), "config.ini")
+from pathlib import Path
+from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
+from utilities.paths import get_user_data_dir
+
+CONFIG_PATH = get_user_data_dir() / "config.ini"
+CONFIG_FILE = str(CONFIG_PATH)
 
 def load_config():
     config = configparser.ConfigParser()
-    if not os.path.exists(CONFIG_FILE):
+
+    if not CONFIG_PATH.exists():
         return config
 
-    config.read(CONFIG_FILE)
+    config.read(CONFIG_PATH, encoding="utf-8")
 
     # ---- Booleans ----
     state.AUTO_START_ENDLESS = config.getboolean("endless", "auto_start", fallback=False)
@@ -49,23 +52,24 @@ def load_config():
 
     return config
 
-def _atomic_write(config, path):
-    tmp = path + ".tmp"
+
+def _atomic_write(config, path: Path):
+    tmp = path.with_suffix(path.suffix + ".tmp")
 
     with open(tmp, "w", encoding="utf-8") as f:
         config.write(f)
         f.flush()
         os.fsync(f.fileno())
 
-    os.replace(tmp, path)  # atomic on Windows
+    os.replace(tmp, path)
+
 
 def write_config_bool(section: str, key: str, value: bool):
     config = configparser.ConfigParser()
-    path = os.path.join(runtime_dir(), "config.ini")
 
-    if os.path.exists(path):
+    if CONFIG_PATH.exists():
         try:
-            config.read(path, encoding="utf-8")
+            config.read(CONFIG_PATH, encoding="utf-8")
         except Exception:
             pass
 
@@ -73,15 +77,15 @@ def write_config_bool(section: str, key: str, value: bool):
         config[section] = {}
 
     config[section][key] = "true" if value else "false"
-    _atomic_write(config, path)
+    _atomic_write(config, CONFIG_PATH)
+
 
 def write_config_str(section: str, key: str, value: str):
     config = configparser.ConfigParser()
-    path = os.path.join(runtime_dir(), "config.ini")
 
-    if os.path.exists(path):
+    if CONFIG_PATH.exists():
         try:
-            config.read(path, encoding="utf-8")
+            config.read(CONFIG_PATH, encoding="utf-8")
         except Exception:
             pass
 
@@ -89,5 +93,6 @@ def write_config_str(section: str, key: str, value: str):
         config[section] = {}
 
     config[section][key] = value
-    _atomic_write(config, path)
+    _atomic_write(config, CONFIG_PATH)
+
 

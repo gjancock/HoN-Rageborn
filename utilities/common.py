@@ -3,13 +3,14 @@ import sys
 import time
 import core.state as state
 
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS  # PyInstaller temp folder
-    except AttributeError:
-        base_path = os.path.abspath(".")
+from utilities.paths import get_launcher_dir
 
-    return os.path.join(base_path, relative_path)
+def resource_path(relative_path: str) -> str:
+    """
+    Resolve a read-only bundled resource path.
+    Works for both dev and PyInstaller.
+    """
+    return str(get_launcher_dir() / relative_path)
 
 def wait(seconds):
     time.sleep(seconds)

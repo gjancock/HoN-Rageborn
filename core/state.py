@@ -147,6 +147,7 @@ USERNAME_PREFIX_COUNT_ENABLED = False
 USERNAME_POSTFIX_COUNT_ENABLED = False
 USERNAME_PREFIX_COUNT_START_AT = 1
 USERNAME_POSTFIX_COUNT_START_AT = 1
+GAME_HWND = None
 
 #
 INGAME_STATE = InGameState()
@@ -237,6 +238,9 @@ def get_username_prefix_count_start_at():
 def get_username_postfix_count_start_at():
     return USERNAME_POSTFIX_COUNT_START_AT
 
+def get_game_hwnd():
+    return GAME_HWND
+
 def set_auto_start_endless(value: bool):
     global AUTO_START_ENDLESS
     AUTO_START_ENDLESS = value
@@ -325,7 +329,11 @@ def set_username_prefix_count_start_at(value: int):
 def set_username_postfix_count_start_at(value: int):
     global USERNAME_POSTFIX_COUNT_START_AT
     USERNAME_POSTFIX_COUNT_START_AT = value
-    write_config_str("username_generator", "postfix_count_start", str(value))    
+    write_config_str("username_generator", "postfix_count_start", str(value))
+
+def set_game_hwnd(value: int):
+    global GAME_HWND
+    GAME_HWND = value
 
 def add_pending_account(username: str, password: str):
     PENDING_ACCOUNTS.add(username, password)

@@ -1,4 +1,33 @@
 # =========================================================================== #
+# v2.1.0 - Feature Enhancement (28 January 2026)
+# =========================================================================== #
+- [x] Re-enable OCR Tesseract for team recognition.
+- [x] Switched Rageborn build output from --onefile to --onedir
+- [x] Introduced ZIP-based release artifact (Rageborn-win64.zip)
+- [x] Added SHA256 checksum generation for Rageborn ZIP
+- [x] Standardized release artifacts to ZIP + .zip.sha256 format
+- [x] Replaced EXE-based updater with ZIP-based installer for Rageborn
+- [x] Launcher now downloads, verifies, and extracts Rageborn-win64.zip
+- [x] Added SHA256 verification against Rageborn-win64.zip.sha256
+- [x] Implemented clean install/update flow by removing old runtime before extraction
+- [x] Updated launcher to write installed Rageborn version and checksum locally
+- [x] OCR runtime fully decoupled from Rageborn executable
+- [x] OCR distributed as separate ZIP artifact with SHA256 verification
+- [x] Launcher ensures OCR runtime exists and matches expected checksum
+- [x] OCR runtime installed only once and reused across Rageborn updates
+- [x] Standardized runtime structure under application base directory
+- [x] Rageborn executable launched from Rageborn/Rageborn.exe
+- [x] External dependencies stored under runtime/ directory
+- [x] Removed reliance on temporary execution paths
+- [x] Existing configuration file (config.ini) preserved
+- [x] auto_update setting continues to control update behavior
+- [x] Local VERSION file updated only after successful installation
+- [x] Network retry and error handling logic retained
+- [x] All downloaded artifacts validated via SHA256 before extraction
+- [x] Launcher aborts on checksum mismatch or incomplete installation
+- [x] Reduced risk of corrupted or partially updated runtime states
+
+# =========================================================================== #
 # v2.0.1 - Bug Fixes (27 January 2026)
 # =========================================================================== #
 - [x] Fixed issue where program crashing due to queue cooldown.

@@ -11,6 +11,7 @@ import utilities.coordinateAccess as assetsLibrary
 import random
 import subprocess
 
+from pathlib import Path
 from threads.hwnd_watchdog import start_hwnd_watchdog
 from utilities.loggerSetup import setup_logger
 from threads.ingame import vote_requester, lobby_message_check_requester
@@ -21,9 +22,19 @@ from utilities.common import resource_path
 from utilities.chatUtilities import get_picking_chats, get_ingame_chats, apply_chat_placeholders
 from utilities.accountGenerator import generatePendingAccount
 from utilities.networkUtilities import getDisconnected, reconnect, wait_for_ping
+from utilities.capture.screen_capture import capture_fullscreen
+from utilities.ui.draft_screen_regions import crop_draft_team_regions
+from utilities.ocr.ocr_engine import read_usernames_from_region, normalize_username, fix_common_ocr_errors
+from utilities.paths import get_launcher_dir
+from difflib import SequenceMatcher
+
 
 # Initialize Logger
 logger = setup_logger()
+
+
+logger.info(f"[DEBUG] CWD = {Path.cwd()}")
+logger.info(f"[DEBUG] launcher_dir = {get_launcher_dir()}")
 
 from utilities.config import load_config
 # Load Config at startup
@@ -81,6 +92,17 @@ def start(username, password):
 
 #
 def find_juvio_platform_hwnd():
+    """
+    Find visible window handles for the game launcher / client.
+
+    Accepts multiple possible window titles because the launcher title
+    may change over time (e.g. rebranding).
+    """
+    TARGET_TITLES = (
+        "juvio platform",
+        "heroes of newerth",
+    )
+
     hwnds = []
 
     def enum_handler(hwnd, _):
@@ -88,7 +110,12 @@ def find_juvio_platform_hwnd():
             return
 
         title = win32gui.GetWindowText(hwnd)
-        if title and "juvio platform" in title.lower():
+        if not title:
+            return
+
+        title_lc = title.lower()
+
+        if any(t in title_lc for t in TARGET_TITLES):
             hwnds.append(hwnd)
 
     win32gui.EnumWindows(enum_handler, None)
@@ -180,6 +207,7 @@ def run_powershell():
     stderr=subprocess.DEVNULL)
     interruptible_wait(0.5)
     script_path = resource_path("scripts/set_game_priority.ps1")
+    ps_priority_proc = None
     ps_priority_proc = subprocess.Popen([
         "powershell",
         "-NoProfile",
@@ -274,11 +302,6 @@ def pin_jokevio():
             raise RuntimeError("Startup UI not detected within timeout")
 
         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 0.7)
-
-    # todo: fullscreen detection; unknown stupid game issue; investigation required
-    #if is_fullscreen(hwnd):
-    #    logger.info("[INFO] Juvio Platform is in fullscreen mode")
-    #    state.STOP_EVENT.set()
 
     # Ensure powershell priority script is running
     run_powershell_async()
@@ -471,38 +494,102 @@ def startQueue(isRageQuit: bool = False):
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 1.5)
 
 
+
+def similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a, b).ratio()
+
+
 def getTeam():
     interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
-    team = constant.TEAM_LEGION # Default
 
-    match state.INGAME_STATE.getCurrentMap():
-        case constant.MAP_FOC:
-            # click minimap
-            pyautogui.click(511,792)
-            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
-            if any_image_exists([
-                "foc-mid-tower-legion.png"
-                ]):
-                team = constant.TEAM_LEGION
-            else:
-                team = constant.TEAM_HELLBOURNE
+    SIMILARITY_THRESHOLD = 0.80  # 🔒 tune once, do not guess
 
-        case constant.MAP_MIDWAR:
-            pyautogui.click(505, 798)
-            interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
-            if any_image_exists([
-                "mw-legion-mid-tower-sight.png"
-                ]):
-                team = constant.TEAM_LEGION
-            else:
-                team = constant.TEAM_HELLBOURNE
+    screenshot = capture_fullscreen()
+    regions = crop_draft_team_regions(screenshot)
+
+    my_username = state.INGAME_STATE.getUsername()
+    if not my_username:
+        logger.error("[ERROR] Username not set")
+        return False
+
+    my_username = my_username.lower().strip()
+    my_username = normalize_username(my_username)
+    my_username = fix_common_ocr_errors(my_username)
+
+    for team, region in regions.items():
+        if region is None:
+            continue
+
+        # ✅ THIS is the correct OCR call
+        rows = read_usernames_from_region(region, team)
+
+        for row in rows:
+            index = row.get("row")
+            text = row.get("text", "").lower().strip()
+            if not text:
+                continue
+
+            logger.warning(
+                f"[MATCH-DEBUG] pos={index} me='{my_username}' ocr='{text}'"
+            )
+
+            # 1️⃣ strict match (fast path)
+            if my_username in text or text in my_username:
+                logger.info(f"[INFO] Detected team: {team} in pos: {index}")
+                state.INGAME_STATE.setCurrentTeam(team)
+                state.INGAME_STATE.setPosition(index)
+                return True
+
+            # 2️⃣ fuzzy match (OCR tolerance)
+            score = similarity(my_username, text)
+
+            logger.debug(
+                f"[MATCH-FUZZY] me='{my_username}' ocr='{text}' score={score:.2f}"
+            )
+
+            if score >= SIMILARITY_THRESHOLD:
+                logger.info(
+                    f"[INFO] Detected team: {team} (fuzzy score={score:.2f})"
+                )
+                state.INGAME_STATE.setCurrentTeam(team)
+                state.INGAME_STATE.setPosition(index)
+                return True
+
+    logger.warning("[INFO] Failed to detect team via OCR")
+    return False
+
+
+# def getTeam():
+#     interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
+    # team = constant.TEAM_LEGION # Default
+
+    # match state.INGAME_STATE.getCurrentMap():
+    #     case constant.MAP_FOC:
+    #         # click minimap
+    #         pyautogui.click(511,792)
+    #         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
+    #         if any_image_exists([
+    #             "foc-mid-tower-legion.png"
+    #             ]):
+    #             team = constant.TEAM_LEGION
+    #         else:
+    #             team = constant.TEAM_HELLBOURNE
+
+    #     case constant.MAP_MIDWAR:
+    #         pyautogui.click(505, 798)
+    #         interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 4)
+    #         if any_image_exists([
+    #             "mw-legion-mid-tower-sight.png"
+    #             ]):
+    #             team = constant.TEAM_LEGION
+    #         else:
+    #             team = constant.TEAM_HELLBOURNE
     
-    state.INGAME_STATE.setCurrentTeam(team)
-    logger.info(f"[INFO] We are on {team} team!")
-    interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
-    pyautogui.press("c")
-    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 1)
-    return team
+    # state.INGAME_STATE.setCurrentTeam(team)
+    # logger.info(f"[INFO] We are on {team} team!")
+    # interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
+    # pyautogui.press("c")    
+    #return team
 
 def enterChat(text):
     pyautogui.moveTo(921, 831)
@@ -598,7 +685,7 @@ def generateAccount():
         interruptible_wait(1 if not state.SLOWER_PC_MODE else 2)
 
     return username, password
-
+    
 
 def pickingPhase(isRageQuit: bool = False):
 
@@ -607,8 +694,12 @@ def pickingPhase(isRageQuit: bool = False):
         find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
         interruptible_wait(0.5)
 
-    generateAccount()
+    if not isRageQuit:
+        logger.info("[INFO] Getting team information")
+        getTeam()
 
+    generateAccount()
+    
     if isRageQuit:
         # Ragequit
         logger.info("[INFO] Waiting to change account")
@@ -776,7 +867,7 @@ def pickingPhase(isRageQuit: bool = False):
                 pyautogui.doubleClick()
                 logger.info(f"[INFO] Hero {hero} is now selected!")
                 pyautogui.moveTo(x, y, duration=0.3)
-
+    
     logger.info("[INFO] Waiting to rageborn")
     while not state.STOP_EVENT.is_set():
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
@@ -880,7 +971,8 @@ def do_foc_stuff():
     import pyperclip
     #
     start_time = time.monotonic()
-    team = getTeam()
+    #team = getTeam()
+    team = state.INGAME_STATE.getCurrentTeam()
     bought = False
     pyautogui.keyDown("c")
     
@@ -1026,13 +1118,14 @@ def do_foc_stuff():
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
 
-# TODO: Incomplete code
+
 # Midwar
 def do_midwar_stuff():
     import pyperclip
     #
     start_time = time.monotonic()
-    team = getTeam()
+    #team = getTeam()
+    team = state.INGAME_STATE.getCurrentTeam()
     bought = False
     pyautogui.keyDown("c")
     
@@ -1160,6 +1253,7 @@ def ingame():
             do_midwar_stuff()
 
 def changeAccount(isRageQuit: bool = False):
+    interruptible_wait(round(random.uniform(0.2, 1), 2))
     acc = state.get_latest_pending_account()
 
     if not acc:
@@ -1252,7 +1346,7 @@ def changeAccount(isRageQuit: bool = False):
 
         if now - loginTime >= timeout:
             logger.info("[INFO] Seems stucked, aborting iteration.")
-            state.STOP_EVENT.set()
+            state.STOP_EVENT.set() # TODO 
             break
 
     return True
