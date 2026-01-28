@@ -8,7 +8,7 @@ I am not responsible for any IP bans, hardware bans, account bans, or any other 
 How to Use
 -------------------------------------
 1. Download launcher.exe (one-time)
-   - https://github.com/gjancock/HoN-Rageborn/releases/tag/launcher-v1.1.0
+   - https://github.com/gjancock/HoN-Rageborn/releases/tag/launcher-v2.0.0
 2. Right click -> Properties -> Compatibility tab -> Run this program as an administrator -> OK
 3. Run it.
 4. Enjoy.
@@ -30,7 +30,7 @@ Windows Settings
 
 1. Set the Windows display resolution to 1920×1080.
 2. Set the scale to 100%.
-3. Do not move the mouse cursor or click anywhere while the script is running.
+3. Do not move the mouse cursor or click anywhere while the program script is running.
 4. Ensure keyboard CAPSLOCK is off.
 5. Ensure "Turn off the display" set to "Never" in Control Panel > Hardware and Sound > Power Options > Edit Plan Settings.
 
@@ -38,10 +38,6 @@ Hardware Settings
 
 1. If you experiencing program stucked or failed unintentionally, try keep the screen opened while the script is running.
 2. Use a "Dummy Adapter" if you don't have a physical monitor to run this bot.
-
-Known Issue
--------------------------------------
-1. Team recognition may failed due to minimap and fogging isn't visible very well at the current stage of the game.
 
 License
 -------------------------------------
