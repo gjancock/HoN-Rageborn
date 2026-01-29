@@ -512,15 +512,16 @@ def getTeam():
         logger.error("[ERROR] Username not set")
         return False
 
-    my_username = my_username.lower().strip()
-    my_username = normalize_username(my_username)
-    my_username = fix_common_ocr_errors(my_username)
+    my_username = fix_common_ocr_errors(
+        normalize_username(my_username.lower().strip())
+    )
+
+    best_match = None  # 🔑 single source of truth
 
     for team, region in regions.items():
         if region is None:
             continue
 
-        # ✅ THIS is the correct OCR call
         rows = read_usernames_from_region(region, team)
 
         for row in rows:
@@ -530,33 +531,57 @@ def getTeam():
                 continue
 
             logger.warning(
-                f"[MATCH-DEBUG] pos={index} me='{my_username}' ocr='{text}'"
+                f"[MATCH-DEBUG] team={team} pos={index} "
+                f"me='{my_username}' ocr='{text}'"
             )
 
-            # 1️⃣ strict match (fast path)
+            # ---------- STRICT MATCH ----------
             if my_username in text or text in my_username:
-                logger.info(f"[INFO] Detected team: {team} in pos: {index}")
-                state.INGAME_STATE.setCurrentTeam(team)
-                state.INGAME_STATE.setPosition(index)
-                return True
+                score = 1.0  # 🔒 absolute win
+                match_type = "strict"
+            else:
+                # ---------- FUZZY MATCH ----------
+                score = similarity(my_username, text)
+                match_type = "fuzzy"
 
-            # 2️⃣ fuzzy match (OCR tolerance)
-            score = similarity(my_username, text)
+                if score < SIMILARITY_THRESHOLD:
+                    continue
 
             logger.debug(
-                f"[MATCH-FUZZY] me='{my_username}' ocr='{text}' score={score:.2f}"
+                f"[MATCH-CANDIDATE] pos={index} "
+                f"type={match_type} score={score:.2f}"
             )
 
-            if score >= SIMILARITY_THRESHOLD:
-                logger.info(
-                    f"[INFO] Detected team: {team} (fuzzy score={score:.2f})"
-                )
-                state.INGAME_STATE.setCurrentTeam(team)
-                state.INGAME_STATE.setPosition(index)
-                return True
+            candidate = {
+                "team": team,
+                "position": index,
+                "text": text,
+                "score": score,
+                "type": match_type,
+            }
 
-    logger.warning("[INFO] Failed to detect team via OCR")
-    return False
+            # 🔥 Keep only the best candidate
+            if (
+                best_match is None
+                or candidate["score"] > best_match["score"]
+            ):
+                best_match = candidate
+
+    # ---------- FINAL DECISION ----------
+    if not best_match:
+        logger.warning("[INFO] Failed to detect team via OCR")
+        return False
+
+    logger.info(
+        f"[FINAL-MATCH] team={best_match['team']} "
+        f"pos={best_match['position']} "
+        f"type={best_match['type']} "
+        f"score={best_match['score']:.2f}"
+    )
+
+    state.INGAME_STATE.setCurrentTeam(best_match["team"])
+    state.INGAME_STATE.setPosition(best_match["position"])
+    return True
 
 
 # def getTeam():
@@ -1027,6 +1052,18 @@ def do_foc_stuff():
         isAfk = state.INGAME_STATE.getIsAfk()
         now = time.time() # for pause
         elapsed = time.monotonic() - start_time
+        
+        if elapsed >= matchTimedout:    
+            pyautogui.keyUp("c") # stop spamming
+            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
+            break
+
+        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
+            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
+
+            if check_lobby_message():    
+                pyautogui.keyUp("c") # stop spamming
+                break
 
         if not state.STOP_EVENT.is_set():           
             if now - last_pause_time >= pauseTimeout: # every 60s click
@@ -1102,20 +1139,6 @@ def do_foc_stuff():
                 allChat()
                 isPathSet = False
 
-        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
-            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
-
-            if check_lobby_message():    
-                pyautogui.keyUp("c") # stop spamming
-                # state.STOP_EVENT.set()
-                break
-        
-        if elapsed >= matchTimedout:    
-            pyautogui.keyUp("c") # stop spamming
-            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
-            # state.STOP_EVENT.set()
-            break
-
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
 
 
@@ -1138,6 +1161,18 @@ def do_midwar_stuff():
         isAfk = state.INGAME_STATE.getIsAfk()
         now = time.time() # for pause
         elapsed = time.monotonic() - start_time
+        
+        if elapsed >= matchTimedout:    
+            pyautogui.keyUp("c") # stop spamming
+            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
+            break
+
+        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
+            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
+
+            if check_lobby_message():    
+                pyautogui.keyUp("c") # stop spamming
+                break
 
         if not state.STOP_EVENT.is_set():           
             if now - last_pause_time >= pauseTimeout: # every 60s click
@@ -1207,20 +1242,6 @@ def do_midwar_stuff():
                     interruptible_wait(round(random.uniform(1, 1.5), 2))
                 allChat()
                 isPathSet = False
-
-        if not state.STOP_EVENT.is_set() and state.SCAN_LOBBY_MESSAGE_EVENT.is_set():
-            state.SCAN_LOBBY_MESSAGE_EVENT.clear()
-
-            if check_lobby_message():    
-                pyautogui.keyUp("c") # stop spamming
-                # state.STOP_EVENT.set()
-                break
-        
-        if elapsed >= matchTimedout:    
-            pyautogui.keyUp("c") # stop spamming
-            logger.info(f"[TIMEOUT] {matchTimedout} seconds reached. Stopping.")
-            # state.STOP_EVENT.set()
-            break
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
 
@@ -1307,6 +1328,11 @@ def changeAccount(isRageQuit: bool = False):
     else:
         pyautogui.click(1415, 235)
         interruptible_wait(0.5)
+
+    # Make sure it has been logged out
+    if not image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
+        pyautogui.click(1415, 235)
+        interruptible_wait(0.5)    
 
     # Increase complete count
     state.increment_iteration()
