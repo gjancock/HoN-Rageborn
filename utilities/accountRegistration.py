@@ -148,19 +148,33 @@ def safe_get(
     )
 
 def is_signup_success(r):
+    # ---- Fast HTML detection ----
+    content_type = r.headers.get("Content-Type", "").lower()
+    text = r.text.lstrip()
+
+    if (
+        "text/html" in content_type
+        or text.startswith("<!doctype")
+        or text.startswith("<html")
+    ):
+        return True, "server_returned_html" # EPIC FAIL PC GAME web issue # Bypass
+
+    # ---- JSON parsing ----
     try:
         data = r.json()
     except ValueError:
-        return False, "Invalid JSON response"
+        return False, "invalid_json_response"
 
+    # ---- API-level failure ----
     if data.get("status") != "success":
-        return False, "Failed to signup: username existed or email used"
+        return False, data.get("message", "signup_failed")
 
     tokens = data.get("tokens", "")
     if "csrf-token" not in tokens:
-        return False, "Missing CSRF token"
+        return False, "missing_csrf_token"
 
-    return True, "Signup success"
+    return True, "signup_success"
+
 
 def log_username(username, filename="signup_users.txt"):
     with open(filename, "a", encoding="utf-8") as f:
