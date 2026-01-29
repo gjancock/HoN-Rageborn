@@ -129,11 +129,12 @@ def _force_generate_account(
     read_credentials_cb,
     signup_cb,
     *,
-    max_attempts: int = 10,
+    max_attempts: int = 5,
 ):
     """
     Hard fallback: force-generate a brand new account.
-    Guaranteed to exit via:
+
+    Guaranteed exit via:
     - success
     - STOP_EVENT
     - max_attempts reached
@@ -141,15 +142,10 @@ def _force_generate_account(
 
     logger.warning("[FAILSAFE] Forcing fresh account generation")
 
-    attempt = 0
+    for attempt in range(1, max_attempts + 1):
 
-    while not state.STOP_EVENT.is_set():
-        attempt += 1
-
-        if attempt > max_attempts:
-            logger.error(
-                f"[FAILSAFE] Aborting after {max_attempts} failed attempts"
-            )
+        if state.STOP_EVENT.is_set():
+            logger.info("[FAILSAFE] Aborted due to STOP_EVENT")
             return None, None
 
         logger.info(f"[FAILSAFE] Attempt {attempt}/{max_attempts}")
@@ -162,7 +158,7 @@ def _force_generate_account(
 
         if not username or not password:
             logger.error("[FAILSAFE] UI returned empty credentials")
-            return None, None
+            return None, None  # hard abort — retrying won't fix UI failure
 
         # 3️⃣ Attempt signup
         try:
@@ -171,7 +167,12 @@ def _force_generate_account(
             logger.exception(
                 "[FAILSAFE] Signup exception during forced recovery"
             )
-            continue  # retry, do NOT abort
+            # short backoff + STOP check
+            for _ in range(10):
+                if state.STOP_EVENT.is_set():
+                    return None, None
+                time.sleep(0.2)
+            continue
 
         if success:
             logger.info("[FAILSAFE] Forced signup successful")
@@ -181,11 +182,14 @@ def _force_generate_account(
             f"[FAILSAFE] Signup failed ({attempt}/{max_attempts}): {msg}"
         )
 
-        time.sleep(random.uniform(1, 3))
+        # interruptible sleep
+        for _ in range(int(random.uniform(1, 3) / 0.2)):
+            if state.STOP_EVENT.is_set():
+                return None, None
+            time.sleep(0.2)
 
-
-    # STOP_EVENT triggered
-    logger.info("[FAILSAFE] Aborted due to STOP_EVENT")
+    logger.error(
+        f"[FAILSAFE] Aborting after {max_attempts} failed attempts"
+    )
     return None, None
-
 
