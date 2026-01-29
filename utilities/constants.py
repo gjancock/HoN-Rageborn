@@ -53,3 +53,11 @@ DEFAULT_ACCOUNT_PASSWORD = "@Abc12345"
 DEFAULT_ACCOUNT_FIRSTNAME = "Maliken"
 DEFAULT_ACCOUNT_LASTNAME = "DeForest"
 DEFAULT_ACCOUNT_EMAIL_DOMAIN = "mail.com"
+
+# Punished Point
+PP_PLAYER_ROW_COG = "cog"
+PP_DISABLE_HELP = "disable_help"
+PP_MUTE_PING = "mute_ping"
+PP_MUTE_VOICE = "mute_voice"
+PP_MUTE_CHAT = "mute_chat"
+PP_AVOID_PLAYER = "avoid_player"

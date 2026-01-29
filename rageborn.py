@@ -898,6 +898,9 @@ def pickingPhase(isRageQuit: bool = False):
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
             logger.info("[INFO] Rageborn begin!")
+            interruptible_wait(0.08)
+            do_pause_vote() # avoiding teammate to kick and drag their time so can give them PP
+            do_pp_stuff()
             interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
             return True
         
@@ -1005,44 +1008,46 @@ def do_foc_stuff():
     matchTimedout = round(random.uniform(600, 660), 2)
 
     # vote pause    
-    pauseChance = 0.2 
-    if not state.SLOWER_PC_MODE and random.random() < pauseChance:
-        state.INGAME_STATE.setIsAfk(True)
-        randomString = [
-            "sorry i need a pause.. 1 minute",
-            "i need a pause",
-            "1 pause",
-            "1 pause please",
-            "pause",
-            "brb",
-            "be right back",
-            "zzzz somebody ring door",
-            "brb phone call",
-            "1 minute plz. on call"
-        ]
-        text = random.choice(randomString)
-        pyperclip.copy(text)
+    # pauseChance = 0.2 
+    # if not state.SLOWER_PC_MODE and random.random() < pauseChance:
+    #     state.INGAME_STATE.setIsAfk(True)
+    #     randomString = [
+    #         "sorry i need a pause.. 1 minute",
+    #         "i need a pause",
+    #         "1 pause",
+    #         "1 pause please",
+    #         "pause",
+    #         "brb",
+    #         "be right back",
+    #         "zzzz somebody ring door",
+    #         "brb phone call",
+    #         "1 minute plz. on call"
+    #     ]
+    #     text = random.choice(randomString)
+    #     pyperclip.copy(text)
 
-        pyautogui.keyUp("c")
-        acChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
-        if random.random() < acChance:
-            pyautogui.hotkey("shift", "enter")
-        else:
-            pyautogui.press("enter")
-        pyautogui.hotkey("ctrl", "v")
-        pyautogui.press("enter")
-        pyautogui.keyDown("c")
-        last_pause_time = do_pause_vote()
-        interruptible_wait(round(random.uniform(40, 60), 2))
-        start_time = time.monotonic()
-    else:
-        state.INGAME_STATE.setIsAfk(False)
-        last_pause_time = time.time()
-        afkChance = 0.15
-        if not state.SLOWER_PC_MODE and random.random() < afkChance:
-            state.INGAME_STATE.setIsAfk(True)
-            logger.info("[INFO] Bot decided to go AFK ingame")
-            time.sleep(round(random.uniform(30, 50), 2))
+    #     pyautogui.keyUp("c")
+    #     acChance = 0.4 if not state.SLOWER_PC_MODE else 0.1
+    #     if random.random() < acChance:
+    #         pyautogui.hotkey("shift", "enter")
+    #     else:
+    #         pyautogui.press("enter")
+    #     pyautogui.hotkey("ctrl", "v")
+    #     pyautogui.press("enter")
+    #     pyautogui.keyDown("c")
+    #     last_pause_time = do_pause_vote()
+    #     interruptible_wait(round(random.uniform(40, 60), 2))
+    #     start_time = time.monotonic()
+    # else:
+    #     state.INGAME_STATE.setIsAfk(False)
+    #     last_pause_time = time.time()
+    #     afkChance = 0.15
+    #     if not state.SLOWER_PC_MODE and random.random() < afkChance:
+    #         state.INGAME_STATE.setIsAfk(True)
+    #         logger.info("[INFO] Bot decided to go AFK ingame")
+    #         time.sleep(round(random.uniform(30, 50), 2))
+    
+    last_pause_time = time.time()
 
     #
     isPathSet = False
@@ -1140,6 +1145,19 @@ def do_foc_stuff():
                 isPathSet = False
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
+
+    return True
+
+
+def leaveMatch():
+    pyautogui.click(1454, 224)
+    interruptible_wait(0.08)
+    pyautogui.click(1430, 304)
+    interruptible_wait(0.08)
+    pyautogui.click(993, 442)
+    interruptible_wait(2)
+    pyautogui.click(995, 340)
+    interruptible_wait(0.08)
 
 
 # Midwar
@@ -1245,6 +1263,60 @@ def do_midwar_stuff():
 
         interruptible_wait(0.03 if not state.SLOWER_PC_MODE else 0.15)
 
+    return True
+
+
+# PP
+def do_pp_stuff():
+    logger.info("[INFO] Giving free PP points!")
+
+    team = state.INGAME_STATE.getCurrentTeam()
+    my_pos = state.INGAME_STATE.getPosition()  # 1–5
+
+    type_in_order = [
+        constant.PP_PLAYER_ROW_COG,
+        constant.PP_AVOID_PLAYER,
+        constant.PP_MUTE_CHAT,
+        constant.PP_MUTE_VOICE
+    ]
+
+    pyautogui.keyDown("x")
+    interruptible_wait(0.15)
+
+    try:        
+        for pos in range(1, 6):
+            if pos == my_pos:
+                continue
+
+            for pp_type_index, pp_type in enumerate(type_in_order):
+                x, y = assetsLibrary.get_pp_type_coord(
+                    team=team,
+                    pos=pos,
+                    type=pp_type
+                )
+
+                pyautogui.moveTo(x, y, duration=0.08)
+                pyautogui.click()
+                interruptible_wait(0.08)
+
+                if pp_type_index == 1:
+                    dialog = assetsLibrary.get_avoid_dialog_coords()
+
+                    pyautogui.moveTo(dialog["dropdown"]["x"], dialog["dropdown"]["y"], duration=0.08)
+                    pyautogui.click()
+                    pyautogui.moveTo(dialog["reason"]["x"], dialog["reason"]["y"], duration=0.08)
+                    pyautogui.click()
+
+                    if not find_and_click("pp-dialog-confirm-button.png", region=constant.SCREEN_REGION):
+                        pyautogui.moveTo(dialog["confirm"]["x"], dialog["confirm"]["y"], duration=0.08)
+                        pyautogui.click()
+
+                # Optional: debug / conditional logic
+                # logger.debug(f"PP[{pp_type_index}] {pp_type} on pos {pos}")
+
+    finally:
+        pyautogui.keyUp("x")
+
 
 def check_lobby_message():
     return any_image_exists([
@@ -1266,12 +1338,15 @@ def ingame():
     #
     logger.info("[INFO] HERE COMES THE TROLL BEGIN")
 
+    isSuccess = False
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
-            do_foc_stuff()
+            isSuccess = do_foc_stuff()
 
         case constant.MAP_MIDWAR:
-            do_midwar_stuff()
+            isSuccess = do_midwar_stuff()
+
+    return isSuccess
 
 def changeAccount(isRageQuit: bool = False):
     interruptible_wait(round(random.uniform(0.2, 1), 2))
@@ -1414,8 +1489,15 @@ def main(username, password, isRageQuit: bool = False):
 
                     if not isRageQuit:
                         ingame()
-                        find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
-                        logger.info("[INFO] KICKED! Closing dialog message.")
+
+                        if not any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):                            
+                            logger.info("[INFO] Manually leave the match due to match timeout reached.")
+                            leaveMatch()
+
+                        else:
+                            find_and_click("message-ok.png", region=constant.LOBBY_MESSAGE_REGION)
+                            logger.info("[INFO] KICKED! Closing dialog message.")
+
                 else:
                     logger.warning("[INFO] Queue cooldown! Changing account..")
                     generateAccount()

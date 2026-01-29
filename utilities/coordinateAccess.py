@@ -321,6 +321,45 @@ def get_in_game_center_hero_coord():
             f"Missing item: in_game.center_hero"
         ) from e
     
+# Punish Point
+def get_pp_type_coord(team, pos, type):
+    try:
+        team_allowed = {constant.TEAM_HELLBOURNE, constant.TEAM_LEGION}
+        if team not in team_allowed:
+            raise ValueError(f"Invalid team type: {team}")
+
+        if pos not in range(1, 6):
+            raise ValueError(f"Invalid pos number: {pos}")
+
+        type_allowed = {
+            constant.PP_DISABLE_HELP,
+            constant.PP_AVOID_PLAYER,
+            constant.PP_MUTE_CHAT,
+            constant.PP_MUTE_PING,
+            constant.PP_MUTE_VOICE,
+            constant.PP_PLAYER_ROW_COG
+        }
+        if type not in type_allowed:
+            raise ValueError(f"Invalid type: {type}")
+
+        row = _coords["in_game"]["punished_points"][team]["player_rows"][pos - 1]
+        button = row["buttons"][type]
+
+        return button["x"], button["y"]
+
+    except KeyError as e:
+        raise ValueError(
+            f"Missing punished_points coord: team={team}, pos={pos}, type={type}"
+        ) from e
+    
+
+def get_avoid_dialog_coords():
+    try:
+        return _coords["in_game"]["punished_points"]["avoid_dialog"]
+    except KeyError as e:
+        raise ValueError("Missing avoid_dialog coordinates") from e
+
+    
 # Region
 def get_player_rows_region(team):
     return [
