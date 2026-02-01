@@ -27,6 +27,8 @@ from utilities.ui.draft_screen_regions import crop_draft_team_regions
 from utilities.ocr.ocr_engine import read_usernames_from_region, normalize_username, fix_common_ocr_errors
 from utilities.paths import get_launcher_dir
 from difflib import SequenceMatcher
+from utilities.firewall import ensure_outbound_block, simulate_lag_timeout
+from utilities.ocr.utils import ocr_read_single_line_region as ocr_single_line
 
 
 # Initialize Logger
@@ -369,6 +371,7 @@ def account_Login(username, password):
             ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {username}")
             state.INGAME_STATE.setUsername(username)
+            state.INGAME_STATE.setPassword(password)
             return True
 
         time.sleep(0.3)
@@ -378,8 +381,18 @@ def account_Login(username, password):
 
 def prequeue():
     # Queue options
+    start_time = time.monotonic()
+
     while not state.STOP_EVENT.is_set():
         logger.info("[INFO] Looking for PLAY button...")
+
+        elapsed = time.monotonic() - start_time
+        
+        if elapsed >= 20:
+            logger.info("[INFO] Stucked! Restarting..")
+            state.STOP_EVENT.set()
+            break
+
         if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
             logger.info("[INFO] PLAY button clicked!")            
             break
@@ -402,6 +415,9 @@ def startQueue(isRageQuit: bool = False):
         pyautogui.moveTo(x, y, duration=0.3)    
         pyautogui.click()
         interruptible_wait(0.3 if not state.SLOWER_PC_MODE else 1)
+    else:
+        pyautogui.click(827, 319) # matchmaking tab
+        interruptible_wait(0.5)
 
     while not state.STOP_EVENT.is_set():
         if not image_exists("matchmaking-disabled.png", region=constant.MATCHMAKING_PANEL_REGION):
@@ -498,25 +514,12 @@ def startQueue(isRageQuit: bool = False):
 def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
-
-def getTeam():
-    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
-
-    SIMILARITY_THRESHOLD = 0.80  # 🔒 tune once, do not guess
-
+# Helper for getTeam
+def _scan_team_once(my_username, similarity_threshold):
     screenshot = capture_fullscreen()
     regions = crop_draft_team_regions(screenshot)
 
-    my_username = state.INGAME_STATE.getUsername()
-    if not my_username:
-        logger.error("[ERROR] Username not set")
-        return False
-
-    my_username = fix_common_ocr_errors(
-        normalize_username(my_username.lower().strip())
-    )
-
-    best_match = None  # 🔑 single source of truth
+    best_match = None
 
     for team, region in regions.items():
         if region is None:
@@ -535,22 +538,16 @@ def getTeam():
                 f"me='{my_username}' ocr='{text}'"
             )
 
-            # ---------- STRICT MATCH ----------
+            # ---------- STRICT ----------
             if my_username in text or text in my_username:
-                score = 1.0  # 🔒 absolute win
+                score = 1.0
                 match_type = "strict"
             else:
-                # ---------- FUZZY MATCH ----------
+                # ---------- FUZZY ----------
                 score = similarity(my_username, text)
-                match_type = "fuzzy"
-
-                if score < SIMILARITY_THRESHOLD:
+                if score < similarity_threshold:
                     continue
-
-            logger.debug(
-                f"[MATCH-CANDIDATE] pos={index} "
-                f"type={match_type} score={score:.2f}"
-            )
+                match_type = "fuzzy"
 
             candidate = {
                 "team": team,
@@ -560,28 +557,78 @@ def getTeam():
                 "type": match_type,
             }
 
-            # 🔥 Keep only the best candidate
-            if (
-                best_match is None
-                or candidate["score"] > best_match["score"]
-            ):
+            logger.debug(
+                f"[MATCH-CANDIDATE] pos={index} "
+                f"type={match_type} score={score:.2f}"
+            )
+
+            if best_match is None or candidate["score"] > best_match["score"]:
                 best_match = candidate
 
+    return best_match
+
+
+
+def getTeam():
+    interruptible_wait(0.5 if not state.SLOWER_PC_MODE else 3)
+
+    BASE_THRESHOLD = 0.80
+    MAX_ATTEMPTS = 2  # 🔒 do NOT go crazy
+    THRESHOLD_STEP = 0.05  # slight relaxation only
+
+    my_username = state.INGAME_STATE.getUsername()
+    if not my_username:
+        logger.error("[ERROR] Username not set")
+        return False
+
+    my_username = fix_common_ocr_errors(
+        normalize_username(my_username.lower().strip())
+    )
+
+    best_overall = None
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        threshold = max(0.65, BASE_THRESHOLD - (attempt - 1) * THRESHOLD_STEP)
+
+        logger.info(
+            f"[TEAM-DETECT] Attempt {attempt}/{MAX_ATTEMPTS} "
+            f"(threshold={threshold:.2f})"
+        )
+
+        candidate = _scan_team_once(my_username, threshold)
+
+        if candidate:
+            # Strict match wins immediately
+            if candidate["type"] == "strict":
+                best_overall = candidate
+                break
+
+            # Otherwise keep best fuzzy
+            if (
+                best_overall is None
+                or candidate["score"] > best_overall["score"]
+            ):
+                best_overall = candidate
+
+        # small delay before re-capture
+        interruptible_wait(0.3)
+
     # ---------- FINAL DECISION ----------
-    if not best_match:
-        logger.warning("[INFO] Failed to detect team via OCR")
+    if not best_overall:
+        logger.warning("[INFO] Failed to detect team via OCR (all attempts)")
         return False
 
     logger.info(
-        f"[FINAL-MATCH] team={best_match['team']} "
-        f"pos={best_match['position']} "
-        f"type={best_match['type']} "
-        f"score={best_match['score']:.2f}"
+        f"[FINAL-MATCH] team={best_overall['team']} "
+        f"pos={best_overall['position']} "
+        f"type={best_overall['type']} "
+        f"score={best_overall['score']:.2f}"
     )
 
-    state.INGAME_STATE.setCurrentTeam(best_match["team"])
-    state.INGAME_STATE.setPosition(best_match["position"])
+    state.INGAME_STATE.setCurrentTeam(best_overall["team"])
+    state.INGAME_STATE.setPosition(best_overall["position"])
     return True
+
 
 
 # def getTeam():
@@ -702,7 +749,7 @@ def continuePickingPhaseChat():
 
 def generateAccount():
     while not state.STOP_EVENT.is_set():
-        status, username, password = generatePendingAccount()
+        status, username, password = generatePendingAccount(True) # True = Not waiting for verification
         if status:
             logger.info(f"[INFO] Generated Username: {username}")
             break
@@ -898,10 +945,9 @@ def pickingPhase(isRageQuit: bool = False):
         if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):
             logger.info("[INFO] I see fountain, I see grief!")
             logger.info("[INFO] Rageborn begin!")
-            interruptible_wait(0.08)
             do_pause_vote() # avoiding teammate to kick and drag their time so can give them PP
             do_pp_stuff()
-            interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
+            #interruptible_wait(1.5 if not state.SLOWER_PC_MODE else 5)
             return True
         
         if any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):
@@ -999,7 +1045,6 @@ def do_foc_stuff():
     import pyperclip
     #
     start_time = time.monotonic()
-    #team = getTeam()
     team = state.INGAME_STATE.getCurrentTeam()
     bought = False
     pyautogui.keyDown("c")
@@ -1150,14 +1195,60 @@ def do_foc_stuff():
 
 
 def leaveMatch():
-    pyautogui.click(1454, 224)
+    pyautogui.hotkey("ctrl", "f8")
     interruptible_wait(0.08)
-    pyautogui.click(1430, 304)
-    interruptible_wait(0.08)
-    pyautogui.click(993, 442)
-    interruptible_wait(2)
+    type_text("disc", False)
+    pyautogui.press("tab")
+    pyautogui.press("enter")
+    pyautogui.hotkey("ctrl", "f8")
+
+    interruptible_wait(2.5)
     pyautogui.click(995, 340)
-    interruptible_wait(0.08)
+
+    # fixed the quick login
+    if find_and_click("play-button.png", region=constant.SCREEN_REGION):            
+        logger.info("[INFO] PLAY button clicked!")
+
+    if find_and_click("play-button-christmas.png", region=constant.SCREEN_REGION):            
+        logger.info("[INFO] PLAY button clicked!")
+
+    interruptible_wait(0.7)
+
+    if image_exists("matchmaking-panel-header.png", region=constant.SCREEN_REGION):
+        # 1095, 319
+        pyautogui.click(1095, 319)
+        logger.info("[INFO] Click Custom game header")        
+
+        # 754, 677 # create game
+        pyautogui.click(754, 677)
+        logger.info("[INFO] Start practice mode")
+
+        start_time = time.monotonic()
+        while not state.STOP_EVENT.is_set():
+
+            elapsed = time.monotonic() - start_time        
+            if elapsed >= 10:
+                logger.info(
+                    "[INFO] Practice mode loading timedout\n"
+                    "[INFO] Probably due to not Practice mode set \n"
+                    "[INFO] Restarting game due to stucked.."
+                )                
+                state.STOP_EVENT.set()
+                break
+
+            if any_image_exists(["ingame-top-left-menu-legion.png", "ingame-top-left-menu-hellbourne.png"], region=constant.SCREEN_REGION):                
+                logger.info(f"[INFO] Practice mode loaded at {elapsed:.2f}s")
+                break
+            interruptible_wait(0.7)
+
+        logger.info("[INFO] Leaving practice mode")
+        pyautogui.click(1459, 226)
+        pyautogui.click(1435, 303)
+        pyautogui.click(1006, 428)
+
+        interruptible_wait(2.5)
+        pyautogui.click(995, 340)
+        logger.info("[INFO] Closed reconnect popup")            
 
 
 # Midwar
@@ -1165,7 +1256,6 @@ def do_midwar_stuff():
     import pyperclip
     #
     start_time = time.monotonic()
-    #team = getTeam()
     team = state.INGAME_STATE.getCurrentTeam()
     bought = False
     pyautogui.keyDown("c")
@@ -1268,6 +1358,11 @@ def do_midwar_stuff():
 
 # PP
 def do_pp_stuff():
+
+    if image_exists("ingame-shop-guide-selection-label.png", region=constant.SCREEN_REGION):
+        pyautogui.press("b")
+        logger.info("[INFO] Dismiss ingame shop")
+
     logger.info("[INFO] Giving free PP points!")
 
     team = state.INGAME_STATE.getCurrentTeam()
@@ -1275,20 +1370,19 @@ def do_pp_stuff():
 
     type_in_order = [
         constant.PP_PLAYER_ROW_COG,
-        constant.PP_AVOID_PLAYER,
-        constant.PP_MUTE_CHAT,
-        constant.PP_MUTE_VOICE
+        constant.PP_AVOID_PLAYER
     ]
 
     pyautogui.keyDown("x")
     interruptible_wait(0.15)
 
     try:        
+        confirmCount = 0
         for pos in range(1, 6):
             if pos == my_pos:
                 continue
 
-            for pp_type_index, pp_type in enumerate(type_in_order):
+            for pp_type in type_in_order:
                 x, y = assetsLibrary.get_pp_type_coord(
                     team=team,
                     pos=pos,
@@ -1299,22 +1393,38 @@ def do_pp_stuff():
                 pyautogui.click()
                 interruptible_wait(0.08)
 
-                if pp_type_index == 1:
+                if pp_type == constant.PP_AVOID_PLAYER:
                     dialog = assetsLibrary.get_avoid_dialog_coords()
-
                     pyautogui.moveTo(dialog["dropdown"]["x"], dialog["dropdown"]["y"], duration=0.08)
                     pyautogui.click()
-                    pyautogui.moveTo(dialog["reason"]["x"], dialog["reason"]["y"], duration=0.08)
+
+                    reasonCount = random.randint(1, 3)
+                    pyautogui.moveTo(dialog[f"reason_{reasonCount}"]["x"], dialog[f"reason_{reasonCount}"]["y"], duration=0.08)
                     pyautogui.click()
 
                     if not find_and_click("pp-dialog-confirm-button.png", region=constant.SCREEN_REGION):
                         pyautogui.moveTo(dialog["confirm"]["x"], dialog["confirm"]["y"], duration=0.08)
                         pyautogui.click()
+                    
+                    confirmCount += 1
 
-                # Optional: debug / conditional logic
-                # logger.debug(f"PP[{pp_type_index}] {pp_type} on pos {pos}")
+                    start_time = time.monotonic()
+                    while not state.STOP_EVENT.is_set():
+                        elapsed = time.monotonic() - start_time
+        
+                        if elapsed >= 2: 
+                            logger.info(
+                                "[INFO] Not seeting the confirmation after 2 seconds\n"
+                                "[INFO] Skipping\n"
+                            )
+                            break
+
+                        if find_and_click("message-ok.png", region=constant.SCREEN_REGION):
+                            break
+                        interruptible_wait(0.09)
 
     finally:
+        logger.info(f"[INFO] {confirmCount} player received free PP")
         pyautogui.keyUp("x")
 
 
@@ -1338,6 +1448,16 @@ def ingame():
     #
     logger.info("[INFO] HERE COMES THE TROLL BEGIN")
 
+    # TODO: Ragequit
+    isRagequit = True
+    if isRagequit: # always True for now
+        logger.info("[INFO] Waiting to leave game..")
+
+        allChat()
+
+        #interruptible_wait(round(random.uniform(7, 10), 2))
+        return True
+
     isSuccess = False
     match state.INGAME_STATE.getCurrentMap():
         case constant.MAP_FOC:
@@ -1358,22 +1478,27 @@ def changeAccount(isRageQuit: bool = False):
         state.STOP_EVENT.set() # quit loop
 
     if isRageQuit:
-        timedoutChance = 0.8
+        timedoutChance = 0 # not stable
         if random.random() < timedoutChance:
-            adapter = getDisconnected()
-            logger.info("[INFO] Oops! electricity goes off out of sudden")
+            # adapter = getDisconnected()
+            # logger.info("[INFO] Oops! electricity goes off out of sudden")
                 
-            reconnect(adapter)
-            logger.info("[INFO] Waiting to reconnect...")
-            restored = wait_for_ping(timeout=30)
-            if restored:
-                logger.info("[INFO] Got back connection!")
+            # reconnect(adapter)
+            # logger.info("[INFO] Waiting to reconnect...")
+            # restored = wait_for_ping(timeout=30)
+
+            event = simulate_lag_timeout(constant.APP_NAME)
+            restored = event.wait(timeout=10)
+
+            if not restored:
+                logger.warning("[WARN] Firewall restore timeout!")
+            else:
+                logger.info("[INFO] Firewall restored, waiting for game response")                
                 # pyautogui.click(1415, 235)
                 # pyautogui.click(1000, 425)
                 # interruptible_wait(2)
                 # pyautogui.click(991, 341)
                 interruptible_wait(5.5)
-
 
             while not state.STOP_EVENT.is_set():
                 if image_exists("startup/login-button.png", region=constant.SCREEN_REGION):
@@ -1388,9 +1513,10 @@ def changeAccount(isRageQuit: bool = False):
                 interruptible_wait(0.3)
             
             interruptible_wait(4)
-        else:
+        else:            
             logger.info("[INFO] Ready to disconnect..")
-            interruptible_wait(round(random.uniform(5, 10), 2))
+
+            # leave match during picking phase
             pyautogui.click(1415, 235)
             pyautogui.click(1000, 425)
             interruptible_wait(2)
@@ -1442,7 +1568,9 @@ def changeAccount(isRageQuit: bool = False):
             ], region=constant.SCREEN_REGION):
             logger.info(f"[LOGIN] Successfully logged in as {acc.username}")
             state.INGAME_STATE.setIsReInitiated(True)
-            state.clear_pending_account(acc.username)
+            state.clear_pending_account(acc.username)            
+            state.INGAME_STATE.setUsername(acc.username)
+            state.INGAME_STATE.setPassword(acc.password)
             break
 
         if now - loginTime >= timeout:
@@ -1459,6 +1587,9 @@ def main(username, password, isRageQuit: bool = False):
     try:
         #
         pin_jokevio()
+
+        #
+        #ensure_outbound_block(constant.APP_NAME, constant.EXE_PATH_DEFAULT)
 
         # Account Login manually
         if account_Login(username, password):
@@ -1490,6 +1621,7 @@ def main(username, password, isRageQuit: bool = False):
                     if not isRageQuit:
                         ingame()
 
+                        # match timed-out / ragequit v2
                         if not any_image_exists(["play-button.png", "play-button-christmas.png"], region=constant.SCREEN_REGION):                            
                             logger.info("[INFO] Manually leave the match due to match timeout reached.")
                             leaveMatch()

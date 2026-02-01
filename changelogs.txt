@@ -1,4 +1,34 @@
 # =========================================================================== #
+# v2.4.2 - Bug Fixes (1 February 2026)
+# =========================================================================== #
+- [x] Fixed rageborn mode stability on patch version 0.9.2.
+- [x] Fixed quick relogging after match.
+- [x] Added failsafe time-out while providing free PP to avoid stuck.
+- [x] Fixed user code not found when doing account verification issue.
+
+# =========================================================================== #
+# v2.4.1 - Bug Fixes (1 February 2026)
+# =========================================================================== #
+- [x] Fixed account verification feature isn't working properly.
+- [x] Added date on account logger text filename.
+- [x] Added optional checkbox for mass account creation with random password generated.
+
+# =========================================================================== #
+# v2.4.0 - Feature Enhancement (31 January 2026)
+# =========================================================================== #
+- [x] Added new feature: bot account creation.
+
+# =========================================================================== #
+# v2.3.0 - Feature Enhancement (30 January 2026)
+# =========================================================================== #
+- [x] Removed all default ingame / picking phase chat text.
+- [x] Added first name, last name generator.
+- [x] Added more realistic words pool for username creation.
+- [x] Bots will not roaming to mid lane to feed themselves but giving free PP points then leave game.
+- [x] Improved disconnect methods by using firewall rules instead of disabling internet adapter.
+- [x] Added password information to 'signup_users.txt' if registration is successful.
+
+# =========================================================================== #
 # v2.2.0 - Feature Enhancement (29 January 2026)
 # =========================================================================== #
 - [x] Added PP provider feature.

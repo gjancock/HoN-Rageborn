@@ -9,10 +9,9 @@ import ctypes
 import hashlib
 import zipfile
 import shutil
-import traceback
+import traceback # Debug
 
 from tkinter import ttk
-from requests.exceptions import ConnectionError, Timeout, RequestException
 from utilities.constants import DEFAULT_ACCOUNT_EMAIL_DOMAIN, DEFAULT_ACCOUNT_FIRSTNAME, DEFAULT_ACCOUNT_LASTNAME, DEFAULT_ACCOUNT_PASSWORD
 from utilities.paths import (
     CONFIG_PATH,
@@ -395,16 +394,17 @@ def main():
                 retry_countdown(ui, RETRY_DELAY)
                 continue
 
-            # ui.set_text(
-            #     "Update failed permanently:\n\n"
-            #     f"{e}\n\n"
-            #     "Please check your internet connection."
-            # )
             ui.set_text(
                 "Update failed permanently:\n\n"
-                f"{repr(e)}\n\n"
-                f"{traceback.format_exc()}"
+                f"{e}\n\n"
+                "Please check your internet connection."
             )
+            # Debug
+            # ui.set_text(
+            #     "Update failed permanently:\n\n"
+            #     f"{repr(e)}\n\n"
+            #     f"{traceback.format_exc()}"
+            # )
             ui.root.mainloop()
             return
 

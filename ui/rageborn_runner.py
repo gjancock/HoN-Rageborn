@@ -5,6 +5,10 @@ import time
 import logging
 import pyautogui
 import core.state as state
+import random
+
+from utilities.accountGenerator import generatePendingAccount
+from utilities.common import interruptible_wait
 
 logger = logging.getLogger("rageborn")
 
@@ -32,21 +36,58 @@ def run_rageborn_flow(username, password, launch_game_process):
     Blocking Rageborn execution.
     """
     try:
-        if not launch_game_process():
-            logger.error("[ERROR] Game launch aborted")
-            return
+        isAccountCreationOnly = state.get_account_spam_creation_enabled()
 
-        if state.SLOWER_PC_MODE:
-            logger.info("[INFO] RAGEBORN slow mode activated.")
+        if isAccountCreationOnly:
+            try:
+                accountQuantity = int(state.get_account_spam_creation_quantity())
+            except (TypeError, ValueError):
+                logger.error("[FATAL] Invalid account creation quantity")
+                return
 
-        import rageborn  # late import by design
+            accountCreated = 0
 
-        reset_state()
-        rageborn.start(username, password)
+            while not state.STOP_EVENT.is_set():
 
-        if state.CRASH_EVENT.is_set():
-            logger.exception("[FATAL] Rageborn crashed during runtime")
-            raise RuntimeError("Rageborn crash detected")
+                # 🔒 Finite vs infinite handling
+                if accountQuantity > 0 and accountCreated >= accountQuantity:
+                    break
+
+                success = generatePendingAccount()
+
+                if success:
+                    accountCreated += 1
+                    state.increment_iteration()
+                else:
+                    logger.warning(
+                        f"[WARN] Account creation failed "
+                        f"({accountCreated}/{accountQuantity})"
+                    )
+
+                interruptible_wait(
+                    round(random.uniform(3, 5), 2)
+                )
+
+            logger.info(
+                f"[INFO] Account creation finished "
+                f"({accountCreated}/{accountQuantity})"
+            )
+        else:
+            if not launch_game_process():
+                logger.error("[ERROR] Game launch aborted")
+                return
+
+            if state.SLOWER_PC_MODE:
+                logger.info("[INFO] RAGEBORN slow mode activated.")
+
+            import rageborn  # late import by design
+
+            reset_state()
+            rageborn.start(username, password)
+
+            if state.CRASH_EVENT.is_set():
+                logger.exception("[FATAL] Rageborn crashed during runtime")
+                raise RuntimeError("Rageborn crash detected")
 
     except pyautogui.FailSafeException:
         logger.info("[SAFETY] FAILSAFE Triggered! Emergency stop.")

@@ -9,6 +9,7 @@ from utilities.usernameGenerator import (
     generate_word_username,
 )
 from utilities.emailGenerator import generate_email
+from utilities.nameGenerator import generate_firstname, generate_lastname
 
 logger = logging.getLogger("rageborn")
 
@@ -20,6 +21,8 @@ def get_effective_password(password_entry):
 
 def on_generate(
     *,
+    first_name_entry,
+    last_name_entry,
     prefix_entry,
     postfix_entry,
     domain_entry,
@@ -56,6 +59,15 @@ def on_generate(
         username = generate_word_username(prefix, postfix)
 
     email = generate_email(prefix, postfix, domain)
+
+    firstname = generate_firstname()
+    lastname = generate_lastname()
+
+    first_name_entry.delete(0, tk.END)
+    first_name_entry.insert(0, firstname)
+
+    last_name_entry.delete(0, tk. END)
+    last_name_entry.insert(0, lastname)
 
     username_entry.delete(0, tk.END)
     username_entry.insert(0, username)

@@ -12,17 +12,19 @@ from utilities.emailGenerator import (
 from utilities.accountRegistration import (
     signup_user
 )
+from utilities.nameGenerator import generate_lastname, generate_firstname
+from utilities.passwordGenerator import generate_password
 
 # Initialize Logger
 logger = setup_logger()
 
-def generatePendingAccount():
+def generatePendingAccount(isAsyncVerification: bool = False):
     username, password, email = generateMandatoryField()
-    firstname = state.get_account_firstname()
-    lastname = state.get_account_lastname()
+    firstname = generate_firstname()
+    lastname = generate_lastname()
 
     success, msg = signup_user(
-        firstname, lastname, email, username, password, False
+        firstname, lastname, email, username, password, isAsyncVerification
     )
 
     if success:
@@ -62,6 +64,10 @@ def generateMandatoryField():
         username = generate_word_username(prefix, postfix)
 
     email = generate_email(prefix, postfix, domain)
+
+    isRandomPassword = state.get_account_spam_creation_random_password_enabled()
+    if isRandomPassword:
+        password = generate_password()
 
     return username, password, email
 

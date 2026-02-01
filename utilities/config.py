@@ -25,6 +25,8 @@ def load_config():
     state.SLOWER_PC_MODE = config.getboolean("performance", "slower_pc_mode", fallback=False)
     state.AUTO_UPDATE = config.getboolean("settings", "auto_update", fallback=True)
     state.RAGEQUIT_MODE = config.getboolean("settings", "ragequit", fallback=False)
+    state.ACCOUNT_SPAM_CREATION_ENABLED = config.getboolean("account_generator", "enabled", fallback=False)
+    state.ACCOUNT_SPAM_CREATION_RANDOM_PASSWORD_ENABLED = config.getboolean("account_generator", "random_password", fallback=False)
 
     # ---- Strings ----
     state.GAME_EXECUTABLE = config.get("paths", "game_executable", fallback="")
@@ -34,6 +36,7 @@ def load_config():
     state.ACCOUNT_LASTNAME = config.get("account", "lastname", fallback=DEFAULT_ACCOUNT_LASTNAME)
     state.USERNAME_PREFIX = config.get("username_generator", "prefix", fallback="")
     state.USERNAME_POSTFIX = config.get("username_generator", "postfix", fallback="")
+    state.ACCOUNT_SPAM_CREATION_QUATITY = config.get("account_generator", "quantity", fallback="0")
 
     # ---- Username counter ----
     state.USERNAME_PREFIX_COUNT_ENABLED = config.getboolean(

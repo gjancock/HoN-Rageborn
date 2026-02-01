@@ -9,6 +9,7 @@ import subprocess
 import threading
 import sys
 
+from datetime import date
 from utilities.loggerSetup import setup_logger
 from utilities.ipAddressGenerator import random_public_ip
 from urllib.parse import urlencode
@@ -85,10 +86,8 @@ def signup_user(first_name, last_name, email, username, password, asyncVerificat
 
         if success:
             logger.info(f"[INFO] Account {username} created")
-            logger.info(f"[INFO] Password: {password}")
-            state.INGAME_STATE.setUsername(username)
-            state.INGAME_STATE.setPassword(password)
-            log_username(username)
+            logger.info(f"[INFO] Password: {password}")            
+            log_account(username, password)
 
             if state.get_auto_email_verification() or state.get_auto_mobile_verification():
                 start_account_verification(username, async_mode=asyncVerification)
@@ -176,9 +175,12 @@ def is_signup_success(r):
     return True, "signup_success"
 
 
-def log_username(username, filename="signup_users.txt"):
+def log_account(username, password):
+    today = date.today().strftime("%Y-%m-%d")
+    filename = f"signup_users_{today}.txt"
+
     with open(filename, "a", encoding="utf-8") as f:
-        f.write(username + "\n")
+        f.write(f"{username} | {password}\n")
 
 def is_dns_error(exc: Exception) -> bool:
     """

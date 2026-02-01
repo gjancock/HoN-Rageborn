@@ -63,12 +63,15 @@ from ui.ui_handlers import (
     on_auto_email_verification_changed,
     on_auto_mobile_verification_changed,
     on_auto_update_changed,
+    on_account_spam_creation_random_password_enabled_changed
 )
 from ui.ui_state_sync import (
     on_prefix_checkbox_toggle,
     on_postfix_checkbox_toggle,
     on_prefix_count_changed,
     on_postfix_count_changed,
+    on_account_spam_creation_checkbox_toggle,
+    on_account_spam_quantity_count_changed
 )
 from ui.chat_editor import (
     build_chat_editor,
@@ -135,6 +138,18 @@ postfix_count_start_var = tk.IntVar(
     value=state.get_username_postfix_count_start_at()
 )
 
+account_spam_creation_var = tk.BooleanVar(
+    value=state.get_account_spam_creation_enabled()
+)
+
+account_spam_creation_quantity_var = tk.IntVar(
+    value=state.get_account_spam_creation_quantity()
+)
+
+account_spam_creation_random_password_enabled = tk.BooleanVar(
+    value=state.get_account_spam_creation_random_password_enabled()
+)
+
 def make_debouncer(root, delay, func):
     job = None
 
@@ -148,6 +163,8 @@ def make_debouncer(root, delay, func):
 
 def _generate_credentials():
     on_generate(
+        first_name_entry=first_name_entry,
+        last_name_entry=last_name_entry,
         prefix_entry=prefix_entry,
         postfix_entry=postfix_entry,
         domain_entry=domain_entry,
@@ -201,6 +218,7 @@ def on_start_endless_mode():
 
 prefix_count_start_var.trace_add("write", lambda *_: on_prefix_count_changed(prefix_count_start_var))
 postfix_count_start_var.trace_add("write", lambda *_: on_postfix_count_changed(postfix_count_start_var))
+account_spam_creation_quantity_var.trace_add("write", lambda *_: on_account_spam_quantity_count_changed(account_spam_creation_quantity_var))
 
 
 # ============================================================
@@ -214,16 +232,30 @@ debounced_prefix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.s
 debounced_postfix_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix)
 debounced_postfix_count_save = make_debouncer(root, constant.DEBOUNCE_MS, state.set_username_postfix_count_start_at)
 
+import ctypes
+from ctypes import wintypes
+
+def get_windows_work_area():
+    SPI_GETWORKAREA = 0x0030
+    rect = wintypes.RECT()
+    ctypes.windll.user32.SystemParametersInfoW(
+        SPI_GETWORKAREA, 0, ctypes.byref(rect), 0
+    )
+    return rect  # left, top, right, bottom
+
+
 WINDOW_WIDTH = 750
-WINDOW_HEIGHT = 800
 
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
+root.update_idletasks()
 
-x = screen_width - 10 - WINDOW_WIDTH
-y = screen_height - 90 - WINDOW_HEIGHT
+work_area = get_windows_work_area()
 
-root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
+usable_height = work_area.bottom - work_area.top
+x = work_area.right - WINDOW_WIDTH - 10
+y = work_area.top
+
+root.geometry(f"{WINDOW_WIDTH}x{usable_height}+{x}+{y}")
+
 
 main_frame = tk.Frame(root)
 main_frame.pack(fill="both", expand=True)
@@ -279,7 +311,7 @@ exe_entry.pack(fill="x", pady=(4, 0))
 tk.Button(
     form_frame,
     text="Generate Username & Email",
-    command=on_generate
+    command=_generate_credentials
 ).pack(fill="x", pady=6)
 
 action_row = tk.Frame(form_frame)
@@ -288,7 +320,15 @@ action_row.pack(fill="x", pady=6)
 tk.Button(
     action_row,
     text="Sign Up",
-    command=on_submit,
+    command=lambda: on_submit(
+        first_name_entry=first_name_entry,
+        last_name_entry=last_name_entry,
+        email_entry=email_entry,
+        username_entry=username_entry,
+        password_entry=password_entry,
+        get_password_cb=get_effective_password,
+        signup_cb=signup_user,
+    ),
     width=12
 ).pack(side="left", expand=True, padx=2)
 
@@ -388,14 +428,18 @@ tk.Checkbutton(
     verification_row,
     text="Auto Email Verification",
     variable=auto_email_verification_var,
-    command=on_auto_email_verification_changed
+    command=lambda: on_auto_email_verification_changed(
+        auto_email_verification_var
+    )
 ).grid(row=0, column=0, sticky="w", padx=(0, 20))
 
 tk.Checkbutton(
     verification_row,
     text="Auto Mobile Verification",
     variable=auto_mobile_verification_var,
-    command=on_auto_mobile_verification_changed
+    command=lambda: on_auto_mobile_verification_changed(
+        auto_mobile_verification_var
+    )
 ).grid(row=0, column=1, sticky="w")
 
 # ============================================================
@@ -443,8 +487,7 @@ tk.Checkbutton(
     app_settings_row2,
     text="Use Ragequit Mode",
     variable=is_ragequit_mode_enabled_var,
-    command=lambda: state.set_is_ragequit_mode_enabled(is_ragequit_mode_enabled_var.get()),
-    fg="red"
+    command=lambda: state.set_is_ragequit_mode_enabled(is_ragequit_mode_enabled_var.get())
 ).grid(row=0, column=1, sticky="w")
 
 # ============================================================
@@ -519,6 +562,70 @@ postfix_count_entry = tk.Entry(
     validatecommand=(vcmd_int, "%P")
 )
 postfix_count_entry.grid(row=0, column=3, padx=5)
+
+# ============================================================
+continuous_account_creation_frame = tk.LabelFrame(
+    extra_settings_tab,
+    text="Account Creation Mode",
+    padx=10,
+    pady=8
+)
+
+continuous_account_creation_frame.pack(
+    fill="x",
+    padx=10,
+    pady=10,
+    anchor="n"
+)
+
+account_spam_creation_row = tk.Frame(continuous_account_creation_frame)
+account_spam_creation_row.pack(anchor="w", pady=4)
+
+_account_creation_state = {"value": False}
+tk.Checkbutton(
+    account_spam_creation_row,
+    text="Enable",
+    variable=account_spam_creation_var,
+    command=lambda: on_account_spam_creation_checkbox_toggle(
+        enabled_var=account_spam_creation_var,
+        count_var=account_spam_creation_quantity_var,
+        entry_widget=account_spam_quantity_entry,
+        last_enabled_ref=_account_creation_state,
+    ),
+    fg="red"
+).grid(row=0, column=0, sticky="w", padx=5)
+
+tk.Label(
+    account_spam_creation_row,
+    text="Quantity"
+).grid(row=0, column=3, sticky="w", padx=10)
+
+account_spam_quantity_entry = tk.Entry(
+    account_spam_creation_row,
+    textvariable=account_spam_creation_quantity_var,
+    width=6,
+    state="disabled",
+    validate="key",
+    validatecommand=(vcmd_int, "%P")
+)
+account_spam_quantity_entry.grid(row=0, column=4, padx=5)
+
+tk.Label(
+    account_spam_creation_row,
+    text="(0 = Infinity)"
+).grid(row=0, column=5, sticky="w", padx=5)
+
+account_spam_creation_row_2 = tk.Frame(continuous_account_creation_frame)
+account_spam_creation_row_2.pack(anchor="w", pady=4)
+
+tk.Checkbutton(
+    account_spam_creation_row_2,
+    text="Random Password (safer)",
+    variable=account_spam_creation_random_password_enabled,
+    command=lambda: on_account_spam_creation_random_password_enabled_changed(
+        auto_email_verification_var
+    )
+).grid(row=0, column=0, sticky="w", padx=5)
 
 # ============================================================
 # CHAT TAB

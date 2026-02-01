@@ -148,6 +148,9 @@ USERNAME_POSTFIX_COUNT_ENABLED = False
 USERNAME_PREFIX_COUNT_START_AT = 1
 USERNAME_POSTFIX_COUNT_START_AT = 1
 GAME_HWND = None
+ACCOUNT_SPAM_CREATION_ENABLED = False
+ACCOUNT_SPAM_CREATION_QUATITY = 0
+ACCOUNT_SPAM_CREATION_RANDOM_PASSWORD_ENABLED = False
 
 #
 INGAME_STATE = InGameState()
@@ -240,6 +243,15 @@ def get_username_postfix_count_start_at():
 
 def get_game_hwnd():
     return GAME_HWND
+
+def get_account_spam_creation_enabled():
+    return ACCOUNT_SPAM_CREATION_ENABLED
+
+def get_account_spam_creation_quantity():
+    return ACCOUNT_SPAM_CREATION_QUATITY
+
+def get_account_spam_creation_random_password_enabled():
+    return ACCOUNT_SPAM_CREATION_RANDOM_PASSWORD_ENABLED
 
 def set_auto_start_endless(value: bool):
     global AUTO_START_ENDLESS
@@ -334,6 +346,21 @@ def set_username_postfix_count_start_at(value: int):
 def set_game_hwnd(value: int):
     global GAME_HWND
     GAME_HWND = value
+
+def set_account_spam_creation_enabled(value: bool):
+    global ACCOUNT_SPAM_CREATION_ENABLED
+    ACCOUNT_SPAM_CREATION_ENABLED = value
+    write_config_bool("account_generator", "enabled", value)
+
+def set_account_spam_creation_quantity(value: int):
+    global ACCOUNT_SPAM_CREATION_QUATITY
+    ACCOUNT_SPAM_CREATION_QUATITY = value
+    write_config_str("account_generator", "quantity", str(value))
+
+def set_account_spam_creation_random_password_enabled(value: bool):
+    global ACCOUNT_SPAM_CREATION_RANDOM_PASSWORD_ENABLED
+    ACCOUNT_SPAM_CREATION_RANDOM_PASSWORD_ENABLED = value
+    write_config_bool("account_generator", "random_password", value)
 
 def add_pending_account(username: str, password: str):
     PENDING_ACCOUNTS.add(username, password)

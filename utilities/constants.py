@@ -18,6 +18,8 @@ LOBBY_CHAT_PANEL_REGION = (1226, 251, 152, 564)
 MATCHMAKING_PANEL_REGION = (659, 296, 560, 464)
 
 # Application
+APP_NAME = "Juvio"
+EXE_PATH_DEFAULT = r"C:\Users\administrator\AppData\Local\Juvio\bin\juvio.exe"
 BASE_IMAGE_DIR = "images"
 DIALOG_MESSAGE_DIR = "dialog-message"
 CONFIDENCE = 0.75  # Adjust if detection fails

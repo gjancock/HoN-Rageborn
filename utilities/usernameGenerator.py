@@ -20,7 +20,89 @@ WORDS_GAMING = [
     "Hunter", "Reaper", "Viper", "Phantom",
     "Titan", "Knight", "Sniper", "Warden",
     "Fury", "Slayer", "Specter", "Riot",
-    "Dog", "Reborn", "Hon", "Silo"
+    "Dog", "Reborn", "Hon", "Silo",
+    "Ace", "Alpha", "Beast", "Clutch", "Core",
+    "Crash", "Dead", "Doom", "Elite", "Fatal",
+    "Force", "Fury", "Ghost", "God", "Grim",
+    "Havoc", "Inferno", "King", "Legend",
+    "Lethal", "Lord", "Master", "Meta",
+    "Night", "Prime", "Rage", "Rekt",
+    "Savage", "Shadow", "Silent", "Slayer",
+    "Storm", "Titan", "Ultra", "Venom",
+    "Vicious", "Void", "Wild", "Xeno",
+    "Abyss", "Ancient", "Arcane", "Bane",
+    "Blood", "Chaos", "Creep", "Dagger",
+    "Dire", "Echo", "Ember", "Fiend",
+    "Frost", "Invoker", "Mana", "Necro",
+    "Oracle", "Phantom", "Razor",
+    "Shadowfiend", "Spirit", "Spectre",
+    "Templar", "Terror", "Void", "Warden",
+    "Zeus",
+    "Carry", "Challenger", "Clean", "Diff",
+    "Elo", "Flash", "Gap", "Godlike",
+    "Hyper", "Int", "Lane", "Main",
+    "Mechanic", "Mid", "OP", "Outplay",
+    "Pentakill", "Precision", "Smurf",
+    "Snowball", "Tilt", "Top",
+    "Unkillable", "Wave", "Win",
+    "Build", "Cracked", "Edit",
+    "Fast", "Flick", "Ghost",
+    "Laser", "Movement", "OneTap",
+    "Peak", "Quick", "Rush",
+    "Sweaty", "Turbo", "Zone",
+    "90s", "NoScope", "Clip",
+    "Assault", "Bullet", "Combat",
+    "Deadshot", "Headshot", "Hunter",
+    "Kill", "Marksman", "Operator",
+    "Ranger", "Recon", "Shooter",
+    "Sniper", "Strike", "Suppressor",
+    "Tactical", "Trigger", "Warzone"
+]
+
+WORDS_PLAYER_USERNAME = [
+    "Sorais", "Heffer", "Merv", "Peasant", "Wartype", "Zannir",
+    "JMoney", "HOODY", "M0DERN", "Gorgots", "Riquisimo", "Treoke",
+    "Ensid", "Moejellini", "Cat", "Jimmeh", "Husken", "Crazyloon",
+    "AllanS", "Makanis", "Tilskueren", "Trell", "burcz", "UesleiLopes",
+    "Vulka", "Chanklin", "xzachariah", "luckyluke", "madcow28",
+    "Kiritok", "Anubis", "Spectrasoul", "GRIEFGOD", "EsthonX",
+    "Porkchop", "OhPeng", "Nasi", "Bassan", "Doru", "Maulefar",
+    "rangerboy13", "Yagerbomb775", "Riuicsi", "fotzzz", "DougBadass",
+    "GetSauced", "BiHan", "Pizdun", "Slieka4", "AlcaponeYou", 
+    "Empaler", "CaTnDoG", "itsskia", "BreakyCPK", "Trastamara",
+    "Keusz", "Kruzi", "Shifts", "MITD", "Feroci0us", "gjanko", 
+    "Monk", "Trastamara", "Psychos", "Simaio", "Dark", "yugen",
+    "Bergelius", "Yenvy", "Xinn", "CoreyKillz", "nobadodo1111", "DUNKERSTYLE",
+    "Manes", "DokiDoki", "Moondweller", "BooDaga", "HasheM",
+    "Inbreddog", "fleese", "Sly69", "FireDog", "RJX", "Rnewton12",
+    "EZro", "Daddy", "2LeaN", "FaAmir", "drewmc024", "Requice", "Ouchmouse",
+    "JipongYou", "ajcut5", "bluegriffin", "Kruzi", "veenzzero88",
+    "Mirock", "zeNAP", "Sarje", "flazepops", "Haz", "lonestar750", 
+    "EternalKiss", "Luofeng", "goose", "xopowui17", "nattaporn91",
+    "xviralx", "TrashMe", "dew", "mevvtwo", "Onyx711", "masistas", 
+    "newEra", "Ritch", "LegendBayby", "doktur", "Pato", "Stevsta",
+    "Cr33pyLeo", "hjrdis", "Rico", "RavenArrowz", "gnomskii", "DarkSky",
+    "Rehvessori", "iznomis", "zensomo", "Matheusin", "friday13", "Wolfkat",
+    "Benzington", "Sommar", "dyadya", "salidron", "PahaTorsti", "arcanemagix",
+    "yogi", "Benoit", "Foliarz", "HazeBoy", "Guga", "wtf", "XERO92", "Kongo",
+    "Micke", "SmerSBoys", "Fervor", "Cena", "Marius", "Kawaii", "MiTsSs", "Seacow",
+    "Ke", "Salt", "Bardiel", "Goston", "Jakjat", "Mallz", "Mikedk7", "Paj",
+    "Matthew", "StrenX", "tushycatt", "Zeroxoz", "Skeletonboz", "MorningYew94",
+    "Aggamenon", "Asmodai", "Azravos", "BeheResto", "Yoounited",
+    "Oloapps19", "HOWiFeed", "Momeantom", "Socknick", "SoNeat", 
+    "LadyFinders", "CODEX5FTW", "actionpapa", "DendiXZ", "Kakukaki",
+    "Papipapooo", "XrayBoi", "StresssLife", "Xress", "SirSnowman",
+    "Youngomw", "MiloIce", "GLHF", "HAHAHEHA", "7Knight", "hokkaido",
+    "holangpu", "Mooogi", "Pookie", "iguy", "mrDEADMAN", "Nettto",
+    "AK47HAX", "Deklass", "Yoonz", "XuFeng", "Samsara", "LachBata",
+    "FenTen", "Sukunaa", "Roachy", "Mwhit", "Sakanya", "Farox",
+    "jeyo", "dLLM", "izzyLike", "Greul", "Rejca", "thanh", "Brutezzi",
+    "SASORI77", "MangoDigger", "jbnz", "2pacHero", "BabyEIEI", "someyell",
+    "Rafeal", "tpolben", "bohaco", "Psychos", "Phrost", "Boxxerz", "Mirwen",
+    "gonetaro", "yumenko", "RyveN", "DelHeinze", "noakie", "Akin", "Beekay",
+    "Resh42", "sucht", "RastaMAN", "LeonKing17", "VerCos360", "Piggy", "Flame1998",
+    "RUNBOI", "turtle001", "LAPIN", "MaddoxBaby", "VGD", "BuiKing",
+    "NightKidz", "Kangcez"
 ]
 
 WORDS_REAL = [
@@ -34,8 +116,7 @@ WORDS_REAL = [
 WORDS_TECH = [
     "Byte", "Cipher", "Kernel", "Logic",
     "Quantum", "Syntax", "Binary", "Crypto",
-    "Circuit", "Node", "Protocol", "RTX5090", "GTX2080",
-    "DDR5"
+    "Circuit", "Node", "Protocol"
 ]
 
 WORDS_FANTASY = [
@@ -49,7 +130,7 @@ FIRST_NAMES = [
     "Chris", "Daniel", "David", "Eric", "Ethan",
     "Jack", "James", "Jason", "John", "Kevin",
     "Lucas", "Mark", "Marcus", "Michael", "Nathan",
-    "Oliver", "Ryan", "Samuel", "Sean", "Steven",
+    "Oliver", "Ryan", "Samuel", "Steven",
     "Thomas", "William", "Edmond", "Wong", "Ong", "Lim", "Tan", "Jay",
     "G", "Gala", "Malboro", "Owen", "Ocean", "Khaw", "Benjamin",
     "Benji", "Jonathan", "Chu", "Teoh", "Maverick", "Salihin",
@@ -77,6 +158,7 @@ NICKNAME_STYLE = [
 ]
 
 WORD_POOL = (
+    WORDS_PLAYER_USERNAME +
     WORDS_GAMING +
     WORDS_REAL +
     WORDS_TECH +
@@ -126,22 +208,28 @@ def generate_word_username(prefix="", postfix=""):
     else:
         base = "user"
 
-    WORD_INDEX += 1
+    WORD_INDEX += random.randint(1,3)
 
     parts.append(base)
 
-    filler = generate_random_string(2, 3)
-    parts.append(filler)
+    if WORD_POOL:
+        body = str(WORD_POOL[WORD_INDEX % len(WORD_POOL)])
+    else:
+        body = "body"
+        
+    WORD_INDEX += random.randint(1,3)
+    
+    parts.append(body)
 
     if postfix:
         parts.append(postfix)
 
-    if random.random() < 0.25:
+    if random.random() < 0.1:
         username = "_".join(parts)
     else:
         username = "".join(parts)
 
-    if random.random() < 0.45:
+    if random.random() < 0.25:
         username = username.capitalize()
 
     return username[:MAX_USERNAME_LENGTH]

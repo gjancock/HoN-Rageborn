@@ -1,7 +1,10 @@
 import logging
+import core.state as state
+
 from tkinter import messagebox
 
 logger = logging.getLogger("rageborn")
+
 
 
 def on_login_only(
@@ -91,7 +94,6 @@ def on_auto_start_checkbox_changed(
     autostart_module,
 ):
     value = auto_start_var.get()
-    import core.state as state
     state.set_auto_start_endless(value)
 
     if value:
@@ -124,7 +126,6 @@ def try_auto_start_from_config(
         return
 
     if not validate_exe_cb(show_error=False):
-        import core.state as state
         state.set_auto_start_endless(False)
         auto_start_var.set(False)
         return
@@ -138,25 +139,24 @@ def try_auto_start_from_config(
 
 
 def on_auto_email_verification_changed(var):
-    import core.state as state
     state.set_auto_email_verification(var.get())
 
 
 def on_auto_mobile_verification_changed(var):
-    import core.state as state
     state.set_auto_mobile_verification(var.get())
 
 
 def on_auto_update_changed(var):
-    import core.state as state
     state.set_auto_update(var.get())
 
 
 def on_username_prefix_add_count_changed(var):
-    import core.state as state
     state.set_username_prefix_count_enabled(var.get())
 
 
 def on_username_postfix_add_count_changed(var):
-    import core.state as state
     state.set_username_postfix_count_enabled(var.get())
+
+
+def on_account_spam_creation_random_password_enabled_changed(var):
+    state.set_account_spam_creation_random_password_enabled(var.get())
